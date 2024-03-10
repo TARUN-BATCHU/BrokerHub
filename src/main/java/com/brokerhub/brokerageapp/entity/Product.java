@@ -15,11 +15,11 @@ public class Product {
 
     private int brokerage;
 
-    protected  int quantity;
+    private  int quantity;
 
-    protected int price;
+    private int price;
 
-    protected String quality;
+    private String quality;
 
     public Long getProductId() {
         return productId;
