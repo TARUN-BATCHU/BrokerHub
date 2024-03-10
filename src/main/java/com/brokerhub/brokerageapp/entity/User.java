@@ -25,6 +25,8 @@ public class User {
 
     private Address address;
 
+    private String email;
+
     private BankDetails bankDetails;
 
     private List<String> phoneNumbers;
@@ -85,6 +87,14 @@ public class User {
 
     public void setAddress(Address address) {
         this.address = address;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public BankDetails getBankDetails() {
