@@ -1,0 +1,91 @@
+package com.brokerhub.brokerageapp.entity;
+
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "broker")
+public class Broker {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long brokerId;
+
+    private String brokerName;
+
+    private String brokerageFirmName;
+
+    private Address address;
+
+    private String email;
+
+    private String phoneNumber;
+
+    private Long totalBrokerage;
+
+    private BankDetails bankDetails;
+
+    public Long getBrokerId() {
+        return brokerId;
+    }
+
+    public void setBrokerId(Long brokerId) {
+        this.brokerId = brokerId;
+    }
+
+    public String getBrokerName() {
+        return brokerName;
+    }
+
+    public void setBrokerName(String brokerName) {
+        this.brokerName = brokerName;
+    }
+
+    public String getBrokerageFirmName() {
+        return brokerageFirmName;
+    }
+
+    public void setBrokerageFirmName(String brokerageFirmName) {
+        this.brokerageFirmName = brokerageFirmName;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public Long getTotalBrokerage() {
+        return totalBrokerage;
+    }
+
+    public void setTotalBrokerage(Long totalBrokerage) {
+        this.totalBrokerage = totalBrokerage;
+    }
+
+    public BankDetails getBankDetails() {
+        return bankDetails;
+    }
+
+    public void setBankDetails(BankDetails bankDetails) {
+        this.bankDetails = bankDetails;
+    }
+}
