@@ -3,6 +3,7 @@ package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
 
+
 @Entity
 @Table(name = "broker")
 public class Broker {
@@ -10,6 +11,11 @@ public class Broker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long brokerId;
+
+    @Column(unique = true)
+    private String userName;
+
+    private String password;
 
     private String brokerName;
 
@@ -31,6 +37,22 @@ public class Broker {
 
     public void setBrokerId(Long brokerId) {
         this.brokerId = brokerId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getBrokerName() {

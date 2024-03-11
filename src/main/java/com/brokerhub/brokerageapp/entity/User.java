@@ -31,7 +31,7 @@ public class User {
 
     private List<String> phoneNumbers;
 
-    private int brokerageRate;
+    private Integer brokerageRate;
 
     private Long totalBagsSold;
 
@@ -113,11 +113,11 @@ public class User {
         this.phoneNumbers = phoneNumbers;
     }
 
-    public int getBrokerageRate() {
+    public Integer getBrokerageRate() {
         return brokerageRate;
     }
 
-    public void setBrokerageRate(int brokerageRate) {
+    public void setBrokerageRate(Integer brokerageRate) {
         this.brokerageRate = brokerageRate;
     }
 

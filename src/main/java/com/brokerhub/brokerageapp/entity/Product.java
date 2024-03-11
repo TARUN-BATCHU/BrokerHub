@@ -13,11 +13,11 @@ public class Product {
 
     private String productName;
 
-    private int brokerage;
+    private Integer brokerage;
 
-    private  int quantity;
+    private  Integer quantity;
 
-    private int price;
+    private Integer price;
 
     private String quality;
 
@@ -37,27 +37,27 @@ public class Product {
         this.productName = productName;
     }
 
-    public int getBrokerage() {
+    public Integer getBrokerage() {
         return brokerage;
     }
 
-    public void setBrokerage(int brokerage) {
+    public void setBrokerage(Integer brokerage) {
         this.brokerage = brokerage;
     }
 
-    public int getQuantity() {
+    public Integer getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
+    public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
-    public int getPrice() {
+    public Integer getPrice() {
         return price;
     }
 
-    public void setPrice(int price) {
+    public void setPrice(Integer price) {
         this.price = price;
     }
 
