@@ -3,7 +3,6 @@ package com.brokerhub.brokerageapp.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name="users")
 public class BankDetails {
 
     @Id

@@ -4,7 +4,6 @@ package com.brokerhub.brokerageapp.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "product")
 public class Product {
 
     @Id

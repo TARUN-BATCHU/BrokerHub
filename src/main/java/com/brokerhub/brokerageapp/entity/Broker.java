@@ -3,9 +3,10 @@ package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+
 
 @Entity
-@Table(name = "broker")
 public class Broker {
 
     @Id
@@ -21,14 +22,16 @@ public class Broker {
 
     private String brokerageFirmName;
 
+    @OneToOne
     private Address address;
 
     private String email;
 
     private String phoneNumber;
 
-    private Long totalBrokerage;
+    private BigDecimal totalBrokerage;
 
+    @OneToOne
     private BankDetails bankDetails;
 
     public Long getBrokerId() {
@@ -95,11 +98,11 @@ public class Broker {
         this.phoneNumber = phoneNumber;
     }
 
-    public Long getTotalBrokerage() {
+    public BigDecimal getTotalBrokerage() {
         return totalBrokerage;
     }
 
-    public void setTotalBrokerage(Long totalBrokerage) {
+    public void setTotalBrokerage(BigDecimal totalBrokerage) {
         this.totalBrokerage = totalBrokerage;
     }
 
