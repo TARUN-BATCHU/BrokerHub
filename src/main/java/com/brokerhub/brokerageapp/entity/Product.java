@@ -12,7 +12,7 @@ public class Product {
 
     private String productName;
 
-    private Integer brokerage;
+    private Integer productBrokerage;
 
     private  Integer quantity;
 
@@ -36,12 +36,12 @@ public class Product {
         this.productName = productName;
     }
 
-    public Integer getBrokerage() {
-        return brokerage;
+    public Integer getProductBrokerage() {
+        return productBrokerage;
     }
 
-    public void setBrokerage(Integer brokerage) {
-        this.brokerage = brokerage;
+    public void setProductBrokerage(Integer productBrokerage) {
+        this.productBrokerage = productBrokerage;
     }
 
     public Integer getQuantity() {

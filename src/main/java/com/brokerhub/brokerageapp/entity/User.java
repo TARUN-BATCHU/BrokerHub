@@ -22,12 +22,14 @@ public abstract class User {
 
     private String ownerName;
 
-    @OneToOne
+    @ManyToOne
+    @JoinColumn(name = "address_id")
     private Address address;
 
     private String email;
 
     @OneToOne
+    @PrimaryKeyJoinColumn
     private BankDetails bankDetails;
 
     private List<String> phoneNumbers;
@@ -41,6 +43,8 @@ public abstract class User {
     private Long payableAmount;
 
     private Long receivableAmount;
+
+    private Long totalPayableBrokerage;
 
     public Long getUserId() {
         return userId;
@@ -152,5 +156,13 @@ public abstract class User {
 
     public void setReceivableAmount(Long receivableAmount) {
         this.receivableAmount = receivableAmount;
+    }
+
+    public Long getTotalPayableBrokerage() {
+        return totalPayableBrokerage;
+    }
+
+    public void setTotalPayableBrokerage(Long totalPayableBrokerage) {
+        this.totalPayableBrokerage = totalPayableBrokerage;
     }
 }
