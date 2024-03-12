@@ -5,10 +5,9 @@ import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
-@Table(name="users")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
-public class User {
+public abstract class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,15 +22,17 @@ public class User {
 
     private String ownerName;
 
+    @OneToOne
     private Address address;
 
     private String email;
 
+    @OneToOne
     private BankDetails bankDetails;
 
     private List<String> phoneNumbers;
 
-    private int brokerageRate;
+    private Integer brokerageRate;
 
     private Long totalBagsSold;
 
@@ -113,11 +114,11 @@ public class User {
         this.phoneNumbers = phoneNumbers;
     }
 
-    public int getBrokerageRate() {
+    public Integer getBrokerageRate() {
         return brokerageRate;
     }
 
-    public void setBrokerageRate(int brokerageRate) {
+    public void setBrokerageRate(Integer brokerageRate) {
         this.brokerageRate = brokerageRate;
     }
 

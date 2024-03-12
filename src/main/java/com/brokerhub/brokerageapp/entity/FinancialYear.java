@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "financialYear")
 public class FinancialYear {
 
     @Id

@@ -3,26 +3,35 @@ package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+
+
 @Entity
-@Table(name = "broker")
 public class Broker {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long brokerId;
 
+    @Column(unique = true)
+    private String userName;
+
+    private String password;
+
     private String brokerName;
 
     private String brokerageFirmName;
 
+    @OneToOne
     private Address address;
 
     private String email;
 
     private String phoneNumber;
 
-    private Long totalBrokerage;
+    private BigDecimal totalBrokerage;
 
+    @OneToOne
     private BankDetails bankDetails;
 
     public Long getBrokerId() {
@@ -31,6 +40,22 @@ public class Broker {
 
     public void setBrokerId(Long brokerId) {
         this.brokerId = brokerId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getBrokerName() {
@@ -73,11 +98,11 @@ public class Broker {
         this.phoneNumber = phoneNumber;
     }
 
-    public Long getTotalBrokerage() {
+    public BigDecimal getTotalBrokerage() {
         return totalBrokerage;
     }
 
-    public void setTotalBrokerage(Long totalBrokerage) {
+    public void setTotalBrokerage(BigDecimal totalBrokerage) {
         this.totalBrokerage = totalBrokerage;
     }
 
