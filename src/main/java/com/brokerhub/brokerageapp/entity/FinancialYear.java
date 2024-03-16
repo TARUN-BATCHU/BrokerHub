@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Date;
 
@@ -11,8 +12,10 @@ public class FinancialYear {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long yearId;
 
+    @NotNull
     private Date start;
 
+    @NotNull
     private Date end;
 
     public Long getYearId() {

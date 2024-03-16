@@ -2,6 +2,10 @@ package com.brokerhub.brokerageapp.entity;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.util.List;
 
 @Entity
@@ -18,13 +22,16 @@ public abstract class User {
 
     private String gstNumber;
 
+    @NotNull
     private String firmName;
 
     private String ownerName;
 
     @OneToOne
+    @NotNull
     private Address address;
 
+    @Email
     private String email;
 
     @OneToOne
@@ -32,14 +39,19 @@ public abstract class User {
 
     private List<String> phoneNumbers;
 
+    @PositiveOrZero
     private Integer brokerageRate;
 
+    @PositiveOrZero
     private Long totalBagsSold;
 
+    @PositiveOrZero
     private Long totalBagsBought;
 
+    @PositiveOrZero
     private Long payableAmount;
 
+    @PositiveOrZero
     private Long receivableAmount;
 
     public Long getUserId() {
