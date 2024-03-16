@@ -29,7 +29,8 @@ public class Broker {
     @NotNull
     private String brokerageFirmName;
 
-    @OneToOne
+    @ManyToOne
+    @JoinColumn(name = "address_id")
     private Address address;
 
     @Email
@@ -42,6 +43,7 @@ public class Broker {
     private BigDecimal totalBrokerage;
 
     @OneToOne
+    @PrimaryKeyJoinColumn
     private BankDetails bankDetails;
 
     public Long getBrokerId() {

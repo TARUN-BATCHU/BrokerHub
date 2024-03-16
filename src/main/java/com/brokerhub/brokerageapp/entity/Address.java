@@ -7,6 +7,8 @@ import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 @Entity
 public class Address {
 
@@ -23,6 +25,12 @@ public class Address {
     private String shopNumber;
 
     private String pincode;
+
+    @OneToMany(mappedBy = "address")
+    private List<User> users;
+
+    @OneToMany(mappedBy = "address")
+    private List<Broker> brokers;
 
     public Long getAddressId() {
         return addressId;
@@ -62,5 +70,21 @@ public class Address {
 
     public void setPincode(String pincode) {
         this.pincode = pincode;
+    }
+
+    public List<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<User> users) {
+        this.users = users;
+    }
+
+    public List<Broker> getBrokers() {
+        return brokers;
+    }
+
+    public void setBrokers(List<Broker> brokers) {
+        this.brokers = brokers;
     }
 }
