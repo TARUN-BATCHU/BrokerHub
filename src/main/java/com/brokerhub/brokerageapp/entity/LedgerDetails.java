@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
@@ -13,6 +14,7 @@ public class LedgerDetails {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @NotNull
     private User fromSeller;
 
     @ManyToOne

@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Entity
 public class LedgerRecord {
@@ -13,19 +15,27 @@ public class LedgerRecord {
     private LedgerDetails ledgerDetails;
 
     @ManyToOne
+    @NotNull
     private User toBuyer;
 
     @ManyToOne
     private Product product;
 
+    @PositiveOrZero
     private int quantity;
 
+    @PositiveOrZero
+    @NotNull
     private int brokerage;
 
+    @PositiveOrZero
     private int productCost;
 
+    @PositiveOrZero
     private int totalProductsCost;
 
+    @PositiveOrZero
+    @NotNull
     private int totalBrokerage;
 
     public Long getLedgerRecordId() {

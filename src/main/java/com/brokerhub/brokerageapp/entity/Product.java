@@ -2,6 +2,8 @@ package com.brokerhub.brokerageapp.entity;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Entity
 public class Product {
@@ -10,12 +12,18 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long productId;
 
+    @NotNull
     private String productName;
 
+    @PositiveOrZero
+    @NotNull
     private Integer productBrokerage;
 
+
+    @PositiveOrZero
     private  Integer quantity;
 
+    @PositiveOrZero
     private Integer price;
 
     private String quality;

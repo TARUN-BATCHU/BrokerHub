@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.entity;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
@@ -13,23 +14,32 @@ public class Broker {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long brokerId;
 
+    @NotNull
+    @NotBlank(message = "please enter the username")
     @Column(unique = true)
     private String userName;
 
+    @NotNull
+    @Size(min = 6, max = 20)
     private String password;
 
+    @NotNull
     private String brokerName;
 
+    @NotNull
     private String brokerageFirmName;
 
     @ManyToOne
     @JoinColumn(name = "address_id")
     private Address address;
 
+    @Email
     private String email;
 
+    @Size(min = 10)
     private String phoneNumber;
 
+    @PositiveOrZero
     private BigDecimal totalBrokerage;
 
     @OneToOne
