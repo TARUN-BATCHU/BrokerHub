@@ -1,9 +1,6 @@
 package com.brokerhub.brokerageapp.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -22,7 +19,7 @@ public class Address {
 
     private String area;
 
-    private String shopNumber;
+    //private String shopNumber;
 
     private String pincode;
 
@@ -56,13 +53,13 @@ public class Address {
         this.area = area;
     }
 
-    public String getShopNumber() {
-        return shopNumber;
-    }
-
-    public void setShopNumber(String shopNumber) {
-        this.shopNumber = shopNumber;
-    }
+//    public String getShopNumber() {
+//        return shopNumber;
+//    }
+//
+//    public void setShopNumber(String shopNumber) {
+//        this.shopNumber = shopNumber;
+//    }
 
     public String getPincode() {
         return pincode;

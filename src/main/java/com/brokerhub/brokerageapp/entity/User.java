@@ -11,7 +11,7 @@ import java.util.List;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
-public abstract class User {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,7 +36,6 @@ public abstract class User {
     private String email;
 
     @OneToOne
-    @PrimaryKeyJoinColumn
     private BankDetails bankDetails;
 
     private List<String> phoneNumbers;
@@ -57,6 +56,16 @@ public abstract class User {
     private Long receivableAmount;
 
     private Long totalPayableBrokerage;
+
+    private String shopNumber;
+
+    public String getShopNumber() {
+        return shopNumber;
+    }
+
+    public void setShopNumber(String shopNumber) {
+        this.shopNumber = shopNumber;
+    }
 
     public Long getUserId() {
         return userId;
