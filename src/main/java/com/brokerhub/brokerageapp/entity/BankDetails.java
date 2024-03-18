@@ -13,7 +13,7 @@ public class BankDetails {
 
     private String accountNumber;
 
-    private String isfcCode;
+    private String ifscCode;
 
     private String branch;
 
@@ -41,12 +41,12 @@ public class BankDetails {
         this.accountNumber = accountNumber;
     }
 
-    public String getIsfcCode() {
-        return isfcCode;
+    public String getIfscCode() {
+        return ifscCode;
     }
 
-    public void setIsfcCode(String isfcCode) {
-        this.isfcCode = isfcCode;
+    public void setIfscCode(String ifscCode) {
+        this.ifscCode = ifscCode;
     }
 
     public String getBranch() {
@@ -56,4 +56,5 @@ public class BankDetails {
     public void setBranch(String branch) {
         this.branch = branch;
     }
+
 }

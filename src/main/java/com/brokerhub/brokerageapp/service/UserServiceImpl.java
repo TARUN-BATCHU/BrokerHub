@@ -72,15 +72,20 @@ public class UserServiceImpl implements UserService {
            return true;
     }
 
-    private ResponseEntity<String> linkBankDetailsToUser(UserDTO userDTO,User user) {
-        BankDetails bankDetails = new BankDetails();
-        bankDetails.setBankName(userDTO.getBankName());
-        bankDetails.setAccountNumber(userDTO.getAccountNumber());
-        bankDetails.setBranch(userDTO.getBranch());
-        bankDetails.setIsfcCode(userDTO.getIsfcCode());
-        ResponseEntity<String> responseEntity = bankDetailsService.createBankDetails(bankDetails);
-        user.setBankDetails(bankDetails);
-        return responseEntity;
+    private void linkBankDetailsToUser(UserDTO userDTO,User user) {
+        if(bankDetailsService.ifBankDetailsExists(userDTO.getAccountNumber())) {
+            BankDetails bankAccount = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+            user.setBankDetails(bankAccount);
+        }
+        else {
+            BankDetails bankDetails = new BankDetails();
+            bankDetails.setBankName(userDTO.getBankName());
+            bankDetails.setAccountNumber(userDTO.getAccountNumber());
+            bankDetails.setBranch(userDTO.getBranch());
+            bankDetails.setIfscCode(userDTO.getIfscCode());
+            bankDetailsService.createBankDetails(bankDetails);
+            user.setBankDetails(bankDetails);
+        }
     }
 
     private Long findAddressIDByCityArea(String city, String area) {

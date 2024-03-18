@@ -23,7 +23,7 @@ public class UserDTO {
     private String email;
     private String BankName;
     private String AccountNumber;
-    private String IsfcCode;
+    private String IfscCode;
     private String Branch;
     private List<String> phoneNumbers;
     private Integer brokerageRate;
@@ -118,12 +118,12 @@ public class UserDTO {
         AccountNumber = accountNumber;
     }
 
-    public String getIsfcCode() {
-        return IsfcCode;
+    public String getIfscCode() {
+        return IfscCode;
     }
 
-    public void setIsfcCode(String isfcCode) {
-        IsfcCode = isfcCode;
+    public void setIfscCode(String ifscCode) {
+        IfscCode = ifscCode;
     }
 
     public String getBranch() {

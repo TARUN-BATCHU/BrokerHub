@@ -28,14 +28,16 @@ public class User {
     private String ownerName;
 
 
-    @OneToOne
+    @ManyToOne
+    @JoinColumn(name = "address_id")
     @NotNull
     private Address address;
 
     @Email
     private String email;
 
-    @OneToOne
+    @ManyToOne
+    @JoinColumn(name = "bankDetails_id")
     private BankDetails bankDetails;
 
     private List<String> phoneNumbers;
