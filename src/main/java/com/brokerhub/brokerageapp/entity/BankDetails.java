@@ -7,53 +7,54 @@ public class BankDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long BankDetailsId;
+    private Long bankDetailsId;
 
-    private String BankName;
+    private String bankName;
 
-    private String AccountNumber;
+    private String accountNumber;
 
-    private String IsfcCode;
+    private String ifscCode;
 
-    private String Branch;
+    private String branch;
 
     public Long getBankDetailsId() {
-        return BankDetailsId;
+        return bankDetailsId;
     }
 
     public void setBankDetailsId(Long bankDetailsId) {
-        BankDetailsId = bankDetailsId;
+        this.bankDetailsId = bankDetailsId;
     }
 
     public String getBankName() {
-        return BankName;
+        return bankName;
     }
 
     public void setBankName(String bankName) {
-        BankName = bankName;
+        this.bankName = bankName;
     }
 
     public String getAccountNumber() {
-        return AccountNumber;
+        return accountNumber;
     }
 
     public void setAccountNumber(String accountNumber) {
-        AccountNumber = accountNumber;
+        this.accountNumber = accountNumber;
     }
 
-    public String getIsfcCode() {
-        return IsfcCode;
+    public String getIfscCode() {
+        return ifscCode;
     }
 
-    public void setIsfcCode(String isfcCode) {
-        IsfcCode = isfcCode;
+    public void setIfscCode(String ifscCode) {
+        this.ifscCode = ifscCode;
     }
 
     public String getBranch() {
-        return Branch;
+        return branch;
     }
 
     public void setBranch(String branch) {
-        Branch = branch;
+        this.branch = branch;
     }
+
 }
