@@ -21,7 +21,6 @@ public class BankDetailsServiceImpl implements BankDetailsService{
             return ResponseEntity.status(HttpStatus.CREATED).body("bank Details saved and linked to user account");
         }
         else{
-            //bankDetailsRepository.save(bankDetails);
             return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("bank details linked to user but same bank previously exists");
         }
     }
@@ -35,18 +34,6 @@ public class BankDetailsServiceImpl implements BankDetailsService{
         return null;
     }
 
-
-    //    private boolean ifBankDetailsExists(String accountNumber) {
-//        Optional<BankDetails> bankDetailsOptional = Optional.ofNullable(bankDetailsRepository.findByAccountNumber(accountNumber));
-//        BankDetails bankDetails = bankDetailsOptional.orElse(null);
-//        if (bankDetails == null) {
-//            System.out.println("Bank details not found for account number: " + accountNumber);
-//            return false;
-//        } else {
-//            System.out.println("Bank details found: " + bankDetails);
-//            return true;
-//        }
-//    }
     public boolean ifBankDetailsExists(String accountNumber) {
         BankDetails bankDetails = bankDetailsRepository.findByAccountNumber(accountNumber);
         System.out.println("bank details empty: " + bankDetails);

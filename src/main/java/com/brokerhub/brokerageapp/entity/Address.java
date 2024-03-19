@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,9 +25,11 @@ public class Address {
     private String pincode;
 
     @OneToMany(mappedBy = "address")
+    @JsonIgnore
     private List<User> users;
 
     @OneToMany(mappedBy = "address")
+    @JsonIgnore
     private List<Broker> brokers;
 
     public Long getAddressId() {

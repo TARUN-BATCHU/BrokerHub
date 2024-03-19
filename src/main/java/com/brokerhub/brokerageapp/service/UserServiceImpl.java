@@ -31,6 +31,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     BankDetailsService bankDetailsService;
 
+    @Autowired
+    AddressService addressService;
+
 
 
     public ResponseEntity createUser(UserDTO userDTO) {
@@ -45,14 +48,15 @@ public class UserServiceImpl implements UserService {
             user.setTotalBagsSold(0L);
             user.setTotalPayableBrokerage(0L);
             if(userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
-                user.setUserType(Constants.USER_TYPE_MILLER);
+                user.setUserType("MILLER");
                 Miller miller = new Miller();
                 miller.setByProduct(userDTO.getByProduct());
             }
             else{
-                user.setUserType(Constants.USER_TYPE_TRADER);
+                user.setUserType("TRADER");
             }
-            Address address = findAddressByCityArea(userDTO.getCity(),userDTO.getArea());
+            //Address address = findAddressByCityArea(userDTO.getCity(),userDTO.getArea());
+            Address address = findAddressByPincode(userDTO.getPincode());
             user.setAddress(address);
             linkBankDetailsToUser(userDTO,user);
             userRepository.save(user);
@@ -62,6 +66,20 @@ public class UserServiceImpl implements UserService {
             return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("User already exists");
         }
 
+    }
+
+    private Address findAddressByPincode(String pincode) {
+        Address address = addressRepository.findByPincode(pincode);
+        return address;
+    }
+
+
+    public User updateUser(User user) {
+        Address address = findAddressByPincode(user.getAddress().getPincode());
+        user.setAddress(address);
+        BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
+        user.setBankDetails(bankDetails);
+        return userRepository.save(user);
     }
 
     private boolean checkUserGSTNumberExists(String gstNumber) {
