@@ -10,4 +10,6 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     Address findByCityAndArea(String city, String area);
 
     Address findByPincode(String pinode);
+
+    boolean existsByCity(String city);
 }

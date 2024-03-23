@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
@@ -20,7 +21,6 @@ public class Address {
 
     private String area;
 
-    //private String shopNumber;
 
     private String pincode;
 
@@ -56,13 +56,6 @@ public class Address {
         this.area = area;
     }
 
-//    public String getShopNumber() {
-//        return shopNumber;
-//    }
-//
-//    public void setShopNumber(String shopNumber) {
-//        this.shopNumber = shopNumber;
-//    }
 
     public String getPincode() {
         return pincode;

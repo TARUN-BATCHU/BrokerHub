@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -82,12 +84,70 @@ public class UserServiceImpl implements UserService {
         return userRepository.save(user);
     }
 
+    @Override
+    public ResponseEntity<String> deleteUser(Long id) {
+        Optional<User> user = userRepository.findById(id);
+        if(!user.isEmpty()) {
+            String firmName = user.get().getFirmName();
+            userRepository.deleteById(id);
+            return ResponseEntity.status(HttpStatus.OK).body(firmName+" - deleted successfully");
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("no user found");
+        }
+    }
+
+    public List<User> getAllUsers() {
+        List<User> allUsers = userRepository.findAll();
+        if(allUsers.size()>=1){
+            return allUsers;
+        }
+        else{
+            return null;
+        }
+    }
+
+    public Object getAllUsersByCity(String city) {
+        boolean isCityExists = addressService.isCityExists(city);
+        if (!isCityExists) {
+            return "City does not exist";
+        }
+
+        List<User> usersInCity = userRepository.findByAddressCity(city);
+        return usersInCity.isEmpty() ? Collections.emptyList() : usersInCity;
+    }
+
+    public Optional<User> getUserById(Long userId) {
+        Optional<User> user = userRepository.findById(userId);
+        if(!user.isEmpty()){
+            return user;
+        }
+        return null;
+    }
+
+    public List<User> getAllUsersHavingBrokerageMoreThan(int brokerage) {
+        List<User> usersHavingBrokerage = userRepository.findByTotalPayableBrokerageGreaterThanEqual(brokerage);
+        if(usersHavingBrokerage.size()>=1){
+            return usersHavingBrokerage;
+        }
+        return null;
+    }
+
+    public List<User> getAllUsersHavingBrokerageInRange(int min, int max) {
+        List<User> usersHavingBrokerageInRange = userRepository.findByBrokerageBetween(min,max);
+        if(usersHavingBrokerageInRange.size()>=1){
+            return usersHavingBrokerageInRange;
+        }
+        return null;
+    }
+
+
     private boolean checkUserGSTNumberExists(String gstNumber) {
         Optional<User> user = userRepository.findByGstNumber(gstNumber);
         if(user.isEmpty()){
             return false;
         }
-           return true;
+        return true;
     }
 
     private void linkBankDetailsToUser(UserDTO userDTO,User user) {
