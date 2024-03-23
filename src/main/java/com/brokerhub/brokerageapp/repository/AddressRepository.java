@@ -8,4 +8,8 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     Long findAddressIdByCityAndArea(String city, String area);
 
     Address findByCityAndArea(String city, String area);
+
+    Address findByPincode(String pinode);
+
+    boolean existsByCity(String city);
 }

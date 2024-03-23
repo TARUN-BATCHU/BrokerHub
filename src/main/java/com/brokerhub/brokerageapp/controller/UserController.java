@@ -9,10 +9,10 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/BrokerHub/user")
@@ -25,5 +25,41 @@ public class UserController {
     public ResponseEntity<String> createUser(@Valid @RequestBody UserDTO userDTO){
         return userService.createUser(userDTO);
     }
+
+    @PutMapping("/updateUser")
+    public User updateUser(@Valid @RequestBody User user){
+        return userService.updateUser(user);
+    }
+
+    @DeleteMapping("/deleteUser/")
+    public ResponseEntity<String> deleteUser(@RequestParam Long Id){
+        return userService.deleteUser(Id);
+    }
+
+    @GetMapping("/allUsers")
+    public List<User> getAllUsers(){
+        return userService.getAllUsers();
+    }
+
+    @GetMapping("/allUsers/")
+    public Object getAllUsersByCity(@RequestParam String city){
+        return userService.getAllUsersByCity(city);
+    }
+
+    @GetMapping("/{userId}")
+    public Optional<User> getUserById(@PathVariable Long userId){
+        return userService.getUserById(userId);
+    }
+
+    @GetMapping("/brokerageMoreThan/")
+    public List<User> getUsersHavingBrokerageMoreThan(@RequestParam int brokerage){
+        return userService.getAllUsersHavingBrokerageMoreThan(brokerage);
+    }
+
+    @GetMapping("/brokerageInRange/")
+    public List<User> getUsersHavingBrokerageInRange(@RequestParam int min, int max){
+        return userService.getAllUsersHavingBrokerageInRange(min,max);
+    }
+
 
 }
