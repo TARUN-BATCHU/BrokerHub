@@ -7,6 +7,7 @@ import com.brokerhub.brokerageapp.entity.User;
 import com.brokerhub.brokerageapp.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,8 +38,8 @@ public class UserController {
     }
 
     @GetMapping("/allUsers")
-    public List<User> getAllUsers(){
-        return userService.getAllUsers();
+    public List<User> getAllUsers(Pageable pageable){
+        return userService.getAllUsers(pageable);
     }
 
     @GetMapping("/allUsers/")
@@ -59,6 +60,11 @@ public class UserController {
     @GetMapping("/brokerageInRange/")
     public List<User> getUsersHavingBrokerageInRange(@RequestParam int min, int max){
         return userService.getAllUsersHavingBrokerageInRange(min,max);
+    }
+
+    @GetMapping("/")
+    public Object getUserByProperty(@RequestParam String property, String value){
+        return userService.getUserByProperty(property,value);
     }
 
 

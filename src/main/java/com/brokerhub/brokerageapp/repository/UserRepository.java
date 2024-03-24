@@ -16,5 +16,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByTotalPayableBrokerageGreaterThanEqual(int brokerage);
 
-    List<User> findByBrokerageBetween(int min, int max);
+    List<User> findByTotalPayableBrokerageBetween(int min, int max);
 }
