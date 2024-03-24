@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.UserDTO;
 import com.brokerhub.brokerageapp.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -14,7 +15,7 @@ public interface UserService {
 
     ResponseEntity<String> deleteUser(Long id);
 
-    List<User> getAllUsers();
+    List<User> getAllUsers(Pageable pageable);
 
     Object getAllUsersByCity(String city);
 
@@ -23,4 +24,6 @@ public interface UserService {
     List<User> getAllUsersHavingBrokerageMoreThan(int brokerage);
 
     List<User> getAllUsersHavingBrokerageInRange(int min, int max);
+
+    Object getUserByProperty(String property, String value);
 }

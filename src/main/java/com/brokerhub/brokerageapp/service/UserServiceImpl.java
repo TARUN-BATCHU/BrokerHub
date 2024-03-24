@@ -10,6 +10,7 @@ import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
 import com.brokerhub.brokerageapp.constants.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -97,8 +98,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public List<User> getAllUsers() {
-        List<User> allUsers = userRepository.findAll();
+    public List<User> getAllUsers(Pageable pageable) {
+        List<User> allUsers = userRepository.findAll(pageable).getContent();
         if(allUsers.size()>=1){
             return allUsers;
         }
@@ -134,11 +135,25 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<User> getAllUsersHavingBrokerageInRange(int min, int max) {
-        List<User> usersHavingBrokerageInRange = userRepository.findByBrokerageBetween(min,max);
+        List<User> usersHavingBrokerageInRange = userRepository.findByTotalPayableBrokerageBetween(min,max);
         if(usersHavingBrokerageInRange.size()>=1){
             return usersHavingBrokerageInRange;
         }
         return null;
+    }
+
+    public Object getUserByProperty(String property, String value) {
+        if(property.equalsIgnoreCase(Constants.USER_PROPERTY_FIRM_NAME)){
+            Optional<User> user = userRepository.findByFirmName(value);
+            return user.isEmpty()? null : user;
+        }
+        else if(property.equalsIgnoreCase(Constants.USER_PROPERTY_GST_NUMBER)){
+            Optional<User> user = userRepository.findByGstNumber(value);
+            return user.isEmpty()? null : user;
+        }
+        else{
+            return HttpStatus.NOT_FOUND;
+        }
     }
 
 
