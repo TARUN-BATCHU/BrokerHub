@@ -17,7 +17,7 @@ public class Product {
 
     @PositiveOrZero
     @NotNull
-    private Integer productBrokerage;
+    private Float productBrokerage;
 
 
     @PositiveOrZero
@@ -44,11 +44,11 @@ public class Product {
         this.productName = productName;
     }
 
-    public Integer getProductBrokerage() {
+    public Float getProductBrokerage() {
         return productBrokerage;
     }
 
-    public void setProductBrokerage(Integer productBrokerage) {
+    public void setProductBrokerage(Float productBrokerage) {
         this.productBrokerage = productBrokerage;
     }
 
