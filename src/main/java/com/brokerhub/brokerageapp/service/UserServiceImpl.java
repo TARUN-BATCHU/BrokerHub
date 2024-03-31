@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +50,7 @@ public class UserServiceImpl implements UserService {
             user.setReceivableAmount(0L);
             user.setTotalBagsBought(0L);
             user.setTotalBagsSold(0L);
-            user.setTotalPayableBrokerage(0L);
+            user.setTotalPayableBrokerage(BigDecimal.valueOf(0));
             if(userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
                 user.setUserType("MILLER");
                 Miller miller = new Miller();
@@ -59,8 +60,10 @@ public class UserServiceImpl implements UserService {
                 user.setUserType("TRADER");
             }
             //Address address = findAddressByCityArea(userDTO.getCity(),userDTO.getArea());
-            Address address = findAddressByPincode(userDTO.getPincode());
-            user.setAddress(address);
+            Address address = addressService.findAddressByPincode(userDTO.getPincode());
+            if(null != address) {
+                user.setAddress(address);
+            }
             linkBankDetailsToUser(userDTO,user);
             userRepository.save(user);
             return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully");
@@ -71,14 +74,9 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    private Address findAddressByPincode(String pincode) {
-        Address address = addressRepository.findByPincode(pincode);
-        return address;
-    }
-
 
     public User updateUser(User user) {
-        Address address = findAddressByPincode(user.getAddress().getPincode());
+        Address address = addressService.findAddressByPincode(user.getAddress().getPincode());
         user.setAddress(address);
         BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
         user.setBankDetails(bankDetails);

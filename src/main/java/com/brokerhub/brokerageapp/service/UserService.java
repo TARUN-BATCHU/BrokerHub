@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.UserDTO;
+import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
