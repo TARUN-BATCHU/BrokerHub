@@ -1,5 +1,7 @@
 package com.brokerhub.brokerageapp.controller;
 
+import com.brokerhub.brokerageapp.dto.BrokerDTO;
+import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.service.BrokerService;
 import jakarta.validation.Valid;
@@ -18,13 +20,13 @@ public class BrokerController {
     BrokerService brokerService;
 
     @PostMapping("/createBroker")
-    public ResponseEntity createBroker(@RequestBody @Valid Broker broker){
-        return brokerService.createBroker(broker);
+    public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
+        return brokerService.createBroker(brokerDTO);
     }
 
     @PutMapping("/updateBroker")
-    public Broker updateBroker(@RequestBody @Valid Broker broker){
-        return brokerService.updateBroker(broker);
+    public ResponseEntity updateBroker(@RequestBody @Valid UpdateBrokerDTO updateBrokerDTO){
+        return brokerService.updateBroker(updateBrokerDTO);
     }
 
     @DeleteMapping("/deleteBroker")
@@ -43,17 +45,17 @@ public class BrokerController {
     }
 
     @GetMapping("/{brokerId}/getBrokerageOfCity/{city}")
-    public BigDecimal getBrokerageFromCity(@PathVariable Long brokerId, String city){
+    public BigDecimal getBrokerageFromCity(@PathVariable Long brokerId, @PathVariable  String city){
         return brokerService.getTotalBrokerageFromCity(brokerId,city);
     }
 
     @GetMapping("/{brokerId}/getBrokerageOfUser/{userId}")
-    public BigDecimal getBrokerageOfUser(@PathVariable Long brokerId, Long userId){
+    public BigDecimal getBrokerageOfUser(@PathVariable Long brokerId, @PathVariable Long userId){
         return brokerService.getTotalBrokerageOfUser(brokerId,userId);
     }
 
     @GetMapping("/{brokerId}/getBrokerageOfProduct/{productId}")
-    public BigDecimal getBrokerageFromProduct(@PathVariable Long brokerId, Long productId){
+    public BigDecimal getBrokerageFromProduct(@PathVariable Long brokerId, @PathVariable Long productId){
         return brokerService.findBrokerageFromProduct(brokerId,productId);
     }
 

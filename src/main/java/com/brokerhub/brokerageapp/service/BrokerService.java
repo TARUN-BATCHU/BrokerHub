@@ -1,15 +1,18 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.BrokerDTO;
+import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
 public interface BrokerService {
-    ResponseEntity createBroker(Broker broker);
+    ResponseEntity createBroker(@Valid BrokerDTO broker);
 
-    Broker updateBroker(Broker broker);
+    ResponseEntity updateBroker(UpdateBrokerDTO UpdateBrokerDTO);
 
     ResponseEntity deleteBroker(Long brokerId);
 
