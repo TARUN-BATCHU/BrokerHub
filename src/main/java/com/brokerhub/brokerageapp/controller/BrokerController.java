@@ -46,4 +46,15 @@ public class BrokerController {
     public BigDecimal getBrokerageFromCity(@PathVariable Long brokerId, String city){
         return brokerService.getTotalBrokerageFromCity(brokerId,city);
     }
+
+    @GetMapping("/{brokerId}/getBrokerageOfUser/{userId}")
+    public BigDecimal getBrokerageOfUser(@PathVariable Long brokerId, Long userId){
+        return brokerService.getTotalBrokerageOfUser(brokerId,userId);
+    }
+
+    @GetMapping("/{brokerId}/getBrokerageOfProduct/{productId}")
+    public BigDecimal getBrokerageFromProduct(@PathVariable Long brokerId, Long productId){
+        return brokerService.findBrokerageFromProduct(brokerId,productId);
+    }
+
 }

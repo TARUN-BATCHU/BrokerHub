@@ -20,4 +20,8 @@ public interface BrokerService {
     public BigDecimal getTotalBrokerage(Long brokerId);
 
     BigDecimal getTotalBrokerageFromCity(Long brokerId, String city);
+
+    BigDecimal getTotalBrokerageOfUser(Long brokerId, Long userId);
+
+    BigDecimal findBrokerageFromProduct(Long brokerId, Long productId);
 }

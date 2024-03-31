@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
@@ -57,7 +58,7 @@ public class User {
     @PositiveOrZero
     private Long receivableAmount;
 
-    private Long totalPayableBrokerage;
+    private BigDecimal totalPayableBrokerage;
 
     private String shopNumber;
 
@@ -181,11 +182,11 @@ public class User {
         this.receivableAmount = receivableAmount;
     }
 
-    public Long getTotalPayableBrokerage() {
+    public BigDecimal getTotalPayableBrokerage() {
         return totalPayableBrokerage;
     }
 
-    public void setTotalPayableBrokerage(Long totalPayableBrokerage) {
+    public void setTotalPayableBrokerage(BigDecimal totalPayableBrokerage) {
         this.totalPayableBrokerage = totalPayableBrokerage;
     }
 }

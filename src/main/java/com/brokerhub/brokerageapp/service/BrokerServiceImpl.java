@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
+import com.brokerhub.brokerageapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ public class BrokerServiceImpl implements BrokerService{
 
     @Autowired
     BrokerRepository brokerRepository;
+
+    @Autowired
+    UserRepository userRepository;
 
     public ResponseEntity createBroker(Broker broker) {
         String brokerFirmName = broker.getBrokerageFirmName();
@@ -49,6 +53,8 @@ public class BrokerServiceImpl implements BrokerService{
     }
 
     public BigDecimal calculateTotalBrokerage(Long brokerId) {
+        //TODO
+        //after implementation of daily ledger
         return null;
     }
 
@@ -59,6 +65,24 @@ public class BrokerServiceImpl implements BrokerService{
 
     public BigDecimal getTotalBrokerageFromCity(Long brokerId, String city) {
         BigDecimal totalBrokerageFromCity = BigDecimal.valueOf(0);
+        //currently checking for only 1 broker so not considering brokerId
+        totalBrokerageFromCity = brokerRepository.findTotalBrokerageOfCity(city);
         return totalBrokerageFromCity;
+    }
+
+    public BigDecimal getTotalBrokerageOfUser(Long brokerId, Long userId) {
+        if(null != brokerId && null!=userId && brokerRepository.findById(brokerId).isPresent() && userRepository.findById(userId).isPresent()){
+            //currently checking for only one broker
+            // we need to take the brokerage of particular broker then we will consider brokerId also
+            BigDecimal totalPayableBrokerageByUser = userRepository.findById(userId).get().getTotalPayableBrokerage();
+            return totalPayableBrokerageByUser;
+        }
+        return null;
+    }
+
+    public BigDecimal findBrokerageFromProduct(Long brokerId, Long productId) {
+        //TODO
+        //after implementation of ledger
+        return null;
     }
 }
