@@ -20,7 +20,6 @@ public class Broker {
     private String userName;
 
     @NotNull
-    @Size(min = 6, max = 20)
     private String password;
 
     @NotNull

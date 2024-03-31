@@ -17,4 +17,6 @@ public interface BrokerRepository extends JpaRepository<Broker, Long> {
 
     @Query(value = "SELECT SUM(u.total_payable_brokerage) FROM user u WHERE address_id IN (SELECT address_id FROM address WHERE city = ?1);", nativeQuery = true)
     BigDecimal findTotalBrokerageOfCity(String city);
+
+    Optional<Broker> findByUserName(String userName);
 }

@@ -19,9 +19,19 @@ public class BrokerController {
     @Autowired
     BrokerService brokerService;
 
+    @GetMapping("/home")
+    public String home(){
+        return "Welcome to home you loggedIn successfully";
+    }
+
     @PostMapping("/createBroker")
     public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
         return brokerService.createBroker(brokerDTO);
+    }
+
+    @GetMapping("/login")
+    public String handleLogin(){
+        return "login";
     }
 
     @PutMapping("/updateBroker")
