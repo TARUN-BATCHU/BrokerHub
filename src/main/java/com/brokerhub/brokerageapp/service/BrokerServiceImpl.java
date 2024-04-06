@@ -11,6 +11,7 @@ import com.brokerhub.brokerageapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -37,6 +38,9 @@ public class BrokerServiceImpl implements BrokerService{
     @Autowired
     AddressService addressService;
 
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
     public ResponseEntity createBroker(BrokerDTO brokerDTO) {
         String brokerFirmName = brokerDTO.getBrokerageFirmName();
         String brokerEmail = brokerDTO.getEmail();
@@ -51,6 +55,7 @@ public class BrokerServiceImpl implements BrokerService{
             if(null != brokerDTO.getAccountNumber() && null!= brokerDTO.getBranch() && null!=brokerDTO.getBankName() && null!=brokerDTO.getIfscCode()){
                 linkBankDetailsToBroker(brokerDTO,broker);
             }
+            broker.setPassword(passwordEncoder.encode(brokerDTO.getPassword()));
             brokerRepository.save(broker);
             return ResponseEntity.status(HttpStatus.CREATED).body("Broker account successfully created");
         }
