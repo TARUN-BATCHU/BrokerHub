@@ -19,19 +19,19 @@ public class BrokerController {
     @Autowired
     BrokerService brokerService;
 
-    @GetMapping("/home")
+    @GetMapping("/")
     public String home(){
-        return "Welcome to home you loggedIn successfully";
+        return "Welcome to home public home page - this page does not have security";
+    }
+
+    @GetMapping("/brokerDashboard")
+    public String brokerDashboard(){
+        return "Login successful now you are in dashboard";
     }
 
     @PostMapping("/createBroker")
     public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
         return brokerService.createBroker(brokerDTO);
-    }
-
-    @GetMapping("/login")
-    public String handleLogin(){
-        return "login";
     }
 
     @PutMapping("/updateBroker")

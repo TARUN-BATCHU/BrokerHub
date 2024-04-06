@@ -3,6 +3,7 @@ package com.brokerhub.brokerageapp.service;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,7 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-@Service
+//@Service
+@Configuration
 public class BrokerDetailService implements UserDetailsService {
 
     @Autowired
