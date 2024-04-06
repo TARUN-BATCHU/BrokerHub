@@ -6,6 +6,7 @@ import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.service.BrokerService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,6 +68,21 @@ public class BrokerController {
     @GetMapping("/{brokerId}/getBrokerageOfProduct/{productId}")
     public BigDecimal getBrokerageFromProduct(@PathVariable Long brokerId, @PathVariable Long productId){
         return brokerService.findBrokerageFromProduct(brokerId,productId);
+    }
+
+    @GetMapping("/forgotPassword")
+    public ResponseEntity<String> forgetPassword(@RequestParam("userName") String userName){
+        return brokerService.forgetPassword(userName);
+    }
+
+    @PostMapping("/verify-account")
+    public ResponseEntity<String> verifyAccount(@RequestParam String email, @RequestParam Integer otp){
+        return new ResponseEntity<>(brokerService.verifyAccount(email,otp), HttpStatus.OK);
+    }
+
+    @PutMapping("/regenerate-otp")
+    public ResponseEntity<String> regenerateOTP(@RequestParam String email){
+        return brokerService.regenerateOTP(email);
     }
 
 }

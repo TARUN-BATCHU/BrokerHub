@@ -8,13 +8,20 @@ import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.mapper.BrokerDTOMapper;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
+import com.brokerhub.brokerageapp.utils.OtpUtil;
+import com.brokerhub.brokerageapp.utils.EmailUtil;
+import com.brokerhub.brokerageapp.constants.Constants;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -41,6 +48,12 @@ public class BrokerServiceImpl implements BrokerService{
     @Autowired
     PasswordEncoder passwordEncoder;
 
+    @Autowired
+    OtpUtil otpUtil;
+
+    @Autowired
+    EmailUtil emailUtil;
+
     public ResponseEntity createBroker(BrokerDTO brokerDTO) {
         String brokerFirmName = brokerDTO.getBrokerageFirmName();
         String brokerEmail = brokerDTO.getEmail();
@@ -56,6 +69,8 @@ public class BrokerServiceImpl implements BrokerService{
                 linkBankDetailsToBroker(brokerDTO,broker);
             }
             broker.setPassword(passwordEncoder.encode(brokerDTO.getPassword()));
+            broker.setOtp(null);
+            broker.setOtpGeneratedTime(null);
             brokerRepository.save(broker);
             return ResponseEntity.status(HttpStatus.CREATED).body("Broker account successfully created");
         }
@@ -145,5 +160,56 @@ public class BrokerServiceImpl implements BrokerService{
         //TODO
         //after implementation of ledger
         return null;
+    }
+
+    public ResponseEntity<String> forgetPassword(String userName) {
+        Optional<Broker> brokerObj = brokerRepository.findByUserName(userName);
+        if(brokerObj.isPresent()){
+            Broker broker = brokerObj.get();
+            Integer OTP = otpUtil.generateOtp();
+            broker.setOtp(OTP);
+            broker.setOtpGeneratedTime(LocalDateTime.now());
+            try{
+                emailUtil.sendOtpToEmail(broker.getEmail(),OTP);
+            }catch (MessagingException e){
+                throw new RuntimeException("Unable to send otp please try again");
+            }
+            brokerRepository.save(broker);
+            return ResponseEntity.ok().body("OTP send successfully");
+        }
+        return ResponseEntity.badRequest().body("No user found with provided user name");
+    }
+
+    public String verifyAccount(String email, Integer otp) {
+        boolean brokerExists = brokerRepository.findByEmail(email).isPresent();
+        if(brokerExists){
+            Optional<Broker> brokerObj = brokerRepository.findByEmail(email);
+            Broker broker = brokerObj.get();
+            if((broker.getOtp() == otp) && Duration.between(broker.getOtpGeneratedTime(),LocalDateTime.now()).getSeconds()<(Constants.OTP_SPAN*60)){
+                broker.setOtp(null);
+                broker.setOtpGeneratedTime(null);
+                return "OTP verified you can login";
+            }
+            else{
+                return "Please regenerate OTP";
+            }
+        }
+        return "Broker not exists";
+    }
+
+    public ResponseEntity<String> regenerateOTP(String email) {
+        Broker broker = brokerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Broker not found with this email: " + email));
+        Integer otp = otpUtil.generateOtp();
+        try {
+            emailUtil.sendOtpToEmail(email, otp);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Unable to send otp please try again");
+        }
+        broker.setOtp(otp);
+        broker.setOtpGeneratedTime(LocalDateTime.now());
+        brokerRepository.save(broker);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Email sent... please verify account within 1 minute");
+
     }
 }
