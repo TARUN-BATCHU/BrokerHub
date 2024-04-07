@@ -185,13 +185,23 @@ public class BrokerServiceImpl implements BrokerService{
         if(brokerExists){
             Optional<Broker> brokerObj = brokerRepository.findByEmail(email);
             Broker broker = brokerObj.get();
-            if((broker.getOtp() == otp) && Duration.between(broker.getOtpGeneratedTime(),LocalDateTime.now()).getSeconds()<(Constants.OTP_SPAN*60)){
-                broker.setOtp(null);
-                broker.setOtpGeneratedTime(null);
-                return "OTP verified you can login";
-            }
-            else{
-                return "Please regenerate OTP";
+//            Integer otpInDatabase = broker.getOtp();
+//            Integer otpProvided = otp;
+//            LocalDateTime timeOtpCreated = broker.getOtpGeneratedTime();
+//            LocalDateTime timeNow = LocalDateTime.now();
+//            Long seconds = Duration.between(broker.getOtpGeneratedTime(),LocalDateTime.now()).getSeconds();
+//            Boolean otpAlive = Duration.between(broker.getOtpGeneratedTime(),LocalDateTime.now()).getSeconds()<(Constants.OTP_SPAN*60);
+            if (broker.getOtp().toString().equalsIgnoreCase(otp.toString())) {
+                if (Duration.between(broker.getOtpGeneratedTime(), LocalDateTime.now()).getSeconds() < (Constants.OTP_SPAN * 60)) {
+                    broker.setOtp(null);
+                    broker.setOtpGeneratedTime(null);
+                    return "OTP verified you can login";
+                }
+                else {
+                    return "Please regenerate OTP";
+                }
+            } else {
+                return "OTP wrong";
             }
         }
         return "Broker not exists";
