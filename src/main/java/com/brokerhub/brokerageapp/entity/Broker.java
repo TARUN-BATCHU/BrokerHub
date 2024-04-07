@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 
 @Entity
@@ -44,6 +45,10 @@ public class Broker {
     @OneToOne
     @PrimaryKeyJoinColumn
     private BankDetails bankDetails;
+
+    private Integer otp = null;
+
+    private LocalDateTime otpGeneratedTime = null;
 
     public Long getBrokerId() {
         return brokerId;
@@ -123,5 +128,21 @@ public class Broker {
 
     public void setBankDetails(BankDetails bankDetails) {
         this.bankDetails = bankDetails;
+    }
+
+    public Integer getOtp() {
+        return otp;
+    }
+
+    public void setOtp(Integer otp) {
+        this.otp = otp;
+    }
+
+    public LocalDateTime getOtpGeneratedTime() {
+        return otpGeneratedTime;
+    }
+
+    public void setOtpGeneratedTime(LocalDateTime otpGeneratedTime) {
+        this.otpGeneratedTime = otpGeneratedTime;
     }
 }

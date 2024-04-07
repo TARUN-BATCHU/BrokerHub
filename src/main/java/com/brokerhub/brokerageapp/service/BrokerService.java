@@ -27,4 +27,10 @@ public interface BrokerService {
     BigDecimal getTotalBrokerageOfUser(Long brokerId, Long userId);
 
     BigDecimal findBrokerageFromProduct(Long brokerId, Long productId);
+
+    ResponseEntity<String> forgetPassword(String userName);
+
+    String verifyAccount(String email, Integer otp);
+
+    ResponseEntity<String> regenerateOTP(String email);
 }
