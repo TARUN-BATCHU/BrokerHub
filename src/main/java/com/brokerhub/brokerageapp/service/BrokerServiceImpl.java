@@ -195,6 +195,7 @@ public class BrokerServiceImpl implements BrokerService{
                 if (Duration.between(broker.getOtpGeneratedTime(), LocalDateTime.now()).getSeconds() < (Constants.OTP_SPAN * 60)) {
                     broker.setOtp(null);
                     broker.setOtpGeneratedTime(null);
+                    brokerRepository.save(broker);
                     return "OTP verified you can login";
                 }
                 else {
