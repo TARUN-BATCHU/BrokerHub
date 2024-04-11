@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.BrokerDTO;
+import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
+import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
 import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import jakarta.validation.Valid;
@@ -30,7 +32,11 @@ public interface BrokerService {
 
     ResponseEntity<String> forgetPassword(String userName);
 
-    String verifyAccount(String email, Integer otp);
+    String verifyAccount(String userName, Integer otp);
 
     ResponseEntity<String> regenerateOTP(String email);
+
+    ResponseEntity<String> changePassword(ResetPasswordDTO resetPasswordDTO);
+
+    ResponseEntity<String> createPassword(CreatePasswordDTO createPasswordDTO);
 }

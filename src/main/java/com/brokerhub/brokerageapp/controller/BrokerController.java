@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.controller;
 
 import com.brokerhub.brokerageapp.dto.BrokerDTO;
+import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
+import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
 import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.service.BrokerService;
@@ -76,13 +78,24 @@ public class BrokerController {
     }
 
     @PostMapping("/verify-account")
-    public ResponseEntity<String> verifyAccount(@RequestParam String email, @RequestParam Integer otp){
-        return new ResponseEntity<>(brokerService.verifyAccount(email,otp), HttpStatus.OK);
+    public ResponseEntity<String> verifyAccount(@RequestParam String userName, @RequestParam Integer otp){
+        return new ResponseEntity<>(brokerService.verifyAccount(userName,otp), HttpStatus.OK);
     }
 
     @PutMapping("/regenerate-otp")
     public ResponseEntity<String> regenerateOTP(@RequestParam String email){
         return brokerService.regenerateOTP(email);
     }
+
+    @PutMapping("/changePassword")
+    public ResponseEntity<String> changePassword(@RequestBody ResetPasswordDTO resetPasswordDTO){
+        return brokerService.changePassword(resetPasswordDTO);
+    }
+
+    @PutMapping("/createPassword")
+    public ResponseEntity<String> createPassword(@RequestBody CreatePasswordDTO createPasswordDTO){
+        return brokerService.createPassword(createPasswordDTO);
+    }
+
 
 }
