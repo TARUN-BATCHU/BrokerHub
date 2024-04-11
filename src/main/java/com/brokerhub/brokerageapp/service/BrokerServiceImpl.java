@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.BrokerDTO;
+import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
+import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
 import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.BankDetails;
@@ -180,10 +182,10 @@ public class BrokerServiceImpl implements BrokerService{
         return ResponseEntity.badRequest().body("No user found with provided user name");
     }
 
-    public String verifyAccount(String email, Integer otp) {
-        boolean brokerExists = brokerRepository.findByEmail(email).isPresent();
+    public String verifyAccount(String userName, Integer otp) {
+        boolean brokerExists = brokerRepository.findByUserName(userName).isPresent();
         if(brokerExists){
-            Optional<Broker> brokerObj = brokerRepository.findByEmail(email);
+            Optional<Broker> brokerObj = brokerRepository.findByUserName(userName);
             Broker broker = brokerObj.get();
 //            Integer otpInDatabase = broker.getOtp();
 //            Integer otpProvided = otp;
@@ -196,7 +198,7 @@ public class BrokerServiceImpl implements BrokerService{
                     broker.setOtp(null);
                     broker.setOtpGeneratedTime(null);
                     brokerRepository.save(broker);
-                    return "OTP verified you can login";
+                    return "OTP verified you can change password now";
                 }
                 else {
                     return "Please regenerate OTP";
@@ -213,7 +215,7 @@ public class BrokerServiceImpl implements BrokerService{
                 .orElseThrow(() -> new RuntimeException("Broker not found with this email: " + email));
         Integer otp = otpUtil.generateOtp();
         try {
-            emailUtil.sendOtpToEmail(email, otp);
+            emailUtil.verifyEmail(email, otp);
         } catch (MessagingException e) {
             throw new RuntimeException("Unable to send otp please try again");
         }
@@ -221,6 +223,32 @@ public class BrokerServiceImpl implements BrokerService{
         broker.setOtpGeneratedTime(LocalDateTime.now());
         brokerRepository.save(broker);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body("Email sent... please verify account within 1 minute");
-
     }
+
+    public ResponseEntity<String> changePassword(ResetPasswordDTO resetPasswordDTO) {
+        Broker broker = brokerRepository.findByEmail(resetPasswordDTO.getEmail())
+                .orElseThrow(() -> new RuntimeException("Broker not found with this email: " + resetPasswordDTO.getEmail()));
+        String oldPassword = resetPasswordDTO.getOldPassword();
+        String newPassword = resetPasswordDTO.getPassword();
+        Boolean isPasswordCorrect = broker.getPassword().equalsIgnoreCase(passwordEncoder.encode(oldPassword));
+        if(isPasswordCorrect){
+                broker.setPassword(newPassword);
+                brokerRepository.save(broker);
+               return  ResponseEntity.status(HttpStatus.CREATED).body("Password changed successfully");
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is wrong");
+        }
+    }
+
+    public ResponseEntity<String> createPassword(CreatePasswordDTO createPasswordDTO) {
+        Broker broker = brokerRepository.findByEmail(createPasswordDTO.getEmail())
+                .orElseThrow(() -> new RuntimeException("Broker not found with this email: " + createPasswordDTO.getEmail()));
+        String newPassword = createPasswordDTO.getPassword();
+        broker.setPassword(passwordEncoder.encode(newPassword));
+        brokerRepository.save(broker);
+        return ResponseEntity.status(HttpStatus.CREATED).body("Password created");
+    }
+
+
 }
