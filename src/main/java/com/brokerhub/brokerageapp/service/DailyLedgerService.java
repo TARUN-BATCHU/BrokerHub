@@ -1,4 +1,14 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.entity.DailyLedger;
+import org.springframework.http.ResponseEntity;
+
+import java.time.LocalDate;
+
 public interface DailyLedgerService {
+    public Long createDailyLedger(Long financialYearId);
+
+    public Long getDailyLedgerId(LocalDate date);
+
+    public DailyLedger getDailyLedger(LocalDate date);
 }

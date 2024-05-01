@@ -3,6 +3,7 @@ package com.brokerhub.brokerageapp.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
@@ -13,10 +14,10 @@ public class FinancialYear {
     private Long yearId;
 
     @NotNull
-    private Date start;
+    private LocalDate start;
 
     @NotNull
-    private Date end;
+    private LocalDate end;
 
     public Long getYearId() {
         return yearId;
@@ -26,19 +27,19 @@ public class FinancialYear {
         this.yearId = yearId;
     }
 
-    public Date getStart() {
+    public LocalDate getStart() {
         return start;
     }
 
-    public void setStart(Date start) {
+    public void setStart(LocalDate start) {
         this.start = start;
     }
 
-    public Date getEnd() {
+    public LocalDate getEnd() {
         return end;
     }
 
-    public void setEnd(Date end) {
+    public void setEnd(LocalDate end) {
         this.end = end;
     }
 }

@@ -6,6 +6,7 @@ import com.brokerhub.brokerageapp.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +28,8 @@ public interface UserService {
     List<User> getAllUsersHavingBrokerageInRange(int min, int max);
 
     Object getUserByProperty(String property, String value);
+
+    List<HashMap<String, Long>> getUserNamesAndIds();
+
+    List<String> getUserNames();
 }

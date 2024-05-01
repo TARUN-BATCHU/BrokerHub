@@ -3,6 +3,7 @@ package com.brokerhub.brokerageapp.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class DailyLedger {
     private Long dailyLedgerId;
 
     @NotNull
-    private Date date;
+    private LocalDate date;
 
     @ManyToOne
     private FinancialYear financialYear;
@@ -30,11 +31,11 @@ public class DailyLedger {
         this.dailyLedgerId = dailyLedgerId;
     }
 
-    public Date getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
