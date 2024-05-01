@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,6 +63,17 @@ public class UserController {
     @GetMapping("/")
     public Object getUserByProperty(@RequestParam String property, String value){
         return userService.getUserByProperty(property,value);
+    }
+
+    //for search bar we will fetch all usernames and ids and in searchbar we can give drop down and when he selects a user we can send id to backend
+    @GetMapping("/getUserNamesAndIds")
+    public List<HashMap<String,Long>> getUserNamesAndIds(){
+        return userService.getUserNamesAndIds();
+    }
+
+    @GetMapping("/getUserNames")
+    public List<String> getUserNames(){
+        return userService.getUserNames();
     }
 
 

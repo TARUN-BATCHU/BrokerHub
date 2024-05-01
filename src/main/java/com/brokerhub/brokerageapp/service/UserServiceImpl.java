@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,6 +153,30 @@ public class UserServiceImpl implements UserService {
         else{
             return HttpStatus.NOT_FOUND;
         }
+    }
+
+    public List<HashMap<String, Long>> getUserNamesAndIds() {
+        //TODO
+        // need to optimise this everytime when user clicks search bar we are taking all users and iterating all which will take lot of time
+        List<HashMap<String,Long>> UserNamesAndIds = null;
+        List<User> allUsers = userRepository.findAll();
+        for(int i=0; i<allUsers.size(); i++){
+            HashMap<String,Long> UserInfo = new HashMap<>();
+            UserInfo.put(allUsers.get(i).getFirmName(),allUsers.get(i).getUserId());
+            UserNamesAndIds.add(UserInfo);
+        }
+        return UserNamesAndIds;
+    }
+
+    public List<String> getUserNames() {
+        //TODO
+        // need to optimise this everytime when user clicks search bar we are taking all users and iterating all which will take lot of time
+        List<String> UserNames = null;
+        List<User> allUsers = userRepository.findAll();
+        for(int i=0; i<allUsers.size(); i++){
+            UserNames.add(allUsers.get(i).getFirmName());
+        }
+        return UserNames;
     }
 
 
