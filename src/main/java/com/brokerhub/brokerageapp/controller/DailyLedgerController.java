@@ -16,8 +16,8 @@ public class DailyLedgerController {
     DailyLedgerService dailyLedgerService;
 
     @PostMapping("/create")
-    public Long createDailyLedger(@RequestParam Long financialYearId){
-        return dailyLedgerService.createDailyLedger(financialYearId);
+    public Long createDailyLedger(@RequestParam Long financialYearId, @RequestParam LocalDate date){
+        return dailyLedgerService.createDailyLedger(financialYearId,date);
     }
 
     @GetMapping("/getDailyLedger")
