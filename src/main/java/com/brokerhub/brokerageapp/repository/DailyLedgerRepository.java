@@ -9,5 +9,5 @@ import java.util.Date;
 
 public interface DailyLedgerRepository extends JpaRepository<DailyLedger, Long> {
 
-    public LedgerDetails findByDate(LocalDate date);
+    public DailyLedger findByDate(LocalDate date);
 }

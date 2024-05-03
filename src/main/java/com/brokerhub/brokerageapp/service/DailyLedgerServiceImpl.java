@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 @Service
 public class DailyLedgerServiceImpl implements DailyLedgerService{
@@ -19,22 +20,26 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
     @Autowired
     FinancialYearRepository financialYearRepository;
 
-    public Long createDailyLedger(Long financialYearId){
-        if(null == dailyLedgerRepository.findByDate(LocalDate.now())){
-            DailyLedger dailyLedger = new DailyLedger();
-            dailyLedger.setDate(LocalDate.now());
+    public Long createDailyLedger(Long financialYearId, LocalDate date){
+        if(null != financialYearId && null!= date) {
             Optional<FinancialYear> financialYear = financialYearRepository.findById(financialYearId);
-            if(financialYear.isPresent()) {
-                dailyLedger.setFinancialYear(financialYear.get());
+            if (financialYear.isPresent() && (date.isEqual(financialYear.get().getStart()) || date.isEqual(financialYear.get().getEnd()) || (date.isAfter(financialYear.get().getStart()) && date.isBefore(financialYear.get().getEnd())))) {
+                if (null == dailyLedgerRepository.findByDate(date)) {
+                    DailyLedger dailyLedger = new DailyLedger();
+                    dailyLedger.setDate(date);
+                    dailyLedger.setFinancialYear(financialYear.get());
+                    dailyLedgerRepository.save(dailyLedger);
+                }
+                return dailyLedgerRepository.findByDate(date).getDailyLedgerId();
             }
-            dailyLedgerRepository.save(dailyLedger);
         }
-        return dailyLedgerRepository.findByDate(LocalDate.now()).getLedgerDetailsId();
+        return null;
     }
+
 
     public Long getDailyLedgerId(LocalDate date) {
         if(null != dailyLedgerRepository.findByDate(date)){
-            return dailyLedgerRepository.findByDate(date).getLedgerDetailsId();
+            return dailyLedgerRepository.findByDate(date).getDailyLedgerId();
         }
         else{
             //TODO if daily ledger not exists then create one.

@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import java.time.LocalDate;
 
 public interface DailyLedgerService {
-    public Long createDailyLedger(Long financialYearId);
+    public Long createDailyLedger(Long financialYearId,LocalDate date);
 
     public Long getDailyLedgerId(LocalDate date);
 
