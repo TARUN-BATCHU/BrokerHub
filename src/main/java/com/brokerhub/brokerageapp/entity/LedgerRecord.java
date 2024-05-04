@@ -22,21 +22,21 @@ public class LedgerRecord {
     private Product product;
 
     @PositiveOrZero
-    private int quantity;
+    private Long quantity;
 
     @PositiveOrZero
     @NotNull
-    private int brokerage;
+    private Long brokerage;
 
     @PositiveOrZero
-    private int productCost;
+    private Long productCost;
 
     @PositiveOrZero
-    private int totalProductsCost;
+    private Long totalProductsCost;
 
     @PositiveOrZero
     @NotNull
-    private int totalBrokerage;
+    private Long totalBrokerage;
 
     public Long getLedgerRecordId() {
         return ledgerRecordId;
@@ -70,43 +70,43 @@ public class LedgerRecord {
         this.product = product;
     }
 
-    public int getQuantity() {
+    public Long getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
+    public void setQuantity(Long quantity) {
         this.quantity = quantity;
     }
 
-    public int getBrokerage() {
+    public Long getBrokerage() {
         return brokerage;
     }
 
-    public void setBrokerage(int brokerage) {
+    public void setBrokerage(Long brokerage) {
         this.brokerage = brokerage;
     }
 
-    public int getProductCost() {
+    public Long getProductCost() {
         return productCost;
     }
 
-    public void setProductCost(int productCost) {
+    public void setProductCost(Long productCost) {
         this.productCost = productCost;
     }
 
-    public int getTotalProductsCost() {
+    public Long getTotalProductsCost() {
         return totalProductsCost;
     }
 
-    public void setTotalProductsCost(int totalProductsCost) {
+    public void setTotalProductsCost(Long totalProductsCost) {
         this.totalProductsCost = totalProductsCost;
     }
 
-    public int getTotalBrokerage() {
+    public Long getTotalBrokerage() {
         return totalBrokerage;
     }
 
-    public void setTotalBrokerage(int totalBrokerage) {
+    public void setTotalBrokerage(Long totalBrokerage) {
         this.totalBrokerage = totalBrokerage;
     }
 }

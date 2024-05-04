@@ -18,16 +18,33 @@ public class FinancialYearServiceImpl implements FinancialYearService{
     @Autowired
     FinancialYearRepository financialYearRepository;
 
-    public ResponseEntity<String> createFinancialYear(LocalDate start, LocalDate end) {
-        FinancialYear existingFinancialYear = financialYearRepository.findOverlappingYears(start,end);
-        if(null == financialYearRepository.findByStartAndEnd(start,end) && null==financialYearRepository.findOverlappingYears(start,end)){
-            FinancialYear financialYear = new FinancialYear();
-            financialYear.setStart(start);
-            financialYear.setEnd(end);
-            financialYearRepository.save(financialYear);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Financial year created");
+    public ResponseEntity<String> createFinancialYear(FinancialYear financialYear) {
+        List<FinancialYear> overlappingFinancialYear = financialYearRepository.findOverlappingYears(financialYear.getStart(),financialYear.getEnd());
+        List<FinancialYear> existingFinancialYear = financialYearRepository.findByStartAndEnd(financialYear.getStart(),financialYear.getEnd());
+        if(existingFinancialYear.size()<1 || overlappingFinancialYear.size()<1) {
+            if (false == financialYear.getForBills().booleanValue()) {
+                if ((existingFinancialYear == null || true == existingFinancialYear.get(0).getForBills().booleanValue()) && (overlappingFinancialYear == null || true == overlappingFinancialYear.get(0).getForBills().booleanValue())) {
+                    FinancialYear newFinancialYear = new FinancialYear();
+                    newFinancialYear.setStart(financialYear.getStart());
+                    newFinancialYear.setEnd(financialYear.getEnd());
+                    newFinancialYear.setFinancialYearName(financialYear.getFinancialYearName());
+                    newFinancialYear.setForBills(financialYear.getForBills());
+                    financialYearRepository.save(newFinancialYear);
+                    return ResponseEntity.status(HttpStatus.CREATED).body("Financial year created : " + newFinancialYear.getFinancialYearName());
+                } else {
+                    return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Already under financial year from :" + existingFinancialYear.get(0).getStart() + " to " + existingFinancialYear.get(0).getEnd());
+                }
+            } else {
+                FinancialYear newFinancialYear = new FinancialYear();
+                newFinancialYear.setStart(financialYear.getStart());
+                newFinancialYear.setEnd(financialYear.getEnd());
+                newFinancialYear.setFinancialYearName(financialYear.getFinancialYearName());
+                newFinancialYear.setForBills(financialYear.getForBills());
+                financialYearRepository.save(newFinancialYear);
+                return ResponseEntity.status(HttpStatus.CREATED).body("Financial year created : " + newFinancialYear.getFinancialYearName() + " for bills");
+            }
         }
-        return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Already under financial year from :"+existingFinancialYear.getStart()+" to "+existingFinancialYear.getEnd());
+        return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Already both with and withoutBill financial Years exists");
     }
 
     public List<Long> getAllFinancialYearIds() {
