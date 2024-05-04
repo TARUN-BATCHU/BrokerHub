@@ -19,6 +19,10 @@ public class FinancialYear {
     @NotNull
     private LocalDate end;
 
+    private String financialYearName;
+
+    private Boolean forBills;
+
     public Long getYearId() {
         return yearId;
     }
@@ -41,5 +45,21 @@ public class FinancialYear {
 
     public void setEnd(LocalDate end) {
         this.end = end;
+    }
+
+    public String getFinancialYearName() {
+        return financialYearName;
+    }
+
+    public void setFinancialYearName(String financialYearName) {
+        this.financialYearName = financialYearName;
+    }
+
+    public Boolean getForBills() {
+        return forBills;
+    }
+
+    public void setForBills(Boolean forBills) {
+        this.forBills = forBills;
     }
 }

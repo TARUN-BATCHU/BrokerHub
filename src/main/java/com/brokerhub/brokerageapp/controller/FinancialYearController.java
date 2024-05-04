@@ -17,8 +17,8 @@ public class FinancialYearController {
     FinancialYearService financialYearService;
 
     @PostMapping("/create")
-    public ResponseEntity<String> createFinancialYear(@RequestParam LocalDate start, @RequestParam LocalDate end){
-        return financialYearService.createFinancialYear(start,end);
+    public ResponseEntity<String> createFinancialYear(@RequestBody FinancialYear financialYear){
+        return financialYearService.createFinancialYear(financialYear);
         //TODO
         //if null then for bills logic
     }
