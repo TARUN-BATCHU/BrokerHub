@@ -4,17 +4,13 @@ public class LedgerRecordDTO {
 
     private String buyerName;
 
-    private String productName;
+    private Long productId;
 
-    private int productQuantity;
+    private Long quantity;
 
-    private String productQuality;
+    private Long brokerage;
 
-    private int quantity;
-
-    private int brokerage;
-
-    private int productCost;
+    private Long productCost;
 
     public String getBuyerName() {
         return buyerName;
@@ -24,51 +20,36 @@ public class LedgerRecordDTO {
         this.buyerName = buyerName;
     }
 
-    public String getProductName() {
-        return productName;
+
+    public Long getProductId() {
+        return productId;
     }
 
-    public void setProductName(String productName) {
-        this.productName = productName;
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 
-    public int getProductQuantity() {
-        return productQuantity;
-    }
-
-    public void setProductQuantity(int productQuantity) {
-        this.productQuantity = productQuantity;
-    }
-
-    public String getProductQuality() {
-        return productQuality;
-    }
-
-    public void setProductQuality(String productQuality) {
-        this.productQuality = productQuality;
-    }
-
-    public int getQuantity() {
+    public Long getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
+    public void setQuantity(Long quantity) {
         this.quantity = quantity;
     }
 
-    public int getBrokerage() {
+    public Long getBrokerage() {
         return brokerage;
     }
 
-    public void setBrokerage(int brokerage) {
+    public void setBrokerage(Long brokerage) {
         this.brokerage = brokerage;
     }
 
-    public int getProductCost() {
+    public Long getProductCost() {
         return productCost;
     }
 
-    public void setProductCost(int productCost) {
+    public void setProductCost(Long productCost) {
         this.productCost = productCost;
     }
 }
