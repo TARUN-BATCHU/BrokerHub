@@ -3,10 +3,7 @@ package com.brokerhub.brokerageapp.service;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
 import com.brokerhub.brokerageapp.dto.LedgerRecordDTO;
 import com.brokerhub.brokerageapp.entity.*;
-import com.brokerhub.brokerageapp.repository.LedgerDetailsRepository;
-import com.brokerhub.brokerageapp.repository.LedgerRecordRepository;
-import com.brokerhub.brokerageapp.repository.ProductRepository;
-import com.brokerhub.brokerageapp.repository.UserRepository;
+import com.brokerhub.brokerageapp.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,11 +35,18 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     @Autowired
     LedgerRecordRepository ledgerRecordRepository;
 
+    @Autowired
+    BrokerRepository brokerRepository;
+
     public ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO) {
         LocalDate date = ledgerDetailsDTO.getDate();
         DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(date);
         Long sellerId = ledgerDetailsDTO.getFromSeller();
         User seller = null;
+        Long sellerBrokerage = ledgerDetailsDTO.getBrokerage();
+//        if(sellerBrokerage<=0){sellerBrokerage= 1L;}
+        Long brokerId = ledgerDetailsDTO.getBrokerId();
+        Broker broker = brokerRepository.findById(brokerId).get();
         if(null!=sellerId){
             seller = userRepository.findById(sellerId).get();
         }
@@ -58,6 +62,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         Long totalBags = 0L;
         for(int i=0; i<ledgerRecordDTOList.size(); i++){
             Long brokerage = ledgerRecordDTOList.get(i).getBrokerage();
+//            if(brokerage<=0){brokerage= 1L;}
             Long quantity = ledgerRecordDTOList.get(i).getQuantity();
             Long productCost = ledgerRecordDTOList.get(i).getProductCost();
             LedgerRecord ledgerRecord = new LedgerRecord();
@@ -83,14 +88,15 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             buyer.setPayableAmount(buyer.getPayableAmount()+quantity*productCost);
             buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().add(totalBrokerage));
             seller.setReceivableAmount(seller.getReceivableAmount()+quantity*productCost);
-            //TODO
-            // need to get broker and update brokerage
+            broker.setTotalBrokerage(broker.getTotalBrokerage().add(totalBrokerage));
             userRepository.save(seller);
             userRepository.save(buyer);
             ledgerDetailsRepository.save(ledgerDetails);
             ledgerRecordRepository.save(ledgerRecord);
         }
         seller.setTotalBagsSold(seller.getTotalBagsSold()+totalBags);
+        seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+        broker.setTotalBrokerage(broker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
         userRepository.save(seller);
         ledgerDetailsRepository.save(ledgerDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
