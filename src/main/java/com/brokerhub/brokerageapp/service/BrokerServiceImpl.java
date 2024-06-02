@@ -7,6 +7,7 @@ import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
 import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.BankDetails;
 import com.brokerhub.brokerageapp.entity.Broker;
+import com.brokerhub.brokerageapp.entity.User;
 import com.brokerhub.brokerageapp.mapper.BrokerDTOMapper;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -128,9 +130,13 @@ public class BrokerServiceImpl implements BrokerService{
     }
 
     public BigDecimal calculateTotalBrokerage(Long brokerId) {
-        //TODO
-        //after implementation of daily ledger
-        return null;
+        List<User> users = userService.getAllUserDetails();
+        BigDecimal total = BigDecimal.valueOf(0);
+        for(User user : users){
+            total.add(user.getTotalPayableBrokerage());
+        }
+        return total;
+        //TODO is it fine or should we get from after iterating all daily ledgers
     }
 
     public BigDecimal getTotalBrokerage(Long brokerId) {

@@ -107,6 +107,16 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    public List<User> getAllUserDetails() {
+        List<User> allUsers = userRepository.findAll();
+        if(allUsers.size()>=1){
+            return allUsers;
+        }
+        else{
+            return null;
+        }
+    }
+
     public Object getAllUsersByCity(String city) {
         boolean isCityExists = addressService.isCityExists(city);
         if (!isCityExists) {

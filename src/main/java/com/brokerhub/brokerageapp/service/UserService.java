@@ -19,6 +19,8 @@ public interface UserService {
 
     List<User> getAllUsers(Pageable pageable);
 
+    List<User> getAllUserDetails();
+
     Object getAllUsersByCity(String city);
 
     Optional<User> getUserById(Long userId);
