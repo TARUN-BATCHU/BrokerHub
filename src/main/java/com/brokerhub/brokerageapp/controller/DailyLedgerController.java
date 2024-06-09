@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileNotFoundException;
 import java.time.LocalDate;
 
 @RestController
@@ -24,4 +25,7 @@ public class DailyLedgerController {
     public DailyLedger getDailyLedger(@RequestParam LocalDate date){
         return dailyLedgerService.getDailyLedger(date);
     }
+
+    @GetMapping("/getDailyLedgerOnDate")
+    public DailyLedger getDailyLedgerOnDate(@RequestParam LocalDate date) throws FileNotFoundException {return dailyLedgerService.getDailyLedgerOnDate(date);}
 }

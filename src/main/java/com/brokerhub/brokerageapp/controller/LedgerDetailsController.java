@@ -23,7 +23,7 @@ public class LedgerDetailsController {
     }
 
     @GetMapping("/getAllLedgerDetails")
-    public List<LedgerDetailsDTO> getAllLedgerDetails(@RequestBody Long brokerId){
+    public List<LedgerDetails> getAllLedgerDetails(@RequestBody Long brokerId){
         return ledgerDetailsService.getAllLedgerDetails();
     }
 
@@ -32,28 +32,28 @@ public class LedgerDetailsController {
         return ledgerDetailsService.getLedgerDetailById(ledgerDetailId,brokerId);
     }
 
-    @GetMapping("/getLedgerDetailsByDate")
-    public List<LedgerDetailsDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
-        return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
-    }
-
-    @GetMapping("/getLedgerDetailsBySeller")
-    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
-        return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
-    }
-
-    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")
-    public List<LedgerDetailsDTO> getAllLedgerDetailsOfAllUsersFromCity(@RequestParam String city,@RequestParam Long brokerId,){
-        return ledgerDetailsService.getAllLedgerDetailsOfAllUsersFromCity(city,brokerId);
-    }
-
-    @DeleteMapping("/deleteLedgerDetail")
-    public ResponseEntity<String> deleteLedgerDetailById(@RequestParam Long ledgerDetailId,@RequestParam Long brokerId){
-        return ledgerDetailsService.deleteLedgerDetailById(ledgerDetailId,brokerId);
-    }
-
-    @PutMapping("/updateLedgerDetailById")
-    public LedgerDetails updateLedgerDetailById(@RequestParam Long ledgerDetailId,@RequestBody LedgerDetailsDTO ledgerDetailsDTO,@RequestParam Long brokerId){
-        return ledgerDetailsService.updateLedgerDetailById(ledgerDetailId,ledgerDetailsDTO,brokerId);
-    }
+//    @GetMapping("/getLedgerDetailsByDate")
+//    public List<LedgerDetailsDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
+//        return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
+//    }
+//
+//    @GetMapping("/getLedgerDetailsBySeller")
+//    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
+//        return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
+//    }
+//
+//    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")
+//    public List<LedgerDetailsDTO> getAllLedgerDetailsOfAllUsersFromCity(@RequestParam String city,@RequestParam Long brokerId,){
+//        return ledgerDetailsService.getAllLedgerDetailsOfAllUsersFromCity(city,brokerId);
+//    }
+//
+//    @DeleteMapping("/deleteLedgerDetail")
+//    public ResponseEntity<String> deleteLedgerDetailById(@RequestParam Long ledgerDetailId,@RequestParam Long brokerId){
+//        return ledgerDetailsService.deleteLedgerDetailById(ledgerDetailId,brokerId);
+//    }
+//
+//    @PutMapping("/updateLedgerDetailById")
+//    public LedgerDetails updateLedgerDetailById(@RequestParam Long ledgerDetailId,@RequestBody LedgerDetailsDTO ledgerDetailsDTO,@RequestParam Long brokerId){
+//        return ledgerDetailsService.updateLedgerDetailById(ledgerDetailId,ledgerDetailsDTO,brokerId);
+//    }
 }
