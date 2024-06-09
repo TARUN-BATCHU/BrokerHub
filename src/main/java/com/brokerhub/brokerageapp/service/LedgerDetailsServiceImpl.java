@@ -101,4 +101,23 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         ledgerDetailsRepository.save(ledgerDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
     }
+
+
+    public List<LedgerDetails> getAllLedgerDetails() {
+        List<LedgerDetails> ledgerDetails = ledgerDetailsRepository.findAll();
+        if(ledgerDetails.size()>0){
+            return ledgerDetails;
+        }
+        return null;
+    }
+
+
+    public LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId) {
+        LedgerDetails ledger = ledgerDetailsRepository.findById(ledgerDetailId).get();
+        if(null!=ledger){
+            return ledger;
+        }
+        return null;
+    }
+
 }

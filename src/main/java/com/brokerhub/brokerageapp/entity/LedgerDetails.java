@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -18,6 +19,7 @@ public class LedgerDetails {
     private User fromSeller;
 
     @ManyToOne
+    @JsonIgnore
     private DailyLedger dailyLedger;
 
     @OneToMany(mappedBy = "ledgerDetails")
