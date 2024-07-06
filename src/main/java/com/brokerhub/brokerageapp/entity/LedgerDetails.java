@@ -3,10 +3,18 @@ package com.brokerhub.brokerageapp.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class LedgerDetails {
 
     @Id
@@ -25,35 +33,4 @@ public class LedgerDetails {
     @OneToMany(mappedBy = "ledgerDetails")
     private List<LedgerRecord> records;
 
-    public Long getLedgerDetailsId() {
-        return ledgerDetailsId;
-    }
-
-    public void setLedgerDetailsId(Long ledgerDetailsId) {
-        this.ledgerDetailsId = ledgerDetailsId;
-    }
-
-    public User getFromSeller() {
-        return fromSeller;
-    }
-
-    public void setFromSeller(User fromSeller) {
-        this.fromSeller = fromSeller;
-    }
-
-    public DailyLedger getDailyLedger() {
-        return dailyLedger;
-    }
-
-    public void setDailyLedger(DailyLedger dailyLedger) {
-        this.dailyLedger = dailyLedger;
-    }
-
-    public List<LedgerRecord> getRecords() {
-        return records;
-    }
-
-    public void setRecords(List<LedgerRecord> records) {
-        this.records = records;
-    }
 }

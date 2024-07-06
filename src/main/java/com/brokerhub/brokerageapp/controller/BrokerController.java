@@ -33,6 +33,7 @@ public class BrokerController {
     }
 
     @PostMapping("/createBroker")
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
         return brokerService.createBroker(brokerDTO);
     }
