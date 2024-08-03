@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.controller;
 
+import com.brokerhub.brokerageapp.dto.DisplayLedgerDetailDTO;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
 import com.brokerhub.brokerageapp.service.LedgerDetailsService;
@@ -32,11 +33,11 @@ public class LedgerDetailsController {
         return ledgerDetailsService.getLedgerDetailById(ledgerDetailId,brokerId);
     }
 
-//    @GetMapping("/getLedgerDetailsByDate")
-//    public List<LedgerDetailsDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
-//        return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
-//    }
-//
+    @GetMapping("/getLedgerDetailsByDate")
+    public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
+        return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
+    }
+
 //    @GetMapping("/getLedgerDetailsBySeller")
 //    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
 //        return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);

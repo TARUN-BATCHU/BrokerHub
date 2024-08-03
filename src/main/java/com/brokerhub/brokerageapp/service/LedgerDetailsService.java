@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.DisplayLedgerDetailDTO;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
 import org.springframework.http.ResponseEntity;
@@ -14,4 +15,5 @@ public interface LedgerDetailsService {
 
     LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId);
 
+    List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId);
 }
