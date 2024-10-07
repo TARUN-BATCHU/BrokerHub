@@ -2,11 +2,19 @@ package com.brokerhub.brokerageapp.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class FinancialYear {
 
     @Id
@@ -23,43 +31,4 @@ public class FinancialYear {
 
     private Boolean forBills;
 
-    public Long getYearId() {
-        return yearId;
-    }
-
-    public void setYearId(Long yearId) {
-        this.yearId = yearId;
-    }
-
-    public LocalDate getStart() {
-        return start;
-    }
-
-    public void setStart(LocalDate start) {
-        this.start = start;
-    }
-
-    public LocalDate getEnd() {
-        return end;
-    }
-
-    public void setEnd(LocalDate end) {
-        this.end = end;
-    }
-
-    public String getFinancialYearName() {
-        return financialYearName;
-    }
-
-    public void setFinancialYearName(String financialYearName) {
-        this.financialYearName = financialYearName;
-    }
-
-    public Boolean getForBills() {
-        return forBills;
-    }
-
-    public void setForBills(Boolean forBills) {
-        this.forBills = forBills;
-    }
 }

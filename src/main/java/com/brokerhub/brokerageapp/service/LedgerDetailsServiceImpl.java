@@ -1,7 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
-import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
-import com.brokerhub.brokerageapp.dto.LedgerRecordDTO;
+import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class LedgerDetailsServiceImpl implements LedgerDetailsService{
@@ -101,4 +102,70 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         ledgerDetailsRepository.save(ledgerDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
     }
+
+
+    public List<LedgerDetails> getAllLedgerDetails() {
+        List<LedgerDetails> ledgerDetails = ledgerDetailsRepository.findAll();
+        if(ledgerDetails.size()>0){
+            return ledgerDetails;
+        }
+        return null;
+    }
+
+
+    public LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId) {
+        LedgerDetails ledger = ledgerDetailsRepository.findById(ledgerDetailId).get();
+        if(null!=ledger){
+            return ledger;
+        }
+        return null;
+    }
+
+    public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId) {
+        List<DisplayLedgerDetailDTO> ledgerDetailsDTOList = new ArrayList<>();
+
+        List<DateLedgerRecordDTO> ledgerRecordsOnDate = ledgerDetailsRepository.findLedgersOnDate(date);
+
+        for(DateLedgerRecordDTO dateLedgerRecord : ledgerRecordsOnDate){
+            DisplayLedgerDetailDTO existingLedgerDetail = checkSellerExists(ledgerDetailsDTOList,userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());
+            if(null==existingLedgerDetail){
+                DisplayLedgerDetailDTO ledgerDetailsDTO = new DisplayLedgerDetailDTO();
+
+                ledgerDetailsDTO.setDate(date);
+                //ledgerDetailsDTO.setBrokerage();
+                //ledgerDetailsDTO.setBrokerId();
+                ledgerDetailsDTO.setSellerName(userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());
+
+                List<DisplayLedgerRecordDTO> ledgerRecordDTOList = new ArrayList<>();
+                DisplayLedgerRecordDTO ledgerRecordDTO = new DisplayLedgerRecordDTO();
+                ledgerRecordDTO.setBrokerage(dateLedgerRecord.getBrokerage());
+                ledgerRecordDTO.setBuyerName(userRepository.findById(dateLedgerRecord.getBuyerId()).get().getFirmName());
+                ledgerRecordDTO.setQuantity(dateLedgerRecord.getQuantity());
+                ledgerRecordDTO.setProductName(productRepository.findById(dateLedgerRecord.getProductId()).get().getProductName());
+                ledgerRecordDTO.setProductCost(dateLedgerRecord.getProductCost());
+                ledgerRecordDTO.setTotal(dateLedgerRecord.getQuantity()*dateLedgerRecord.getProductCost());
+                ledgerRecordDTOList.add(ledgerRecordDTO);
+
+                ledgerDetailsDTO.setDisplayLedgerRecordDTOList(ledgerRecordDTOList);
+                ledgerDetailsDTOList.add(ledgerDetailsDTO);
+            }else{
+
+                DisplayLedgerRecordDTO ledgerRecordDTO = new DisplayLedgerRecordDTO();
+                ledgerRecordDTO.setBrokerage(dateLedgerRecord.getBrokerage());
+                ledgerRecordDTO.setBuyerName(userRepository.findById(dateLedgerRecord.getBuyerId()).get().getFirmName());
+                ledgerRecordDTO.setQuantity(dateLedgerRecord.getQuantity());
+                ledgerRecordDTO.setProductName(productRepository.findById(dateLedgerRecord.getProductId()).get().getProductName());
+                ledgerRecordDTO.setProductCost(dateLedgerRecord.getProductCost());
+                ledgerRecordDTO.setTotal(dateLedgerRecord.getQuantity()*dateLedgerRecord.getProductCost());
+
+                existingLedgerDetail.getDisplayLedgerRecordDTOList().add(ledgerRecordDTO);
+            }
+        }
+        return ledgerDetailsDTOList;
+    }
+
+    private DisplayLedgerDetailDTO checkSellerExists(List<DisplayLedgerDetailDTO> ledgerDetailsDTOList,String sellerName) {
+        return ledgerDetailsDTOList.stream().filter(ld -> ld.getSellerName().equalsIgnoreCase(sellerName)).findFirst().orElse(null);
+    }
+
 }

@@ -5,11 +5,19 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
 public class User {
@@ -61,132 +69,4 @@ public class User {
     private BigDecimal totalPayableBrokerage;
 
     private String shopNumber;
-
-    public String getShopNumber() {
-        return shopNumber;
-    }
-
-    public void setShopNumber(String shopNumber) {
-        this.shopNumber = shopNumber;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public String getUserType() {
-        return userType;
-    }
-
-    public void setUserType(String userType) {
-        this.userType = userType;
-    }
-
-    public String getGstNumber() {
-        return gstNumber;
-    }
-
-    public void setGstNumber(String gstNumber) {
-        this.gstNumber = gstNumber;
-    }
-
-    public String getFirmName() {
-        return firmName;
-    }
-
-    public void setFirmName(String firmName) {
-        this.firmName = firmName;
-    }
-
-    public String getOwnerName() {
-        return ownerName;
-    }
-
-    public void setOwnerName(String ownerName) {
-        this.ownerName = ownerName;
-    }
-
-    public Address getAddress() {
-        return address;
-    }
-
-    public void setAddress(Address address) {
-        this.address = address;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public BankDetails getBankDetails() {
-        return bankDetails;
-    }
-
-    public void setBankDetails(BankDetails bankDetails) {
-        this.bankDetails = bankDetails;
-    }
-
-    public List<String> getPhoneNumbers() {
-        return phoneNumbers;
-    }
-
-    public void setPhoneNumbers(List<String> phoneNumbers) {
-        this.phoneNumbers = phoneNumbers;
-    }
-
-    public Integer getBrokerageRate() {
-        return brokerageRate;
-    }
-
-    public void setBrokerageRate(Integer brokerageRate) {
-        this.brokerageRate = brokerageRate;
-    }
-
-    public Long getTotalBagsSold() {
-        return totalBagsSold;
-    }
-
-    public void setTotalBagsSold(Long totalBagsSold) {
-        this.totalBagsSold = totalBagsSold;
-    }
-
-    public Long getTotalBagsBought() {
-        return totalBagsBought;
-    }
-
-    public void setTotalBagsBought(Long totalBagsBought) {
-        this.totalBagsBought = totalBagsBought;
-    }
-
-    public Long getPayableAmount() {
-        return payableAmount;
-    }
-
-    public void setPayableAmount(Long payableAmount) {
-        this.payableAmount = payableAmount;
-    }
-
-    public Long getReceivableAmount() {
-        return receivableAmount;
-    }
-
-    public void setReceivableAmount(Long receivableAmount) {
-        this.receivableAmount = receivableAmount;
-    }
-
-    public BigDecimal getTotalPayableBrokerage() {
-        return totalPayableBrokerage;
-    }
-
-    public void setTotalPayableBrokerage(BigDecimal totalPayableBrokerage) {
-        this.totalPayableBrokerage = totalPayableBrokerage;
-    }
 }

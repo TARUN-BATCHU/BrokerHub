@@ -9,11 +9,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class LedgerRecordDTO {
+public class DisplayLedgerRecordDTO {
 
     private String buyerName;
 
-    private Long productId;
+    private String location;
+
+    private String productName;
 
     private Long quantity;
 
@@ -21,4 +23,5 @@ public class LedgerRecordDTO {
 
     private Long productCost;
 
+    private Long total;
 }

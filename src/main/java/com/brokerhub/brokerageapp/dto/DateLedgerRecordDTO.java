@@ -9,16 +9,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class LedgerRecordDTO {
+public class DateLedgerRecordDTO {
 
-    private String buyerName;
 
+    private Long sellerId;
+    private Long ledgerDetailsId;
+    private Long buyerId;
     private Long productId;
-
     private Long quantity;
-
     private Long brokerage;
-
     private Long productCost;
+
 
 }

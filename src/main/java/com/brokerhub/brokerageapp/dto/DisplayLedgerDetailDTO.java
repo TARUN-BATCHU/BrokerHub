@@ -1,6 +1,5 @@
 package com.brokerhub.brokerageapp.dto;
 
-import com.brokerhub.brokerageapp.entity.LedgerRecord;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,15 +12,15 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class LedgerDetailsDTO {
+public class DisplayLedgerDetailDTO {
 
-    private Long brokerId;
+    private String brokerName;
 
     private Long brokerage;
 
-    private Long fromSeller;
+    private String sellerName;
 
     private LocalDate date;
 
-    private List<LedgerRecordDTO> ledgerRecordDTOList;
+    private List<DisplayLedgerRecordDTO> displayLedgerRecordDTOList;
 }
