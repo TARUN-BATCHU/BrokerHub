@@ -1,9 +1,6 @@
 package com.brokerhub.brokerageapp.controller;
 
-import com.brokerhub.brokerageapp.dto.BrokerDTO;
-import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
-import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
-import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
+import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.service.BrokerService;
 import jakarta.validation.Valid;
@@ -21,6 +18,14 @@ public class BrokerController {
 
     @Autowired
     BrokerService brokerService;
+
+    @PostMapping("/login")
+    public ResponseEntity login(@RequestBody BrokerLoginDTO brokerLoginDTO){
+        if(null == brokerLoginDTO.getUserName() || null == brokerLoginDTO.getPassword()){
+            return new ResponseEntity("Username or password is missing",HttpStatus.BAD_REQUEST);
+        }
+        return brokerService.login(brokerLoginDTO);
+    }
 
     @GetMapping("/")
     public String home(){

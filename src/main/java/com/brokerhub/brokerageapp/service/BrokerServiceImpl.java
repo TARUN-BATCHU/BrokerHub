@@ -1,9 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
-import com.brokerhub.brokerageapp.dto.BrokerDTO;
-import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
-import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
-import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
+import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.BankDetails;
 import com.brokerhub.brokerageapp.entity.Broker;
@@ -236,9 +233,9 @@ public class BrokerServiceImpl implements BrokerService{
                 .orElseThrow(() -> new RuntimeException("Broker not found with this email: " + resetPasswordDTO.getEmail()));
         String oldPassword = resetPasswordDTO.getOldPassword();
         String newPassword = resetPasswordDTO.getPassword();
-        Boolean isPasswordCorrect = broker.getPassword().equalsIgnoreCase(passwordEncoder.encode(oldPassword));
+        Boolean isPasswordCorrect = passwordEncoder.matches(oldPassword, broker.getPassword());
         if(isPasswordCorrect){
-                broker.setPassword(newPassword);
+                broker.setPassword(passwordEncoder.encode(newPassword));
                 brokerRepository.save(broker);
                return  ResponseEntity.status(HttpStatus.CREATED).body("Password changed successfully");
         }
@@ -254,6 +251,19 @@ public class BrokerServiceImpl implements BrokerService{
         broker.setPassword(passwordEncoder.encode(newPassword));
         brokerRepository.save(broker);
         return ResponseEntity.status(HttpStatus.CREATED).body("Password created");
+    }
+
+    public ResponseEntity login(BrokerLoginDTO brokerLoginDTO){
+        Broker broker = brokerRepository.findByUserName(brokerLoginDTO.getUserName()).orElseThrow(() -> new RuntimeException("Broker not found with this userName: " + brokerLoginDTO.getUserName()));
+        String password = brokerLoginDTO.getPassword();
+        Boolean isPasswordCorrect = passwordEncoder.matches(password, broker.getPassword());
+        String brokerId = broker.getBrokerId().toString();
+        if(isPasswordCorrect){
+            return ResponseEntity.ok().body("Login successful "+brokerId);
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is wrong");
+        }
     }
 
 

@@ -12,4 +12,6 @@ public interface BankDetailsService {
     BankDetails getBankDetailsByAccountNumber(String accountNumber);
 
     boolean ifBankDetailsExists(String accountNumber);
+
+    BankDetails saveBankDetails(BankDetails bankDetails);
 }

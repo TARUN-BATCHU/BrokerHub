@@ -1,13 +1,18 @@
 package com.brokerhub.brokerageapp.controller;
 
+import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
 import com.brokerhub.brokerageapp.entity.User;
 import com.brokerhub.brokerageapp.service.UserService;
+import com.brokerhub.brokerageapp.utils.ExcelTemplateGenerator;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +28,45 @@ public class UserController {
     @PostMapping("/createUser")
     public ResponseEntity<String> createUser(@Valid @RequestBody UserDTO userDTO){
         return userService.createUser(userDTO);
+    }
+
+    @PostMapping(value = "/bulkUpload", consumes = "multipart/form-data")
+    public ResponseEntity<BulkUploadResponseDTO> bulkUploadUsers(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                BulkUploadResponseDTO response = BulkUploadResponseDTO.builder()
+                        .totalRecords(0)
+                        .successfulRecords(0)
+                        .failedRecords(0)
+                        .errorMessages(List.of("Please select a file to upload"))
+                        .message("No file selected")
+                        .build();
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            BulkUploadResponseDTO response = userService.bulkUploadUsers(file);
+
+            if (response.getSuccessfulRecords() > 0) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+        } catch (Exception e) {
+            BulkUploadResponseDTO errorResponse = BulkUploadResponseDTO.builder()
+                    .totalRecords(0)
+                    .successfulRecords(0)
+                    .failedRecords(0)
+                    .errorMessages(List.of("Server error: " + e.getMessage()))
+                    .message("Upload failed")
+                    .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/downloadTemplate")
+    public ResponseEntity<ByteArrayResource> downloadBulkUploadTemplate() {
+        return ExcelTemplateGenerator.generateTemplate();
     }
 
     @PutMapping("/updateUser")

@@ -23,4 +23,9 @@ public class AddressServiceImpl implements AddressService{
         Address address = addressRepository.findByPincode(pincode);
         return address;
     }
+
+    @Override
+    public Address saveAddress(Address address) {
+        return addressRepository.save(address);
+    }
 }

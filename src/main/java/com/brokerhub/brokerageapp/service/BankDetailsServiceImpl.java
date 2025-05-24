@@ -43,6 +43,8 @@ public class BankDetailsServiceImpl implements BankDetailsService{
         return true;
     }
 
-
-
+    @Override
+    public BankDetails saveBankDetails(BankDetails bankDetails) {
+        return bankDetailsRepository.save(bankDetails);
+    }
 }

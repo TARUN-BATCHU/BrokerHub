@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
 import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.BankDetails;
@@ -9,17 +10,17 @@ import com.brokerhub.brokerageapp.mapper.UserDTOMapper;
 import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
 import com.brokerhub.brokerageapp.constants.Constants;
+import com.brokerhub.brokerageapp.utils.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -55,6 +56,38 @@ public class UserServiceImpl implements UserService {
             user.setTotalBagsBought(0L);
             user.setTotalBagsSold(0L);
             user.setTotalPayableBrokerage(BigDecimal.valueOf(0));
+
+            // Handle address creation if pincode is provided
+            if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
+                Address address = addressService.findAddressByPincode(userDTO.getPincode());
+                if(address == null) {
+                    // Create a new address if not found
+                    address = new Address();
+                    address.setPincode(userDTO.getPincode());
+                    if(userDTO.getCity() != null) address.setCity(userDTO.getCity());
+                    if(userDTO.getArea() != null) address.setArea(userDTO.getArea());
+                    // Save the address first
+                    address = addressService.saveAddress(address);
+                }
+                user.setAddress(address);
+            }
+
+            // Handle bank details creation
+            if(userDTO.getAccountNumber() != null && !userDTO.getAccountNumber().trim().isEmpty()) {
+                BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+                if(bankDetails == null) {
+                    // Create new bank details if not found
+                    bankDetails = new BankDetails();
+                    bankDetails.setAccountNumber(userDTO.getAccountNumber());
+                    if(userDTO.getBankName() != null) bankDetails.setBankName(userDTO.getBankName());
+                    if(userDTO.getIfscCode() != null) bankDetails.setIfscCode(userDTO.getIfscCode());
+                    if(userDTO.getBranch() != null) bankDetails.setBranch(userDTO.getBranch());
+                    // Save the bank details first
+                    bankDetails = bankDetailsService.saveBankDetails(bankDetails);
+                }
+                user.setBankDetails(bankDetails);
+            }
+
             if(userDTO.getUserType() != null && userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
                 user.setUserType("MILLER");
                 Miller miller = new Miller();
@@ -238,6 +271,117 @@ public class UserServiceImpl implements UserService {
             return false;
         }
         return true;
+    }
 
+    @Override
+    public BulkUploadResponseDTO bulkUploadUsers(MultipartFile file) {
+        List<String> errorMessages = new ArrayList<>();
+        int totalRecords = 0;
+        int successfulRecords = 0;
+        int failedRecords = 0;
+
+        try {
+            // Validate file format
+            if (!ExcelUtil.hasExcelFormat(file)) {
+                return BulkUploadResponseDTO.builder()
+                        .totalRecords(0)
+                        .successfulRecords(0)
+                        .failedRecords(0)
+                        .errorMessages(Arrays.asList("Please upload a valid Excel file (.xlsx)"))
+                        .message("Invalid file format")
+                        .build();
+            }
+
+            // Parse Excel file
+            List<UserDTO> userDTOs = ExcelUtil.excelToUserDTOs(file.getInputStream());
+            totalRecords = userDTOs.size();
+
+            if (totalRecords == 0) {
+                return BulkUploadResponseDTO.builder()
+                        .totalRecords(0)
+                        .successfulRecords(0)
+                        .failedRecords(0)
+                        .errorMessages(Arrays.asList("No valid user records found in the Excel file"))
+                        .message("No data to process")
+                        .build();
+            }
+
+            // Process each user
+            for (int i = 0; i < userDTOs.size(); i++) {
+                UserDTO userDTO = userDTOs.get(i);
+                int rowNumber = i + 2; // +2 because Excel rows start from 1 and we skip header
+
+                try {
+                    // Validate required fields
+                    if (userDTO.getFirmName() == null || userDTO.getFirmName().trim().isEmpty()) {
+                        errorMessages.add("Row " + rowNumber + ": Firm name is required");
+                        failedRecords++;
+                        continue;
+                    }
+
+                    // Check if user already exists
+                    if (checkUserFirmExists(userDTO.getFirmName()) ||
+                        (userDTO.getGstNumber() != null && checkUserGSTNumberExists(userDTO.getGstNumber()))) {
+                        errorMessages.add("Row " + rowNumber + ": User with firm name '" +
+                                        userDTO.getFirmName() + "' or GST number already exists");
+                        failedRecords++;
+                        continue;
+                    }
+
+                    // Set default values if not provided
+                    if (userDTO.getUserType() == null || userDTO.getUserType().trim().isEmpty()) {
+                        userDTO.setUserType("TRADER");
+                    }
+
+                    // Create user
+                    ResponseEntity response = createUser(userDTO);
+                    if (response.getStatusCode() == HttpStatus.CREATED) {
+                        successfulRecords++;
+                    } else {
+                        errorMessages.add("Row " + rowNumber + ": " + response.getBody());
+                        failedRecords++;
+                    }
+
+                } catch (Exception e) {
+                    errorMessages.add("Row " + rowNumber + ": Error processing user - " + e.getMessage());
+                    failedRecords++;
+                }
+            }
+
+        } catch (IOException e) {
+            return BulkUploadResponseDTO.builder()
+                    .totalRecords(0)
+                    .successfulRecords(0)
+                    .failedRecords(0)
+                    .errorMessages(Arrays.asList("Error reading Excel file: " + e.getMessage()))
+                    .message("File processing failed")
+                    .build();
+        } catch (Exception e) {
+            return BulkUploadResponseDTO.builder()
+                    .totalRecords(totalRecords)
+                    .successfulRecords(successfulRecords)
+                    .failedRecords(failedRecords)
+                    .errorMessages(Arrays.asList("Unexpected error: " + e.getMessage()))
+                    .message("Bulk upload failed")
+                    .build();
+        }
+
+        // Prepare response message
+        String message;
+        if (failedRecords == 0) {
+            message = "All users uploaded successfully";
+        } else if (successfulRecords == 0) {
+            message = "No users were uploaded";
+        } else {
+            message = "Partial success: " + successfulRecords + " users uploaded, " + failedRecords + " failed";
+        }
+
+        return BulkUploadResponseDTO.builder()
+                .totalRecords(totalRecords)
+                .successfulRecords(successfulRecords)
+                .failedRecords(failedRecords)
+                .errorMessages(errorMessages)
+                .message(message)
+                .build();
     }
 }

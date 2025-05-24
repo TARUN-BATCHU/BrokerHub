@@ -1,10 +1,12 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
 import com.brokerhub.brokerageapp.entity.Address;
 import com.brokerhub.brokerageapp.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -34,4 +36,6 @@ public interface UserService {
     List<HashMap<String, Long>> getUserNamesAndIds();
 
     List<String> getUserNames();
+
+    BulkUploadResponseDTO bulkUploadUsers(MultipartFile file);
 }
