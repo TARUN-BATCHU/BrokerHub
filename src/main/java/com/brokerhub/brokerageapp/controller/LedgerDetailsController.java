@@ -23,6 +23,11 @@ public class LedgerDetailsController {
         return ledgerDetailsService.createLedgerDetails(ledgerDetailsDTO);
     }
 
+//    @PostMapping("/createLedgerDetailsUsingExcel")
+//    public ResponseEntity<String> createLedgerDetailsUsingExcel(@RequestBody String filePath){
+//        return ledgerDetailsService.createLedgerDetailsUsingExcel(filePath);
+//    }
+
     @GetMapping("/getAllLedgerDetails")
     public List<LedgerDetails> getAllLedgerDetails(@RequestBody Long brokerId){
         return ledgerDetailsService.getAllLedgerDetails();
@@ -38,10 +43,10 @@ public class LedgerDetailsController {
         return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
     }
 
-//    @GetMapping("/getLedgerDetailsBySeller")
-//    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
-//        return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
-//    }
+    @GetMapping("/getLedgerDetailsBySeller")
+    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
+        return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
+    }
 //
 //    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")
 //    public List<LedgerDetailsDTO> getAllLedgerDetailsOfAllUsersFromCity(@RequestParam String city,@RequestParam Long brokerId,){
@@ -56,5 +61,11 @@ public class LedgerDetailsController {
 //    @PutMapping("/updateLedgerDetailById")
 //    public LedgerDetails updateLedgerDetailById(@RequestParam Long ledgerDetailId,@RequestBody LedgerDetailsDTO ledgerDetailsDTO,@RequestParam Long brokerId){
 //        return ledgerDetailsService.updateLedgerDetailById(ledgerDetailId,ledgerDetailsDTO,brokerId);
+//    }
+
+    //update the brokerage for all the transactions for a particular product
+//    @PutMapping("/updateBrokerageForAProduct")
+//    public LedgerDetails updateBrokerageForAProduct(@RequestParam Long productId,@RequestParam Long brokerage,@RequestParam Long brokerId){
+//        return ledgerDetailsService.updateBrokerageForAProduct(productId,brokerage,brokerId);
 //    }
 }

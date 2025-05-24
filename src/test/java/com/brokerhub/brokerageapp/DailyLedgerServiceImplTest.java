@@ -40,12 +40,17 @@ class DailyLedgerServiceImplTest {
         financialYear.setStart(LocalDate.of(2023, 1, 1));
         financialYear.setEnd(LocalDate.of(2023, 12, 31));
 
+        DailyLedger savedDailyLedger = new DailyLedger();
+        savedDailyLedger.setDailyLedgerId(1L);
+        savedDailyLedger.setDate(date);
+
         when(financialYearRepository.findById(financialYearId)).thenReturn(Optional.of(financialYear));
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(null);
+        when(dailyLedgerRepository.findByDate(date)).thenReturn(null).thenReturn(savedDailyLedger);
 
         Long ledgerId = dailyLedgerServiceImpl.createDailyLedger(financialYearId, date);
 
         assertNotNull(ledgerId);
+        assertEquals(1L, ledgerId);
         verify(dailyLedgerRepository, times(1)).save(any(DailyLedger.class));
     }
 

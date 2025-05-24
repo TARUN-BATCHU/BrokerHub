@@ -44,15 +44,18 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity createUser(UserDTO userDTO) {
         String firmName = userDTO.getFirmName();
         String GSTNumber = userDTO.getGstNumber();
-        if(!checkUserFirmExists(firmName) || !checkUserGSTNumberExists(GSTNumber)) {
+        if(!checkUserFirmExists(firmName) && !checkUserGSTNumberExists(GSTNumber)) {
             User user = userDTOMapper.convertUserDTOtoUser(userDTO);
             //User user = new User();
+            if(user == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to convert UserDTO to User");
+            }
             user.setPayableAmount(0L);
             user.setReceivableAmount(0L);
             user.setTotalBagsBought(0L);
             user.setTotalBagsSold(0L);
             user.setTotalPayableBrokerage(BigDecimal.valueOf(0));
-            if(userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
+            if(userDTO.getUserType() != null && userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
                 user.setUserType("MILLER");
                 Miller miller = new Miller();
                 miller.setByProduct(userDTO.getByProduct());
@@ -77,10 +80,14 @@ public class UserServiceImpl implements UserService {
 
 
     public User updateUser(User user) {
-        Address address = addressService.findAddressByPincode(user.getAddress().getPincode());
-        user.setAddress(address);
-        BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
-        user.setBankDetails(bankDetails);
+        if(user.getAddress() != null && user.getAddress().getPincode() != null) {
+            Address address = addressService.findAddressByPincode(user.getAddress().getPincode());
+            user.setAddress(address);
+        }
+        if(user.getBankDetails() != null && user.getBankDetails().getAccountNumber() != null) {
+            BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
+            user.setBankDetails(bankDetails);
+        }
         return userRepository.save(user);
     }
 

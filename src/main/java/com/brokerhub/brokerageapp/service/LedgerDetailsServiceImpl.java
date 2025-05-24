@@ -47,9 +47,11 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         Long sellerBrokerage = ledgerDetailsDTO.getBrokerage();
 //        if(sellerBrokerage<=0){sellerBrokerage= 1L;}
         Long brokerId = ledgerDetailsDTO.getBrokerId();
-        Broker broker = brokerRepository.findById(brokerId).get();
+        Optional<Broker> brokerOptional = brokerRepository.findById(brokerId);
+        Broker broker = brokerOptional.orElse(null);
         if(null!=sellerId){
-            seller = userRepository.findById(sellerId).get();
+            Optional<User> sellerOptional = userRepository.findById(sellerId);
+            seller = sellerOptional.orElse(null);
         }
 
         LedgerDetails ledgerDetails = new LedgerDetails();
@@ -61,7 +63,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
         List<LedgerRecordDTO> ledgerRecordDTOList = ledgerDetailsDTO.getLedgerRecordDTOList();
         Long totalBags = 0L;
-        for(int i=0; i<ledgerRecordDTOList.size(); i++){
+        if(ledgerRecordDTOList != null && !ledgerRecordDTOList.isEmpty()) {
+            for(int i=0; i<ledgerRecordDTOList.size(); i++){
             Long brokerage = ledgerRecordDTOList.get(i).getBrokerage();
 //            if(brokerage<=0){brokerage= 1L;}
             Long quantity = ledgerRecordDTOList.get(i).getQuantity();
@@ -94,11 +97,16 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             userRepository.save(buyer);
             ledgerDetailsRepository.save(ledgerDetails);
             ledgerRecordRepository.save(ledgerRecord);
+            }
         }
-        seller.setTotalBagsSold(seller.getTotalBagsSold()+totalBags);
-        seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
-        broker.setTotalBrokerage(broker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
-        userRepository.save(seller);
+        if(seller != null) {
+            seller.setTotalBagsSold(seller.getTotalBagsSold()+totalBags);
+            seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+            userRepository.save(seller);
+        }
+        if(broker != null) {
+            broker.setTotalBrokerage(broker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+        }
         ledgerDetailsRepository.save(ledgerDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
     }
@@ -114,9 +122,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
 
 
     public LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId) {
-        LedgerDetails ledger = ledgerDetailsRepository.findById(ledgerDetailId).get();
-        if(null!=ledger){
-            return ledger;
+        Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findById(ledgerDetailId);
+        if(ledgerOptional.isPresent()){
+            return ledgerOptional.get();
         }
         return null;
     }
@@ -163,6 +171,16 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
         return ledgerDetailsDTOList;
     }
+
+    @Override
+    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId) {
+        return null;
+    }
+
+//    @Override
+//    public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId) {
+//        List<LedgerDetailsDTO> LedgerDetailsBySeller = ledgerDetailsRepository.findByFromSeller(sellerId);
+//    }
 
     private DisplayLedgerDetailDTO checkSellerExists(List<DisplayLedgerDetailDTO> ledgerDetailsDTOList,String sellerName) {
         return ledgerDetailsDTOList.stream().filter(ld -> ld.getSellerName().equalsIgnoreCase(sellerName)).findFirst().orElse(null);
