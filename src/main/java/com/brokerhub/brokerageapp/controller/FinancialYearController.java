@@ -27,4 +27,9 @@ public class FinancialYearController {
     public List<Long> getAllFinancialYearIds(){
         return financialYearService.getAllFinancialYearIds();
     }
+
+    @GetMapping("/getAllFinancialYears")
+    public List<FinancialYear> getFinancialYearById(){
+        return financialYearService.getAllFinancialYears();
+    }
 }

@@ -82,4 +82,12 @@ public class FinancialYearServiceImpl implements FinancialYearService{
         }
         return null;
     }
+
+    public List<FinancialYear> getAllFinancialYears(){
+        List<FinancialYear> financialYears = financialYearRepository.findAll();
+        if(!financialYears.isEmpty()){
+            return financialYears;
+        }
+        return null;
+    }
 }

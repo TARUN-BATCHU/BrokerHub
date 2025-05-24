@@ -10,4 +10,6 @@ public interface FinancialYearService {
    public ResponseEntity<String> createFinancialYear(FinancialYear financialYear);
 
    public List<Long> getAllFinancialYearIds();
+
+   public List<FinancialYear> getAllFinancialYears();
 }
