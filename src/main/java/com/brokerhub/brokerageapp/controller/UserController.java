@@ -76,5 +76,10 @@ public class UserController {
         return userService.getUserNames();
     }
 
+//    @PutMapping("/updateBrokerage")
+//    public void updateUserBrokerage(Long UserId, int brokerage){
+//        return userService.updateBrokerage();
+//    }
+
 
 }

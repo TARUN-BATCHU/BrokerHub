@@ -50,10 +50,14 @@ class UserServiceImplTest {
         UserDTO userDTO = new UserDTO();
         userDTO.setFirmName("New Firm");
         userDTO.setGstNumber("GST123");
+        userDTO.setUserType("TRADER"); // Add userType to avoid NullPointerException
+
+        User mockUser = new User();
+        mockUser.setUserType("TRADER");
 
         when(userRepository.findByFirmName("New Firm")).thenReturn(Optional.empty());
         when(userRepository.findByGstNumber("GST123")).thenReturn(Optional.empty());
-        when(userDTOMapper.convertUserDTOtoUser(userDTO)).thenReturn(new User());
+        when(userDTOMapper.convertUserDTOtoUser(userDTO)).thenReturn(mockUser);
 
         ResponseEntity response = userServiceImpl.createUser(userDTO);
 
@@ -66,8 +70,13 @@ class UserServiceImplTest {
         UserDTO userDTO = new UserDTO();
         userDTO.setFirmName("Existing Firm");
         userDTO.setGstNumber("GST123");
+        userDTO.setUserType("TRADER"); // Add userType to avoid NullPointerException
+
+        User mockUser = new User();
+        mockUser.setUserType("TRADER");
 
         when(userRepository.findByFirmName("Existing Firm")).thenReturn(Optional.of(new User()));
+        when(userDTOMapper.convertUserDTOtoUser(userDTO)).thenReturn(mockUser);
 
         ResponseEntity response = userServiceImpl.createUser(userDTO);
 
@@ -78,11 +87,17 @@ class UserServiceImplTest {
     @Test
     void testUpdateUser() {
         User user = new User();
-        user.setAddress(new Address());
-        user.setBankDetails(new BankDetails());
+        Address address = new Address();
+        address.setPincode("123456");
+        user.setAddress(address);
 
-        when(addressService.findAddressByPincode(anyString())).thenReturn(new Address());
-        when(bankDetailsService.getBankDetailsByAccountNumber(anyString())).thenReturn(new BankDetails());
+        BankDetails bankDetails = new BankDetails();
+        bankDetails.setAccountNumber("123456789");
+        user.setBankDetails(bankDetails);
+
+        when(addressService.findAddressByPincode("123456")).thenReturn(new Address());
+        when(bankDetailsService.getBankDetailsByAccountNumber("123456789")).thenReturn(new BankDetails());
+        when(userRepository.save(any(User.class))).thenReturn(user);
 
         User updatedUser = userServiceImpl.updateUser(user);
 

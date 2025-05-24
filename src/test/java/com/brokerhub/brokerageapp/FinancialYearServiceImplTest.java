@@ -57,6 +57,7 @@ class FinancialYearServiceImplTest {
         existingYears.add(financialYear);
 
         when(financialYearRepository.findOverlappingYears(any(), any())).thenReturn(existingYears);
+        when(financialYearRepository.findByStartAndEnd(any(), any())).thenReturn(existingYears);
 
         ResponseEntity<String> response = financialYearServiceImpl.createFinancialYear(financialYear);
 

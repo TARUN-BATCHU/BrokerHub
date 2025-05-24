@@ -27,7 +27,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/login").permitAll()
+                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/BrokerHub/user/createUser", "/login").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(withDefaults())
                 .formLogin(form -> form

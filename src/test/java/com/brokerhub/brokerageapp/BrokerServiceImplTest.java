@@ -38,6 +38,9 @@ class BrokerServiceImplTest {
     private BankDetailsService bankDetailsService;
 
     @Mock
+    private AddressService addressService;
+
+    @Mock
     private BrokerDTOMapper brokerDTOMapper;
 
     @Mock
@@ -63,11 +66,13 @@ class BrokerServiceImplTest {
         brokerDTO.setBrokerageFirmName("New Firm");
         brokerDTO.setEmail("new@firm.com");
         brokerDTO.setPhoneNumber("1234567890");
+        brokerDTO.setPincode("123456");
 
         when(brokerRepository.findByBrokerageFirmName(anyString())).thenReturn(Optional.empty());
         when(brokerRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(brokerRepository.findByPhoneNumber(anyString())).thenReturn(Optional.empty());
         when(brokerDTOMapper.convertBrokerDTOtoBroker(brokerDTO)).thenReturn(new Broker());
+        when(addressService.findAddressByPincode("123456")).thenReturn(null);
 
         ResponseEntity response = brokerServiceImpl.createBroker(brokerDTO);
 

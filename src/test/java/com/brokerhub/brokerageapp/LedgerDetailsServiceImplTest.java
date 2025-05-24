@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
+import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.LedgerDetailsRepository;
 import com.brokerhub.brokerageapp.repository.LedgerRecordRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
@@ -33,6 +34,9 @@ class LedgerDetailsServiceImplTest {
 
     @Mock
     private DailyLedgerService dailyLedgerService;
+
+    @Mock
+    private BrokerRepository brokerRepository;
 
     @InjectMocks
     private LedgerDetailsServiceImpl ledgerDetailsServiceImpl;

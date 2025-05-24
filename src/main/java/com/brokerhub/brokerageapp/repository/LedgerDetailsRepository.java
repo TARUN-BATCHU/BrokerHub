@@ -21,4 +21,7 @@ public interface LedgerDetailsRepository extends JpaRepository<LedgerDetails, Lo
             "ON ld.daily_ledger_daily_ledger_Id = dl.daily_ledger_id " +
             "WHERE dl.date = :date", nativeQuery = true)
     List<DateLedgerRecordDTO> findLedgersOnDate(@Param("date")LocalDate date);
+
+//    @Query(value = "SELECT * FROM ")
+//    List<LedgerDetailsDTO> findByFromSeller(Long sellerId);
 }
