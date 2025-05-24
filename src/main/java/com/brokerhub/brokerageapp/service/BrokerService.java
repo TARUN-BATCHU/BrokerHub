@@ -1,9 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
-import com.brokerhub.brokerageapp.dto.BrokerDTO;
-import com.brokerhub.brokerageapp.dto.CreatePasswordDTO;
-import com.brokerhub.brokerageapp.dto.ResetPasswordDTO;
-import com.brokerhub.brokerageapp.dto.UpdateBrokerDTO;
+import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.Broker;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -39,4 +36,6 @@ public interface BrokerService {
     ResponseEntity<String> changePassword(ResetPasswordDTO resetPasswordDTO);
 
     ResponseEntity<String> createPassword(CreatePasswordDTO createPasswordDTO);
+
+    ResponseEntity login(BrokerLoginDTO brokerLoginDTO);
 }
