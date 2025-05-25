@@ -69,4 +69,8 @@ public class User {
     private BigDecimal totalPayableBrokerage;
 
     private String shopNumber;
+
+    private String addressHint;
+
+    private String collectionRote;
 }
