@@ -32,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/BrokerHub/Broker/login", "/BrokerHub/user/createUser", "/BrokerHub/user/bulkUpload", "/BrokerHub/user/downloadTemplate", "/login").permitAll()
+                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/BrokerHub/Broker/login", "/BrokerHub/user/createUser", "/BrokerHub/user/bulkUpload", "/BrokerHub/user/downloadTemplate", "/login", "/BrokerHub/Dashboard/**").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(withDefaults())
                 .formLogin(form -> form
