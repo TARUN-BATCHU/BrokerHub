@@ -15,6 +15,8 @@ import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,52 +30,61 @@ public class DashboardServiceImpl implements DashboardService {
     private FinancialYearRepository financialYearRepository;
 
     @Override
-    @Cacheable(value = "financialYearAnalytics", key = "#financialYearId")
+    @Cacheable(value = "financialYearAnalytics", key = "#brokerId + '_' + #financialYearId")
     public FinancialYearAnalyticsDTO getFinancialYearAnalytics(Long brokerId, Long financialYearId) {
         log.info("Generating analytics for financial year: {} and broker: {}", financialYearId, brokerId);
 
-        // Get financial year details
-        FinancialYear financialYear = financialYearRepository.findById(financialYearId)
-                .orElseThrow(() -> new RuntimeException("Financial year not found"));
+        // Get financial year details with caching
+        FinancialYear financialYear = getFinancialYearCached(financialYearId);
 
-        // Get overall totals
-        Object[] overallTotals = dashboardRepository.getOverallTotals(financialYearId);
+        // Parallel execution for better performance
+        CompletableFuture<Object[]> overallTotalsFuture = CompletableFuture.supplyAsync(() ->
+            dashboardRepository.getOverallTotals(financialYearId));
 
-        // Debug log to understand the structure
-        if (overallTotals != null) {
-            log.debug("Overall totals array length: {}", overallTotals.length);
-            for (int i = 0; i < overallTotals.length; i++) {
-                log.debug("overallTotals[{}]: {} (type: {})", i, overallTotals[i],
-                    overallTotals[i] != null ? overallTotals[i].getClass().getSimpleName() : "null");
-            }
+        CompletableFuture<List<MonthlyAnalyticsDTO>> monthlyAnalyticsFuture = CompletableFuture.supplyAsync(() ->
+            buildOptimizedMonthlyAnalytics(financialYearId));
+
+        CompletableFuture<List<ProductAnalyticsDTO>> productTotalsFuture = CompletableFuture.supplyAsync(() ->
+            buildOptimizedProductTotals(financialYearId));
+
+        CompletableFuture<List<CityAnalyticsDTO>> cityTotalsFuture = CompletableFuture.supplyAsync(() ->
+            buildOptimizedCityTotals(financialYearId));
+
+        CompletableFuture<List<MerchantTypeAnalyticsDTO>> merchantTypeTotalsFuture = CompletableFuture.supplyAsync(() ->
+            buildOptimizedMerchantTypeTotals(financialYearId));
+
+        try {
+            // Wait for all futures to complete
+            Object[] overallTotals = overallTotalsFuture.get();
+            List<MonthlyAnalyticsDTO> monthlyAnalytics = monthlyAnalyticsFuture.get();
+            List<ProductAnalyticsDTO> overallProductTotals = productTotalsFuture.get();
+            List<CityAnalyticsDTO> overallCityTotals = cityTotalsFuture.get();
+            List<MerchantTypeAnalyticsDTO> overallMerchantTypeTotals = merchantTypeTotalsFuture.get();
+
+            return FinancialYearAnalyticsDTO.builder()
+                    .financialYearId(financialYear.getYearId())
+                    .financialYearName(financialYear.getFinancialYearName())
+                    .startDate(financialYear.getStart())
+                    .endDate(financialYear.getEnd())
+                    .totalBrokerage(safeArrayAccess(overallTotals, 0, this::safeBigDecimalConvert, BigDecimal.ZERO))
+                    .totalQuantity(safeArrayAccess(overallTotals, 1, this::safeLongConvert, 0L))
+                    .totalTransactionValue(safeArrayAccess(overallTotals, 2, this::safeBigDecimalConvert, BigDecimal.ZERO))
+                    .totalTransactions(safeArrayAccess(overallTotals, 3, this::safeIntegerConvert, 0))
+                    .monthlyAnalytics(monthlyAnalytics)
+                    .overallProductTotals(overallProductTotals)
+                    .overallCityTotals(overallCityTotals)
+                    .overallMerchantTypeTotals(overallMerchantTypeTotals)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error generating analytics for financial year: {}", financialYearId, e);
+            throw new RuntimeException("Failed to generate analytics", e);
         }
+    }
 
-        // Get monthly analytics
-        List<MonthlyAnalyticsDTO> monthlyAnalytics = buildMonthlyAnalytics(financialYearId);
-
-        // Get overall product totals
-        List<ProductAnalyticsDTO> overallProductTotals = buildOverallProductTotals(financialYearId);
-
-        // Get overall city totals
-        List<CityAnalyticsDTO> overallCityTotals = buildOverallCityTotals(financialYearId);
-
-        // Get overall merchant type totals
-        List<MerchantTypeAnalyticsDTO> overallMerchantTypeTotals = buildOverallMerchantTypeTotals(financialYearId);
-
-        return FinancialYearAnalyticsDTO.builder()
-                .financialYearId(financialYear.getYearId())
-                .financialYearName(financialYear.getFinancialYearName())
-                .startDate(financialYear.getStart())
-                .endDate(financialYear.getEnd())
-                .totalBrokerage(safeArrayAccess(overallTotals, 0, this::safeBigDecimalConvert, BigDecimal.ZERO))
-                .totalQuantity(safeArrayAccess(overallTotals, 1, this::safeLongConvert, 0L))
-                .totalTransactionValue(safeArrayAccess(overallTotals, 2, this::safeBigDecimalConvert, BigDecimal.ZERO))
-                .totalTransactions(safeArrayAccess(overallTotals, 3, this::safeIntegerConvert, 0))
-                .monthlyAnalytics(monthlyAnalytics)
-                .overallProductTotals(overallProductTotals)
-                .overallCityTotals(overallCityTotals)
-                .overallMerchantTypeTotals(overallMerchantTypeTotals)
-                .build();
+    @Cacheable(value = "financialYear", key = "#financialYearId")
+    private FinancialYear getFinancialYearCached(Long financialYearId) {
+        return financialYearRepository.findById(financialYearId)
+                .orElseThrow(() -> new RuntimeException("Financial year not found"));
     }
 
     private List<MonthlyAnalyticsDTO> buildMonthlyAnalytics(Long financialYearId) {
@@ -201,6 +212,226 @@ public class DashboardServiceImpl implements DashboardService {
 
         return monthlyMap.values().stream()
                 .sorted(Comparator.comparing(MonthlyAnalyticsDTO::getMonth))
+                .collect(Collectors.toList());
+    }
+
+    // Optimized version with reduced database calls and parallel processing
+    private List<MonthlyAnalyticsDTO> buildOptimizedMonthlyAnalytics(Long financialYearId) {
+        // Fetch all data in parallel
+        CompletableFuture<List<Object[]>> monthlyDataFuture = CompletableFuture.supplyAsync(() ->
+            dashboardRepository.getMonthlyAnalytics(financialYearId));
+        CompletableFuture<List<Object[]>> productDataFuture = CompletableFuture.supplyAsync(() ->
+            dashboardRepository.getProductAnalyticsByMonth(financialYearId));
+        CompletableFuture<List<Object[]>> cityDataFuture = CompletableFuture.supplyAsync(() ->
+            dashboardRepository.getCityAnalyticsByMonth(financialYearId));
+        CompletableFuture<List<Object[]>> merchantTypeDataFuture = CompletableFuture.supplyAsync(() ->
+            dashboardRepository.getMerchantTypeAnalyticsByMonth(financialYearId));
+
+        try {
+            List<Object[]> monthlyData = monthlyDataFuture.get();
+            List<Object[]> productData = productDataFuture.get();
+            List<Object[]> cityData = cityDataFuture.get();
+            List<Object[]> merchantTypeData = merchantTypeDataFuture.get();
+
+            // Use ConcurrentHashMap for thread-safe operations
+            Map<YearMonth, MonthlyAnalyticsDTO> monthlyMap = new ConcurrentHashMap<>();
+
+            // Process monthly totals
+            monthlyData.parallelStream().forEach(row -> {
+                Integer year = row[0] != null ? Integer.valueOf(row[0].toString()) : null;
+                Integer month = row[1] != null ? Integer.valueOf(row[1].toString()) : null;
+                if (year == null || month == null) return;
+                YearMonth yearMonth = YearMonth.of(year, month);
+
+                MonthlyAnalyticsDTO monthlyDTO = MonthlyAnalyticsDTO.builder()
+                        .month(yearMonth)
+                        .monthName(yearMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + year)
+                        .totalBrokerage(safeBigDecimalConvert(row[2]))
+                        .totalQuantity(safeLongConvert(row[3]))
+                        .totalTransactionValue(safeBigDecimalConvert(row[4]))
+                        .totalTransactions(safeIntegerConvert(row[5]))
+                        .productAnalytics(new ArrayList<>())
+                        .cityAnalytics(new ArrayList<>())
+                        .merchantTypeAnalytics(new ArrayList<>())
+                        .build();
+
+                monthlyMap.put(yearMonth, monthlyDTO);
+            });
+
+            // Process product analytics by month using parallel streams
+            Map<YearMonth, List<ProductAnalyticsDTO>> productByMonth = productData.parallelStream()
+                    .filter(row -> row[0] != null && row[1] != null)
+                    .collect(Collectors.groupingByConcurrent(
+                        row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                        Collectors.mapping(this::mapToProductAnalytics, Collectors.toList())
+                    ));
+
+            // Process city analytics by month using parallel streams
+            Map<YearMonth, List<CityAnalyticsDTO>> cityByMonth = cityData.parallelStream()
+                    .filter(row -> row[0] != null && row[1] != null)
+                    .collect(Collectors.groupingByConcurrent(
+                        row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                        Collectors.mapping(this::mapToCityAnalytics, Collectors.toList())
+                    ));
+
+            // Process merchant type analytics by month
+            Map<YearMonth, Map<String, MerchantTypeAnalyticsDTO>> merchantTypeByMonth = new ConcurrentHashMap<>();
+            merchantTypeData.parallelStream().forEach(row -> {
+                if (row[0] == null || row[1] == null) return;
+                YearMonth yearMonth = YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString()));
+                String merchantType = row[2] != null ? row[2].toString() : "";
+
+                merchantTypeByMonth.computeIfAbsent(yearMonth, k -> new ConcurrentHashMap<>())
+                        .merge(merchantType, mapToMerchantTypeAnalytics(row), this::mergeMerchantTypeAnalytics);
+            });
+
+            // Combine all data efficiently
+            monthlyMap.entrySet().parallelStream().forEach(entry -> {
+                YearMonth yearMonth = entry.getKey();
+                MonthlyAnalyticsDTO monthlyDTO = entry.getValue();
+
+                monthlyDTO.setProductAnalytics(productByMonth.getOrDefault(yearMonth, new ArrayList<>()));
+                monthlyDTO.setCityAnalytics(cityByMonth.getOrDefault(yearMonth, new ArrayList<>()));
+                monthlyDTO.setMerchantTypeAnalytics(new ArrayList<>(merchantTypeByMonth.getOrDefault(yearMonth, new HashMap<>()).values()));
+            });
+
+            return monthlyMap.values().stream()
+                    .sorted(Comparator.comparing(MonthlyAnalyticsDTO::getMonth))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error building optimized monthly analytics", e);
+            throw new RuntimeException("Failed to build monthly analytics", e);
+        }
+    }
+
+    // Helper methods for mapping database results to DTOs
+    private ProductAnalyticsDTO mapToProductAnalytics(Object[] row) {
+        return ProductAnalyticsDTO.builder()
+                .productId(row[2] != null ? Long.valueOf(row[2].toString()) : null)
+                .productName(row[3] != null ? row[3].toString() : "")
+                .totalQuantity(row[4] != null ? Long.valueOf(row[4].toString()) : 0L)
+                .totalBrokerage(row[5] != null ? new BigDecimal(row[5].toString()) : BigDecimal.ZERO)
+                .totalTransactionValue(row[6] != null ? new BigDecimal(row[6].toString()) : BigDecimal.ZERO)
+                .totalTransactions(row[7] != null ? Integer.valueOf(row[7].toString()) : 0)
+                .averagePrice(row[8] != null ? new BigDecimal(row[8].toString()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                .averageBrokeragePerUnit(row[9] != null ? new BigDecimal(row[9].toString()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                .build();
+    }
+
+    private CityAnalyticsDTO mapToCityAnalytics(Object[] row) {
+        return CityAnalyticsDTO.builder()
+                .cityName(row[2] != null ? row[2].toString() : "")
+                .totalQuantity(row[3] != null ? Long.valueOf(row[3].toString()) : 0L)
+                .totalBrokerage(row[4] != null ? new BigDecimal(row[4].toString()) : BigDecimal.ZERO)
+                .totalTransactionValue(row[5] != null ? new BigDecimal(row[5].toString()) : BigDecimal.ZERO)
+                .totalTransactions(row[6] != null ? Integer.valueOf(row[6].toString()) : 0)
+                .totalSellers(row[7] != null ? Integer.valueOf(row[7].toString()) : 0)
+                .totalBuyers(row[8] != null ? Integer.valueOf(row[8].toString()) : 0)
+                .productBreakdown(new ArrayList<>())
+                .build();
+    }
+
+    private MerchantTypeAnalyticsDTO mapToMerchantTypeAnalytics(Object[] row) {
+        return MerchantTypeAnalyticsDTO.builder()
+                .merchantType(row[2] != null ? row[2].toString() : "")
+                .totalQuantitySold(row[3] != null ? Long.valueOf(row[3].toString()) : 0L)
+                .totalQuantityBought(row[4] != null ? Long.valueOf(row[4].toString()) : 0L)
+                .totalBrokeragePaid(row[5] != null ? new BigDecimal(row[5].toString()) : BigDecimal.ZERO)
+                .totalTransactionValue(row[6] != null ? new BigDecimal(row[6].toString()) : BigDecimal.ZERO)
+                .totalTransactions(row[7] != null ? Integer.valueOf(row[7].toString()) : 0)
+                .totalMerchants(row[8] != null ? Integer.valueOf(row[8].toString()) : 0)
+                .build();
+    }
+
+    private MerchantTypeAnalyticsDTO mergeMerchantTypeAnalytics(MerchantTypeAnalyticsDTO existing, MerchantTypeAnalyticsDTO newData) {
+        return MerchantTypeAnalyticsDTO.builder()
+                .merchantType(existing.getMerchantType())
+                .totalQuantitySold(existing.getTotalQuantitySold() + newData.getTotalQuantitySold())
+                .totalQuantityBought(existing.getTotalQuantityBought() + newData.getTotalQuantityBought())
+                .totalBrokeragePaid(existing.getTotalBrokeragePaid().add(newData.getTotalBrokeragePaid()))
+                .totalTransactionValue(existing.getTotalTransactionValue().add(newData.getTotalTransactionValue()))
+                .totalTransactions(existing.getTotalTransactions() + newData.getTotalTransactions())
+                .totalMerchants(Math.max(existing.getTotalMerchants(), newData.getTotalMerchants()))
+                .build();
+    }
+
+    private ProductAnalyticsDTO mergeProductAnalytics(ProductAnalyticsDTO existing, ProductAnalyticsDTO newData) {
+        if (existing == null) return newData;
+        if (newData == null) return existing;
+
+        return ProductAnalyticsDTO.builder()
+                .productId(existing.getProductId())
+                .productName(existing.getProductName())
+                .totalQuantity(existing.getTotalQuantity() + newData.getTotalQuantity())
+                .totalBrokerage(existing.getTotalBrokerage().add(newData.getTotalBrokerage()))
+                .totalTransactionValue(existing.getTotalTransactionValue().add(newData.getTotalTransactionValue()))
+                .totalTransactions(existing.getTotalTransactions() + newData.getTotalTransactions())
+                .averagePrice(calculateAveragePrice(existing.getTotalTransactionValue().add(newData.getTotalTransactionValue()),
+                    existing.getTotalQuantity() + newData.getTotalQuantity()))
+                .averageBrokeragePerUnit(calculateAverageBrokerage(existing.getTotalBrokerage().add(newData.getTotalBrokerage()),
+                    existing.getTotalQuantity() + newData.getTotalQuantity()))
+                .build();
+    }
+
+    private CityAnalyticsDTO mergeCityAnalytics(CityAnalyticsDTO existing, CityAnalyticsDTO newData) {
+        if (existing == null) return newData;
+        if (newData == null) return existing;
+
+        return CityAnalyticsDTO.builder()
+                .cityName(existing.getCityName())
+                .totalQuantity(existing.getTotalQuantity() + newData.getTotalQuantity())
+                .totalBrokerage(existing.getTotalBrokerage().add(newData.getTotalBrokerage()))
+                .totalTransactionValue(existing.getTotalTransactionValue().add(newData.getTotalTransactionValue()))
+                .totalTransactions(existing.getTotalTransactions() + newData.getTotalTransactions())
+                .totalSellers(Math.max(existing.getTotalSellers(), newData.getTotalSellers()))
+                .totalBuyers(Math.max(existing.getTotalBuyers(), newData.getTotalBuyers()))
+                .productBreakdown(existing.getProductBreakdown())
+                .build();
+    }
+
+    // Optimized versions of build methods
+    private List<ProductAnalyticsDTO> buildOptimizedProductTotals(Long financialYearId) {
+        List<Object[]> productData = dashboardRepository.getProductAnalyticsByMonth(financialYearId);
+
+        return productData.parallelStream()
+                .collect(Collectors.groupingByConcurrent(
+                    row -> row[2] != null ? Long.valueOf(row[2].toString()) : null,
+                    Collectors.reducing(null, this::mapToProductAnalytics, this::mergeProductAnalytics)
+                ))
+                .values()
+                .stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(ProductAnalyticsDTO::getProductName))
+                .collect(Collectors.toList());
+    }
+
+    private List<CityAnalyticsDTO> buildOptimizedCityTotals(Long financialYearId) {
+        List<Object[]> cityData = dashboardRepository.getCityAnalyticsByMonth(financialYearId);
+
+        return cityData.parallelStream()
+                .collect(Collectors.groupingByConcurrent(
+                    row -> row[2] != null ? row[2].toString() : "",
+                    Collectors.reducing(null, this::mapToCityAnalytics, this::mergeCityAnalytics)
+                ))
+                .values()
+                .stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(CityAnalyticsDTO::getCityName))
+                .collect(Collectors.toList());
+    }
+
+    private List<MerchantTypeAnalyticsDTO> buildOptimizedMerchantTypeTotals(Long financialYearId) {
+        List<Object[]> merchantTypeData = dashboardRepository.getMerchantTypeAnalyticsByMonth(financialYearId);
+
+        return merchantTypeData.parallelStream()
+                .collect(Collectors.groupingByConcurrent(
+                    row -> row[2] != null ? row[2].toString() : "",
+                    Collectors.reducing(null, this::mapToMerchantTypeAnalytics, this::mergeMerchantTypeAnalytics)
+                ))
+                .values()
+                .stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(MerchantTypeAnalyticsDTO::getMerchantType))
                 .collect(Collectors.toList());
     }
 
@@ -337,7 +568,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = "topPerformers", key = "#financialYearId")
+    @Cacheable(value = "topPerformers", key = "#brokerId + '_' + #financialYearId")
     public TopPerformersDTO getTopPerformers(Long brokerId, Long financialYearId) {
         log.info("Generating top performers for financial year: {} and broker: {}", financialYearId, brokerId);
 
@@ -365,7 +596,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = "topBuyers", key = "#financialYearId")
+    @Cacheable(value = "topBuyers", key = "#brokerId + '_' + #financialYearId")
     public List<TopBuyerDTO> getTop5BuyersByQuantity(Long brokerId, Long financialYearId) {
         log.info("Getting top 5 buyers by quantity for financial year: {}", financialYearId);
 
@@ -390,7 +621,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = "topSellers", key = "#financialYearId")
+    @Cacheable(value = "topSellers", key = "#brokerId + '_' + #financialYearId")
     public List<TopSellerDTO> getTop5SellersByQuantity(Long brokerId, Long financialYearId) {
         log.info("Getting top 5 sellers by quantity for financial year: {}", financialYearId);
 
@@ -415,7 +646,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = "topMerchants", key = "#financialYearId")
+    @Cacheable(value = "topMerchants", key = "#brokerId + '_' + #financialYearId")
     public List<TopMerchantByBrokerageDTO> getTop5MerchantsByBrokerage(Long brokerId, Long financialYearId) {
         log.info("Getting top 5 merchants by brokerage for financial year: {}", financialYearId);
 
