@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.time.LocalDate;
 import java.util.Date;
@@ -28,7 +30,8 @@ public class DailyLedger {
     @ManyToOne
     private FinancialYear financialYear;
 
-    @OneToMany(mappedBy = "dailyLedger")
+    @OneToMany(mappedBy = "dailyLedger", fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     private List<LedgerDetails> ledgerDetails;
 
 }

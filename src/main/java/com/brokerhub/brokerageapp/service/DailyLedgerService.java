@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.OptimizedDailyLedgerDTO;
 import com.brokerhub.brokerageapp.entity.DailyLedger;
 import org.springframework.http.ResponseEntity;
 
@@ -14,4 +15,6 @@ public interface DailyLedgerService {
     public DailyLedger getDailyLedger(LocalDate date);
 
     DailyLedger getDailyLedgerOnDate(LocalDate date) throws FileNotFoundException;
+
+    OptimizedDailyLedgerDTO getOptimizedDailyLedger(LocalDate date);
 }

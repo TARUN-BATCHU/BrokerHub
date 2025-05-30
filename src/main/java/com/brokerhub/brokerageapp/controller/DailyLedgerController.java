@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.controller;
 
+import com.brokerhub.brokerageapp.dto.OptimizedDailyLedgerDTO;
 import com.brokerhub.brokerageapp.entity.DailyLedger;
 import com.brokerhub.brokerageapp.service.DailyLedgerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,4 +33,10 @@ public class DailyLedgerController {
     @GetMapping("/getDailyLedgerOnDate")
     @ResponseStatus(HttpStatus.OK)
     public DailyLedger getDailyLedgerOnDate(@RequestParam LocalDate date) throws FileNotFoundException {return dailyLedgerService.getDailyLedgerOnDate(date);}
+
+    @GetMapping("/getOptimizedDailyLedger")
+    @ResponseStatus(HttpStatus.OK)
+    public OptimizedDailyLedgerDTO getOptimizedDailyLedger(@RequestParam LocalDate date) {
+        return dailyLedgerService.getOptimizedDailyLedger(date);
+    }
 }

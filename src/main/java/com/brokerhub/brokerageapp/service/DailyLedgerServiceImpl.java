@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.DailyLedger;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
@@ -14,17 +15,21 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.property.TextAlignment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 
 @Service
+@Transactional
 public class DailyLedgerServiceImpl implements DailyLedgerService{
 
     @Autowired
@@ -61,10 +66,20 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
     }
 
     public DailyLedger getDailyLedger(LocalDate date) {
-        Long dailyLedgerId = getDailyLedgerId(date);
-        if(null != dailyLedgerId){
-            Optional<DailyLedger> dailyLedger =  dailyLedgerRepository.findById(dailyLedgerId);
-            return dailyLedger.get();
+        // Use the new method that eagerly fetches ledgerDetails
+        Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+        if(dailyLedgerOpt.isPresent()){
+            DailyLedger dailyLedger = dailyLedgerOpt.get();
+            // Initialize the records collection for each ledger detail to avoid lazy loading
+            if(dailyLedger.getLedgerDetails() != null) {
+                for(LedgerDetails ledgerDetail : dailyLedger.getLedgerDetails()) {
+                    // Force initialization of the records collection
+                    if(ledgerDetail.getRecords() != null) {
+                        ledgerDetail.getRecords().size();
+                    }
+                }
+            }
+            return dailyLedger;
         }
         else{
             //TODO if daily ledger not exists then create one.
@@ -75,9 +90,13 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
     public DailyLedger getDailyLedgerOnDate(LocalDate date) throws FileNotFoundException {
         String fileName = date.toString()+" Records";
         String filePath = "C:\\Users\\HP\\Desktop\\Pdfs\\"+fileName+".pdf";
-        Long dailyLedgerId = getDailyLedgerId(date);
-//        if(null != dailyLedgerId){
-            Optional<DailyLedger> dailyLedger =  dailyLedgerRepository.findById(dailyLedgerId);
+
+        // Use the new method that eagerly fetches ledgerDetails and records
+        Optional<DailyLedger> dailyLedger = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+
+        if(!dailyLedger.isPresent()) {
+            return null;
+        }
 //        try {
 //            PdfWriter pdfWriter = new PdfWriter(filePath);
 //            PdfDocument pdf = new PdfDocument(pdfWriter);
@@ -148,5 +167,100 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                 }
             }
             return new DailyLedger();
+    }
+
+    @Override
+    public OptimizedDailyLedgerDTO getOptimizedDailyLedger(LocalDate date) {
+        // Use the same method that eagerly fetches ledgerDetails
+        Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+
+        if (dailyLedgerOpt.isPresent()) {
+            DailyLedger dailyLedger = dailyLedgerOpt.get();
+
+            // Convert to optimized DTO
+            OptimizedDailyLedgerDTO optimizedDTO = OptimizedDailyLedgerDTO.builder()
+                    .dailyLedgerId(dailyLedger.getDailyLedgerId())
+                    .date(dailyLedger.getDate())
+                    .financialYearId(dailyLedger.getFinancialYear() != null ?
+                            dailyLedger.getFinancialYear().getYearId() : null)
+                    .build();
+
+            // Convert ledger details
+            if (dailyLedger.getLedgerDetails() != null) {
+                List<OptimizedLedgerDetailsDTO> optimizedLedgerDetails =
+                        dailyLedger.getLedgerDetails().stream()
+                                .map(this::convertToOptimizedLedgerDetailsDTO)
+                                .collect(Collectors.toList());
+                optimizedDTO.setLedgerDetails(optimizedLedgerDetails);
+            }
+
+            return optimizedDTO;
+        }
+
+        return null;
+    }
+
+    private OptimizedLedgerDetailsDTO convertToOptimizedLedgerDetailsDTO(LedgerDetails ledgerDetails) {
+        OptimizedLedgerDetailsDTO dto = OptimizedLedgerDetailsDTO.builder()
+                .ledgerDetailsId(ledgerDetails.getLedgerDetailsId())
+                .build();
+
+        // Convert seller info
+        if (ledgerDetails.getFromSeller() != null) {
+            OptimizedUserDTO sellerDTO = OptimizedUserDTO.builder()
+                    .userId(ledgerDetails.getFromSeller().getUserId())
+                    .firmName(ledgerDetails.getFromSeller().getFirmName())
+                    .addressId(ledgerDetails.getFromSeller().getAddress() != null ?
+                            ledgerDetails.getFromSeller().getAddress().getAddressId() : null)
+                    .build();
+            dto.setFromSeller(sellerDTO);
+        }
+
+        // Convert records
+        if (ledgerDetails.getRecords() != null) {
+            // Force initialization of the records collection
+            ledgerDetails.getRecords().size();
+
+            List<OptimizedLedgerRecordDTO> optimizedRecords =
+                    ledgerDetails.getRecords().stream()
+                            .map(this::convertToOptimizedLedgerRecordDTO)
+                            .collect(Collectors.toList());
+            dto.setRecords(optimizedRecords);
+        }
+
+        return dto;
+    }
+
+    private OptimizedLedgerRecordDTO convertToOptimizedLedgerRecordDTO(LedgerRecord record) {
+        OptimizedLedgerRecordDTO dto = OptimizedLedgerRecordDTO.builder()
+                .ledgerRecordId(record.getLedgerRecordId())
+                .quantity(record.getQuantity())
+                .brokerage(record.getBrokerage())
+                .productCost(record.getProductCost())
+                .totalProductsCost(record.getTotalProductsCost())
+                .totalBrokerage(record.getTotalBrokerage())
+                .build();
+
+        // Convert buyer info
+        if (record.getToBuyer() != null) {
+            OptimizedUserDTO buyerDTO = OptimizedUserDTO.builder()
+                    .userId(record.getToBuyer().getUserId())
+                    .firmName(record.getToBuyer().getFirmName())
+                    .addressId(record.getToBuyer().getAddress() != null ?
+                            record.getToBuyer().getAddress().getAddressId() : null)
+                    .build();
+            dto.setToBuyer(buyerDTO);
+        }
+
+        // Convert product info
+        if (record.getProduct() != null) {
+            OptimizedProductDTO productDTO = OptimizedProductDTO.builder()
+                    .productId(record.getProduct().getProductId())
+                    .productName(record.getProduct().getProductName())
+                    .build();
+            dto.setProduct(productDTO);
+        }
+
+        return dto;
     }
 }
