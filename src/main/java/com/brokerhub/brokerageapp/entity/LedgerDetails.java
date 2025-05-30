@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.util.List;
 
@@ -30,7 +32,8 @@ public class LedgerDetails {
     @JsonIgnore
     private DailyLedger dailyLedger;
 
-    @OneToMany(mappedBy = "ledgerDetails")
+    @OneToMany(mappedBy = "ledgerDetails", fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     private List<LedgerRecord> records;
 
 }

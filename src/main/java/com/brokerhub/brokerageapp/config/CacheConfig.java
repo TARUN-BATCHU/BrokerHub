@@ -21,7 +21,16 @@ public class CacheConfig {
                 "topPerformers",
                 "topBuyers",
                 "topSellers",
-                "topMerchants"
+                "topMerchants",
+                // Payment system caches
+                "firmNames",
+                "brokeragePayments",
+                "pendingPayments",
+                "receivablePayments",
+                "paymentDashboard",
+                "paymentSummary",
+                "paymentAlerts",
+                "paymentTrends"
         );
     }
 }

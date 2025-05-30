@@ -96,19 +96,19 @@ class DailyLedgerServiceImplTest {
         DailyLedger dailyLedger = new DailyLedger();
         dailyLedger.setDailyLedgerId(1L);
 
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(dailyLedger);
-        when(dailyLedgerRepository.findById(1L)).thenReturn(Optional.of(dailyLedger));
+        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.of(dailyLedger));
 
         DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
 
         assertNotNull(result);
+        assertEquals(1L, result.getDailyLedgerId());
     }
 
     @Test
     void testGetDailyLedger_NonExistingLedger() {
         LocalDate date = LocalDate.of(2023, 10, 10);
 
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(null);
+        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.empty());
 
         DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
 
