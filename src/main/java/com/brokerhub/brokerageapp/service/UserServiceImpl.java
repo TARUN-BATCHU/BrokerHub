@@ -40,6 +40,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     AddressService addressService;
 
+    @Autowired
+    UserCacheService userCacheService;
+
 
 
     public ResponseEntity createUser(UserDTO userDTO) {
@@ -103,6 +106,10 @@ public class UserServiceImpl implements UserService {
             }
             linkBankDetailsToUser(userDTO,user);
             userRepository.save(user);
+
+            // Clear user caches after creating new user
+            userCacheService.clearUserCaches();
+
             return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully");
         }
         else{
@@ -121,7 +128,13 @@ public class UserServiceImpl implements UserService {
             BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
             user.setBankDetails(bankDetails);
         }
-        return userRepository.save(user);
+
+        User updatedUser = userRepository.save(user);
+
+        // Clear user caches after updating user
+        userCacheService.clearUserCaches();
+
+        return updatedUser;
     }
 
     @Override
@@ -130,6 +143,10 @@ public class UserServiceImpl implements UserService {
         if(!user.isEmpty()) {
             String firmName = user.get().getFirmName();
             userRepository.deleteById(id);
+
+            // Clear user caches after deleting user
+            userCacheService.clearUserCaches();
+
             return ResponseEntity.status(HttpStatus.OK).body(firmName+" - deleted successfully");
         }
         else{
@@ -206,27 +223,14 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<HashMap<String, Long>> getUserNamesAndIds() {
-        //TODO
-        // need to optimise this everytime when user clicks search bar we are taking all users and iterating all which will take lot of time
-        List<HashMap<String,Long>> UserNamesAndIds = null;
-        List<User> allUsers = userRepository.findAll();
-        for(int i=0; i<allUsers.size(); i++){
-            HashMap<String,Long> UserInfo = new HashMap<>();
-            UserInfo.put(allUsers.get(i).getFirmName(),allUsers.get(i).getUserId());
-            UserNamesAndIds.add(UserInfo);
-        }
-        return UserNamesAndIds;
+        // Use optimized cache service instead of fetching all users
+        return userCacheService.getUserNamesAndIds();
     }
 
     public List<String> getUserNames() {
-        //TODO
-        // need to optimise this everytime when user clicks search bar we are taking all users and iterating all which will take lot of time
-        List<String> UserNames = null;
-        List<User> allUsers = userRepository.findAll();
-        for(int i=0; i<allUsers.size(); i++){
-            UserNames.add(allUsers.get(i).getFirmName());
-        }
-        return UserNames;
+        // Optimized: Use cache service with Redis caching (1 hour TTL)
+        // This fetches only firm names from database instead of full User entities
+        return userCacheService.getAllUserNames();
     }
 
 
@@ -364,6 +368,11 @@ public class UserServiceImpl implements UserService {
                     .errorMessages(Arrays.asList("Unexpected error: " + e.getMessage()))
                     .message("Bulk upload failed")
                     .build();
+        }
+
+        // Clear user caches if any users were successfully created
+        if (successfulRecords > 0) {
+            userCacheService.clearUserCaches();
         }
 
         // Prepare response message

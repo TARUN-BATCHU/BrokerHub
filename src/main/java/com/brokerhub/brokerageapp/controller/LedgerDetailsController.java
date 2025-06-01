@@ -2,9 +2,12 @@ package com.brokerhub.brokerageapp.controller;
 
 import com.brokerhub.brokerageapp.dto.DisplayLedgerDetailDTO;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
+import com.brokerhub.brokerageapp.dto.OptimizedLedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
 import com.brokerhub.brokerageapp.service.LedgerDetailsService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/BrokerHub/LedgerDetails")
+@Slf4j
 public class LedgerDetailsController {
 
     @Autowired
@@ -23,19 +27,49 @@ public class LedgerDetailsController {
         return ledgerDetailsService.createLedgerDetails(ledgerDetailsDTO);
     }
 
-//    @PostMapping("/createLedgerDetailsUsingExcel")
-//    public ResponseEntity<String> createLedgerDetailsUsingExcel(@RequestBody String filePath){
-//        return ledgerDetailsService.createLedgerDetailsUsingExcel(filePath);
-//    }
 
     @GetMapping("/getAllLedgerDetails")
     public List<LedgerDetails> getAllLedgerDetails(@RequestBody Long brokerId){
         return ledgerDetailsService.getAllLedgerDetails();
     }
 
-    @GetMapping("/getLedgerDetailsById/")
+    @GetMapping("/getLedgerDetailsById")
     public LedgerDetails getLedgerDetailById(@RequestParam Long ledgerDetailId, @RequestParam Long brokerId){
         return ledgerDetailsService.getLedgerDetailById(ledgerDetailId,brokerId);
+    }
+
+    /**
+     * Get optimized ledger details by ID - solves lazy loading issues
+     *
+     * @param ledgerDetailId The ID of the ledger detail to fetch
+     * @param brokerId The broker ID for authorization
+     * @return OptimizedLedgerDetailsDTO with all related data eagerly loaded
+     */
+    @GetMapping("/getOptimizedLedgerDetailsById")
+    public ResponseEntity<OptimizedLedgerDetailsDTO> getOptimizedLedgerDetailsById(
+            @RequestParam Long ledgerDetailId,
+            @RequestParam Long brokerId) {
+
+        log.info("Fetching optimized ledger details by ID: {} for broker: {}", ledgerDetailId, brokerId);
+
+        try {
+            OptimizedLedgerDetailsDTO optimizedLedgerDetails =
+                    ledgerDetailsService.getOptimizedLedgerDetailById(ledgerDetailId, brokerId);
+
+            if (optimizedLedgerDetails != null) {
+                log.info("Successfully fetched optimized ledger details for ID: {}", ledgerDetailId);
+                return ResponseEntity.ok(optimizedLedgerDetails);
+            } else {
+                log.warn("No ledger details found for ID: {}", ledgerDetailId);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for getOptimizedLedgerDetailsById: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error fetching optimized ledger details for ID: {}", ledgerDetailId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/getLedgerDetailsByDate")

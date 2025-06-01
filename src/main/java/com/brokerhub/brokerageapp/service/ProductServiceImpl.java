@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.ProductBasicInfoDTO;
 import com.brokerhub.brokerageapp.entity.Product;
 import com.brokerhub.brokerageapp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +18,9 @@ public class ProductServiceImpl implements ProductService{
 
     @Autowired
     ProductRepository productRepository;
+
+    @Autowired
+    ProductCacheService productCacheService;
 
 
     public ResponseEntity<String> createProduct(Product product) {
@@ -34,13 +39,21 @@ public class ProductServiceImpl implements ProductService{
         // Save the product
         productRepository.save(product);
 
+        // Clear product caches after creating new product
+        productCacheService.clearProductCaches();
+
         return ResponseEntity.status(HttpStatus.CREATED).body("Product created successfully");
     }
 
     public Object updateProduct(Product product) {
         boolean productExists = productRepository.findById(product.getProductId()).isPresent();
         if(productExists) {
-            return productRepository.save(product);
+            Product updatedProduct = productRepository.save(product);
+
+            // Clear product caches after updating product
+            productCacheService.clearProductCaches();
+
+            return updatedProduct;
         }
         return HttpStatus.NOT_FOUND;
     }
@@ -49,6 +62,10 @@ public class ProductServiceImpl implements ProductService{
         Optional<Product> product = productRepository.findById(productId);
         if(product.isPresent()) {
             productRepository.deleteById(productId);
+
+            // Clear product caches after deleting product
+            productCacheService.clearProductCaches();
+
             return ResponseEntity.status(HttpStatus.OK).body("product deleted");
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("no product found to delete");
@@ -68,6 +85,45 @@ public class ProductServiceImpl implements ProductService{
             return products;
         }
         return null;
+    }
+
+    // ==================== OPTIMIZED CACHED METHODS ====================
+
+    @Override
+    public List<String> getProductNames() {
+        // Optimized: Use cache service with Redis caching (1 hour TTL)
+        // This fetches only product names from database instead of full Product entities
+        return productCacheService.getAllProductNames();
+    }
+
+    @Override
+    public List<String> getDistinctProductNames() {
+        // Optimized: Use cache service to get distinct product names
+        return productCacheService.getDistinctProductNames();
+    }
+
+    @Override
+    public List<HashMap<String, Long>> getProductNamesAndIds() {
+        // Optimized: Use cache service instead of fetching all products
+        return productCacheService.getProductNamesAndIds();
+    }
+
+    @Override
+    public List<ProductBasicInfoDTO> getBasicProductInfo() {
+        // Optimized: Use cache service to get basic product information
+        return productCacheService.getAllBasicProductInfo();
+    }
+
+    @Override
+    public List<ProductBasicInfoDTO> getProductNamesAndQualities() {
+        // Optimized: Use cache service to get product names and qualities
+        return productCacheService.getProductNamesAndQualities();
+    }
+
+    @Override
+    public List<HashMap<String, Long>> getProductNamesAndQualitiesAndQuantitiesWithIds() {
+        // Optimized: Use cache service to get product names, qualities, quantities with IDs
+        return productCacheService.getProductNamesAndQualitiesAndQuantitiesWithIds();
     }
 }
 

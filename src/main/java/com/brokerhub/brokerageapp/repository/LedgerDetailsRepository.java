@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface LedgerDetailsRepository extends JpaRepository<LedgerDetails, Long> {
 
@@ -21,6 +22,26 @@ public interface LedgerDetailsRepository extends JpaRepository<LedgerDetails, Lo
             "ON ld.daily_ledger_daily_ledger_Id = dl.daily_ledger_id " +
             "WHERE dl.date = :date", nativeQuery = true)
     List<DateLedgerRecordDTO> findLedgersOnDate(@Param("date")LocalDate date);
+
+    @Query("SELECT DISTINCT ld FROM LedgerDetails ld " +
+           "LEFT JOIN FETCH ld.records lr " +
+           "LEFT JOIN FETCH lr.toBuyer tb " +
+           "LEFT JOIN FETCH tb.address " +
+           "LEFT JOIN FETCH lr.product " +
+           "LEFT JOIN FETCH ld.fromSeller fs " +
+           "LEFT JOIN FETCH fs.address " +
+           "LEFT JOIN FETCH ld.dailyLedger dl " +
+           "LEFT JOIN FETCH dl.financialYear " +
+           "WHERE ld.ledgerDetailsId = :id")
+    Optional<LedgerDetails> findByIdWithAllRelations(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT ld FROM LedgerDetails ld " +
+           "LEFT JOIN FETCH ld.records lr " +
+           "LEFT JOIN FETCH lr.toBuyer tb " +
+           "LEFT JOIN FETCH lr.product " +
+           "LEFT JOIN FETCH ld.fromSeller fs " +
+           "LEFT JOIN FETCH ld.dailyLedger dl")
+    List<LedgerDetails> findAllWithRecords();
 
 //    @Query(value = "SELECT * FROM ")
 //    List<LedgerDetailsDTO> findByFromSeller(Long sellerId);

@@ -1,7 +1,9 @@
 package com.brokerhub.brokerageapp.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -22,48 +24,77 @@ public class CacheConfig {
 
     @Bean
     @Primary
-    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
-        // Default cache configuration
+    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
+    public CacheManager redisCacheManager(RedisConnectionFactory redisConnectionFactory) {
+        // Redis cache configuration with 1 hour TTL for user caches
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(24)) // 24 hours default TTL
+                .entryTtl(Duration.ofHours(1))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
                 .disableCachingNullValues();
 
-        // Custom cache configurations with different TTLs
+        // Specific cache configurations
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        // Analytics caches - longer TTL (24 hours)
-        cacheConfigurations.put("financialYearAnalytics", defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigurations.put("topPerformers", defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigurations.put("topBuyers", defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigurations.put("topSellers", defaultConfig.entryTtl(Duration.ofHours(24)));
-        cacheConfigurations.put("topMerchants", defaultConfig.entryTtl(Duration.ofHours(24)));
+        // User caches with 1 hour TTL
+        cacheConfigurations.put("userNames", defaultConfig);
+        cacheConfigurations.put("userNamesAndIds", defaultConfig);
+        cacheConfigurations.put("userBasicInfo", defaultConfig);
 
-        // Payment system caches - medium TTL (6 hours)
-        cacheConfigurations.put("firmNames", defaultConfig.entryTtl(Duration.ofHours(6)));
-        cacheConfigurations.put("brokeragePayments", defaultConfig.entryTtl(Duration.ofHours(6)));
-        cacheConfigurations.put("pendingPayments", defaultConfig.entryTtl(Duration.ofHours(6)));
-        cacheConfigurations.put("receivablePayments", defaultConfig.entryTtl(Duration.ofHours(6)));
-        cacheConfigurations.put("paymentDashboard", defaultConfig.entryTtl(Duration.ofHours(6)));
+        // Product caches with 1 hour TTL
+        cacheConfigurations.put("productNames", defaultConfig);
+        cacheConfigurations.put("productNamesAndIds", defaultConfig);
+        cacheConfigurations.put("productBasicInfo", defaultConfig);
+        cacheConfigurations.put("distinctProductNames", defaultConfig);
+        cacheConfigurations.put("productNamesAndQualities", defaultConfig);
 
-        // Frequently changing data - shorter TTL (1 hour)
-        cacheConfigurations.put("paymentSummary", defaultConfig.entryTtl(Duration.ofHours(1)));
-        cacheConfigurations.put("paymentAlerts", defaultConfig.entryTtl(Duration.ofMinutes(30)));
-        cacheConfigurations.put("paymentTrends", defaultConfig.entryTtl(Duration.ofHours(2)));
-
-        // User and product data - medium TTL (12 hours)
-        cacheConfigurations.put("userProfiles", defaultConfig.entryTtl(Duration.ofHours(12)));
-        cacheConfigurations.put("productCatalog", defaultConfig.entryTtl(Duration.ofHours(12)));
-        cacheConfigurations.put("addressLookup", defaultConfig.entryTtl(Duration.ofHours(12)));
-
-        // Ledger data - shorter TTL (2 hours) as it changes frequently
-        cacheConfigurations.put("dailyLedger", defaultConfig.entryTtl(Duration.ofHours(2)));
-        cacheConfigurations.put("ledgerDetails", defaultConfig.entryTtl(Duration.ofHours(2)));
+        // Other caches with different TTLs
+        cacheConfigurations.put("financialYearAnalytics", defaultConfig.entryTtl(Duration.ofMinutes(30)));
+        cacheConfigurations.put("dailyLedger", defaultConfig.entryTtl(Duration.ofMinutes(15)));
+        cacheConfigurations.put("paymentDashboard", defaultConfig.entryTtl(Duration.ofMinutes(10)));
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "simple", matchIfMissing = true)
+    public CacheManager fallbackCacheManager() {
+        // Fallback to in-memory cache when Redis is not available
+        return new ConcurrentMapCacheManager(
+                "financialYearAnalytics",
+                "topPerformers",
+                "topBuyers",
+                "topSellers",
+                "topMerchants",
+                // Payment system caches
+                "firmNames",
+                "brokeragePayments",
+                "pendingPayments",
+                "receivablePayments",
+                "paymentDashboard",
+                "paymentSummary",
+                "paymentAlerts",
+                "paymentTrends",
+                // User and product data
+                "userProfiles",
+                "userNames",
+                "userNamesAndIds",
+                "userBasicInfo",
+                "productCatalog",
+                "productNames",
+                "productNamesAndIds",
+                "productBasicInfo",
+                "distinctProductNames",
+                "productNamesAndQualities",
+                "addressLookup",
+                // Ledger data
+                "dailyLedger",
+                "ledgerDetails",
+                // Financial year cache
+                "financialYear"
+        );
     }
 }
