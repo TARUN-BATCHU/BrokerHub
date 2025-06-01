@@ -1,10 +1,7 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.*;
-import com.brokerhub.brokerageapp.entity.DailyLedger;
-import com.brokerhub.brokerageapp.entity.FinancialYear;
-import com.brokerhub.brokerageapp.entity.LedgerDetails;
-import com.brokerhub.brokerageapp.entity.LedgerRecord;
+import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.repository.DailyLedgerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
 import com.itextpdf.kernel.color.Color;
@@ -13,16 +10,20 @@ import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.property.TextAlignment;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -30,6 +31,7 @@ import com.itextpdf.layout.Document;
 
 @Service
 @Transactional
+@Slf4j
 public class DailyLedgerServiceImpl implements DailyLedgerService{
 
     @Autowired
@@ -56,35 +58,127 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
 
 
     public Long getDailyLedgerId(LocalDate date) {
-        if(null != dailyLedgerRepository.findByDate(date)){
-            return dailyLedgerRepository.findByDate(date).getDailyLedgerId();
+        log.info("Getting daily ledger ID for date: {}", date);
+
+        if (date == null) {
+            log.error("Date parameter cannot be null");
+            throw new IllegalArgumentException("Date parameter cannot be null");
         }
-        else{
-            //TODO if daily ledger not exists then create one.
-            return null;
+
+        try {
+            DailyLedger existingLedger = dailyLedgerRepository.findByDate(date);
+            if (existingLedger != null) {
+                log.debug("Found existing daily ledger with ID: {} for date: {}",
+                         existingLedger.getDailyLedgerId(), date);
+                return existingLedger.getDailyLedgerId();
+            } else {
+                // Auto-create daily ledger if it doesn't exist
+                log.info("Daily ledger not found for date: {}. Creating new daily ledger.", date);
+                DailyLedger newLedger = createDailyLedgerForDate(date);
+                return newLedger.getDailyLedgerId();
+            }
+        } catch (Exception e) {
+            log.error("Error getting daily ledger ID for date: {}", date, e);
+            throw new RuntimeException("Failed to get daily ledger ID for date: " + date, e);
         }
     }
 
     public DailyLedger getDailyLedger(LocalDate date) {
-        // Use the new method that eagerly fetches ledgerDetails
-        Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
-        if(dailyLedgerOpt.isPresent()){
-            DailyLedger dailyLedger = dailyLedgerOpt.get();
-            // Initialize the records collection for each ledger detail to avoid lazy loading
-            if(dailyLedger.getLedgerDetails() != null) {
-                for(LedgerDetails ledgerDetail : dailyLedger.getLedgerDetails()) {
-                    // Force initialization of the records collection
-                    if(ledgerDetail.getRecords() != null) {
-                        ledgerDetail.getRecords().size();
+        log.info("Fetching daily ledger for date: {}", date);
+
+        if (date == null) {
+            log.error("Date parameter cannot be null");
+            throw new IllegalArgumentException("Date parameter cannot be null");
+        }
+
+        try {
+            // Use the new method that eagerly fetches ledgerDetails
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+
+            if (dailyLedgerOpt.isPresent()) {
+                DailyLedger dailyLedger = dailyLedgerOpt.get();
+                log.debug("Found existing daily ledger with ID: {} for date: {}",
+                         dailyLedger.getDailyLedgerId(), date);
+
+                // Initialize the records collection for each ledger detail to avoid lazy loading
+                if (dailyLedger.getLedgerDetails() != null) {
+                    for (LedgerDetails ledgerDetail : dailyLedger.getLedgerDetails()) {
+                        // Force initialization of the records collection
+                        if (ledgerDetail.getRecords() != null) {
+                            ledgerDetail.getRecords().size();
+                        }
                     }
                 }
+                return dailyLedger;
+            } else {
+                // Auto-create daily ledger if it doesn't exist
+                log.info("Daily ledger not found for date: {}. Creating new daily ledger.", date);
+                return createDailyLedgerForDate(date);
             }
-            return dailyLedger;
+        } catch (Exception e) {
+            log.error("Error fetching daily ledger for date: {}", date, e);
+            throw new RuntimeException("Failed to fetch daily ledger for date: " + date, e);
         }
-        else{
-            //TODO if daily ledger not exists then create one.
-            return null;
+    }
+
+    /**
+     * Helper method to create a daily ledger for a given date
+     * Automatically finds the appropriate financial year for the date
+     */
+    private DailyLedger createDailyLedgerForDate(LocalDate date) {
+        log.info("Creating new daily ledger for date: {}", date);
+
+        try {
+            // Find the financial year that contains this date
+            FinancialYear financialYear = findFinancialYearForDate(date);
+
+            if (financialYear == null) {
+                log.error("No financial year found for date: {}", date);
+                throw new RuntimeException("No financial year found for date: " + date);
+            }
+
+            // Create new daily ledger
+            DailyLedger dailyLedger = DailyLedger.builder()
+                    .date(date)
+                    .financialYear(financialYear)
+                    .build();
+
+            DailyLedger savedLedger = dailyLedgerRepository.save(dailyLedger);
+            log.info("Successfully created daily ledger with ID: {} for date: {}",
+                    savedLedger.getDailyLedgerId(), date);
+
+            return savedLedger;
+        } catch (Exception e) {
+            log.error("Error creating daily ledger for date: {}", date, e);
+            throw new RuntimeException("Failed to create daily ledger for date: " + date, e);
         }
+    }
+
+    /**
+     * Helper method to find the financial year for a given date
+     */
+    private FinancialYear findFinancialYearForDate(LocalDate date) {
+        log.debug("Finding financial year for date: {}", date);
+
+        List<FinancialYear> allFinancialYears = financialYearRepository.findAll();
+
+        for (FinancialYear fy : allFinancialYears) {
+            if (isDateInFinancialYear(date, fy)) {
+                log.debug("Found financial year: {} for date: {}", fy.getFinancialYearName(), date);
+                return fy;
+            }
+        }
+
+        log.warn("No financial year found for date: {}", date);
+        return null;
+    }
+
+    /**
+     * Helper method to check if a date falls within a financial year
+     */
+    private boolean isDateInFinancialYear(LocalDate date, FinancialYear financialYear) {
+        return (date.isEqual(financialYear.getStart()) || date.isEqual(financialYear.getEnd()) ||
+                (date.isAfter(financialYear.getStart()) && date.isBefore(financialYear.getEnd())));
     }
 
     public DailyLedger getDailyLedgerOnDate(LocalDate date) throws FileNotFoundException {
@@ -205,19 +299,24 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                 .ledgerDetailsId(ledgerDetails.getLedgerDetailsId())
                 .build();
 
-        // Convert seller info
+        // Set transaction date
+        if (ledgerDetails.getDailyLedger() != null) {
+            dto.setTransactionDate(ledgerDetails.getDailyLedger().getDate());
+        }
+
+        // Convert seller info (basic info only)
         if (ledgerDetails.getFromSeller() != null) {
+            User seller = ledgerDetails.getFromSeller();
             OptimizedUserDTO sellerDTO = OptimizedUserDTO.builder()
-                    .userId(ledgerDetails.getFromSeller().getUserId())
-                    .firmName(ledgerDetails.getFromSeller().getFirmName())
-                    .addressId(ledgerDetails.getFromSeller().getAddress() != null ?
-                            ledgerDetails.getFromSeller().getAddress().getAddressId() : null)
+                    .userId(seller.getUserId())
+                    .firmName(seller.getFirmName())
+                    .addressId(seller.getAddress() != null ? seller.getAddress().getAddressId() : null)
                     .build();
             dto.setFromSeller(sellerDTO);
         }
 
-        // Convert records
-        if (ledgerDetails.getRecords() != null) {
+        // Convert records and calculate transaction-specific data
+        if (ledgerDetails.getRecords() != null && !ledgerDetails.getRecords().isEmpty()) {
             // Force initialization of the records collection
             ledgerDetails.getRecords().size();
 
@@ -226,6 +325,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                             .map(this::convertToOptimizedLedgerRecordDTO)
                             .collect(Collectors.toList());
             dto.setRecords(optimizedRecords);
+
+            // Calculate transaction summary (delegate to LedgerDetailsServiceImpl logic)
+            dto.setTransactionSummary(calculateTransactionSummaryForDailyLedger(ledgerDetails.getRecords()));
         }
 
         return dto;
@@ -263,4 +365,163 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
 
         return dto;
     }
+
+    @Override
+    public DailyLedger getDailyLedgerWithPagination(LocalDate date, Pageable pageable) {
+        log.info("Fetching daily ledger with pagination for date: {}, page: {}, size: {}",
+                date, pageable.getPageNumber(), pageable.getPageSize());
+
+        if (date == null) {
+            log.error("Date parameter cannot be null");
+            throw new IllegalArgumentException("Date parameter cannot be null");
+        }
+
+        if (pageable == null) {
+            log.error("Pageable parameter cannot be null");
+            throw new IllegalArgumentException("Pageable parameter cannot be null");
+        }
+
+        try {
+            // First, get or create the daily ledger
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithFinancialYear(date);
+            DailyLedger dailyLedger;
+
+            if (dailyLedgerOpt.isPresent()) {
+                dailyLedger = dailyLedgerOpt.get();
+                log.debug("Found existing daily ledger with ID: {} for date: {}",
+                         dailyLedger.getDailyLedgerId(), date);
+            } else {
+                // Auto-create daily ledger if it doesn't exist
+                log.info("Daily ledger not found for date: {}. Creating new daily ledger.", date);
+                dailyLedger = createDailyLedgerForDate(date);
+            }
+
+            // Get paginated ledger details
+            Page<LedgerDetails> ledgerDetailsPage = dailyLedgerRepository
+                    .findLedgerDetailsByDateWithPagination(date, pageable);
+
+            // Set the paginated ledger details to the daily ledger
+            dailyLedger.setLedgerDetails(ledgerDetailsPage.getContent());
+
+            // Initialize the records collection for each ledger detail to avoid lazy loading
+            for (LedgerDetails ledgerDetail : dailyLedger.getLedgerDetails()) {
+                if (ledgerDetail.getRecords() != null) {
+                    ledgerDetail.getRecords().size();
+                }
+            }
+
+            log.info("Successfully fetched daily ledger with {} ledger details for date: {}",
+                    ledgerDetailsPage.getNumberOfElements(), date);
+
+            return dailyLedger;
+        } catch (Exception e) {
+            log.error("Error fetching daily ledger with pagination for date: {}", date, e);
+            throw new RuntimeException("Failed to fetch daily ledger with pagination for date: " + date, e);
+        }
+    }
+
+    @Override
+    public OptimizedDailyLedgerDTO getDailyLedgerOptimizedWithPagination(LocalDate date, Pageable pageable) {
+        log.info("Fetching optimized daily ledger with pagination for date: {}, page: {}, size: {}",
+                date, pageable.getPageNumber(), pageable.getPageSize());
+
+        if (date == null) {
+            log.error("Date parameter cannot be null");
+            throw new IllegalArgumentException("Date parameter cannot be null");
+        }
+
+        if (pageable == null) {
+            log.error("Pageable parameter cannot be null");
+            throw new IllegalArgumentException("Pageable parameter cannot be null");
+        }
+
+        try {
+            // First, get or create the daily ledger
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithFinancialYear(date);
+            DailyLedger dailyLedger;
+
+            if (dailyLedgerOpt.isPresent()) {
+                dailyLedger = dailyLedgerOpt.get();
+                log.debug("Found existing daily ledger with ID: {} for date: {}",
+                         dailyLedger.getDailyLedgerId(), date);
+            } else {
+                // Auto-create daily ledger if it doesn't exist
+                log.info("Daily ledger not found for date: {}. Creating new daily ledger.", date);
+                dailyLedger = createDailyLedgerForDate(date);
+            }
+
+            // Convert to optimized DTO
+            OptimizedDailyLedgerDTO optimizedDTO = OptimizedDailyLedgerDTO.builder()
+                    .dailyLedgerId(dailyLedger.getDailyLedgerId())
+                    .date(dailyLedger.getDate())
+                    .financialYearId(dailyLedger.getFinancialYear() != null ?
+                            dailyLedger.getFinancialYear().getYearId() : null)
+                    .build();
+
+            // Get paginated ledger details
+            Page<LedgerDetails> ledgerDetailsPage = dailyLedgerRepository
+                    .findLedgerDetailsByDateWithPagination(date, pageable);
+
+            // Convert paginated ledger details to optimized DTOs
+            List<OptimizedLedgerDetailsDTO> optimizedLedgerDetails = ledgerDetailsPage.getContent()
+                    .stream()
+                    .map(this::convertToOptimizedLedgerDetailsDTO)
+                    .collect(Collectors.toList());
+
+            optimizedDTO.setLedgerDetails(optimizedLedgerDetails);
+
+            log.info("Successfully fetched optimized daily ledger with {} ledger details for date: {}",
+                    ledgerDetailsPage.getNumberOfElements(), date);
+
+            return optimizedDTO;
+        } catch (Exception e) {
+            log.error("Error fetching optimized daily ledger with pagination for date: {}", date, e);
+            throw new RuntimeException("Failed to fetch optimized daily ledger with pagination for date: " + date, e);
+        }
+    }
+
+    /**
+     * Calculate transaction summary for daily ledger (same logic as LedgerDetailsServiceImpl)
+     */
+    private OptimizedLedgerDetailsDTO.TransactionSummaryDTO calculateTransactionSummaryForDailyLedger(List<LedgerRecord> records) {
+        Long totalBags = records.stream()
+                .mapToLong(record -> record.getQuantity() != null ? record.getQuantity() : 0L)
+                .sum();
+
+        BigDecimal totalBrokerage = records.stream()
+                .map(record -> record.getTotalBrokerage() != null ?
+                        BigDecimal.valueOf(record.getTotalBrokerage()) : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Long totalReceivableAmount = records.stream()
+                .mapToLong(record -> record.getTotalProductsCost() != null ? record.getTotalProductsCost() : 0L)
+                .sum();
+
+        BigDecimal averageBrokeragePerBag = totalBags > 0 ?
+                totalBrokerage.divide(BigDecimal.valueOf(totalBags), 2, BigDecimal.ROUND_HALF_UP) :
+                BigDecimal.ZERO;
+
+        Integer numberOfProducts = (int) records.stream()
+                .map(record -> record.getProduct() != null ? record.getProduct().getProductId() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        Integer numberOfBuyers = (int) records.stream()
+                .map(record -> record.getToBuyer() != null ? record.getToBuyer().getUserId() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        return OptimizedLedgerDetailsDTO.TransactionSummaryDTO.builder()
+                .totalBagsSoldInTransaction(totalBags)
+                .totalBrokerageInTransaction(totalBrokerage)
+                .totalReceivableAmountInTransaction(totalReceivableAmount)
+                .averageBrokeragePerBag(averageBrokeragePerBag)
+                .numberOfProducts(numberOfProducts)
+                .numberOfBuyers(numberOfBuyers)
+                .build();
+    }
+
+
 }
