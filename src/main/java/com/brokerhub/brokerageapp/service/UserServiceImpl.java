@@ -2,10 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
-import com.brokerhub.brokerageapp.entity.Address;
-import com.brokerhub.brokerageapp.entity.BankDetails;
-import com.brokerhub.brokerageapp.entity.Miller;
-import com.brokerhub.brokerageapp.entity.User;
+import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.mapper.UserDTOMapper;
 import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
