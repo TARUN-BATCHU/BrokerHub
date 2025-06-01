@@ -43,17 +43,26 @@ public class UserServiceImpl implements UserService {
     @Autowired
     UserCacheService userCacheService;
 
-
+    @Autowired
+    TenantContextService tenantContextService;
 
     public ResponseEntity createUser(UserDTO userDTO) {
         String firmName = userDTO.getFirmName();
         String GSTNumber = userDTO.getGstNumber();
+
+        // Get current broker for multi-tenant isolation
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+
         if(!checkUserFirmExists(firmName) && !checkUserGSTNumberExists(GSTNumber)) {
             User user = userDTOMapper.convertUserDTOtoUser(userDTO);
             //User user = new User();
             if(user == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to convert UserDTO to User");
             }
+
+            // Set the broker for multi-tenant isolation
+            user.setBroker(currentBroker);
+
             user.setPayableAmount(0L);
             user.setReceivableAmount(0L);
             user.setTotalBagsBought(0L);
@@ -165,7 +174,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<User> getAllUserDetails() {
-        List<User> allUsers = userRepository.findAll();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<User> allUsers = userRepository.findByBrokerBrokerId(currentBrokerId);
         if(allUsers.size()>=1){
             return allUsers;
         }
@@ -175,12 +185,13 @@ public class UserServiceImpl implements UserService {
     }
 
     public Object getAllUsersByCity(String city) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         boolean isCityExists = addressService.isCityExists(city);
         if (!isCityExists) {
             return "City does not exist";
         }
 
-        List<User> usersInCity = userRepository.findByAddressCity(city);
+        List<User> usersInCity = userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
         return usersInCity.isEmpty() ? Collections.emptyList() : usersInCity;
     }
 
@@ -209,12 +220,13 @@ public class UserServiceImpl implements UserService {
     }
 
     public Object getUserByProperty(String property, String value) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if(property.equalsIgnoreCase(Constants.USER_PROPERTY_FIRM_NAME)){
-            Optional<User> user = userRepository.findByFirmName(value);
+            Optional<User> user = userRepository.findByBrokerBrokerIdAndFirmName(currentBrokerId, value);
             return user.isEmpty()? null : user;
         }
         else if(property.equalsIgnoreCase(Constants.USER_PROPERTY_GST_NUMBER)){
-            Optional<User> user = userRepository.findByGstNumber(value);
+            Optional<User> user = userRepository.findByBrokerBrokerIdAndGstNumber(currentBrokerId, value);
             return user.isEmpty()? null : user;
         }
         else{
@@ -235,7 +247,8 @@ public class UserServiceImpl implements UserService {
 
 
     private boolean checkUserGSTNumberExists(String gstNumber) {
-        Optional<User> user = userRepository.findByGstNumber(gstNumber);
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<User> user = userRepository.findByBrokerBrokerIdAndGstNumber(currentBrokerId, gstNumber);
         if(user.isEmpty()){
             return false;
         }
@@ -269,7 +282,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public boolean checkUserFirmExists(String firmName){
-        Optional<User> user = userRepository.findByFirmName(firmName);
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<User> user = userRepository.findByBrokerBrokerIdAndFirmName(currentBrokerId, firmName);
         System.out.println(user);
         if(user.isEmpty()){
             return false;

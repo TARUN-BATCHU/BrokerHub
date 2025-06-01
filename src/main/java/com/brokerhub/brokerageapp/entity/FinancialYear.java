@@ -21,6 +21,15 @@ public class FinancialYear {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long yearId;
 
+    /**
+     * The broker who owns this financial year.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
+
     @NotNull
     private LocalDate start;
 

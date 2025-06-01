@@ -36,6 +36,14 @@ public class User {
 
     private String ownerName;
 
+    /**
+     * The broker who owns this user/merchant.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
 
     @ManyToOne
     @JoinColumn(name = "address_id")

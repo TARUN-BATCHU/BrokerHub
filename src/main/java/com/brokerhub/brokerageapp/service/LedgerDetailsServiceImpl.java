@@ -41,6 +41,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     @Autowired
     BrokerRepository brokerRepository;
 
+    @Autowired
+    TenantContextService tenantContextService;
+
     public ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO) {
         LocalDate date = ledgerDetailsDTO.getDate();
         DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(date);
@@ -57,6 +60,11 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
 
         LedgerDetails ledgerDetails = new LedgerDetails();
+
+        // Set broker for multi-tenant isolation
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+        ledgerDetails.setBroker(currentBroker);
+
         if(dailyLedger != null){
             ledgerDetails.setDailyLedger(dailyLedger);
         }
@@ -118,8 +126,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         log.info("Fetching all ledger details");
 
         try {
-            // Use the optimized query that eagerly fetches records
-            List<LedgerDetails> ledgerDetails = ledgerDetailsRepository.findAllWithRecords();
+            // Use the broker-aware optimized query that eagerly fetches records
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            List<LedgerDetails> ledgerDetails = ledgerDetailsRepository.findAllWithRecordsByBrokerId(currentBrokerId);
 
             if (ledgerDetails != null && !ledgerDetails.isEmpty()) {
                 log.info("Successfully fetched {} ledger details with records", ledgerDetails.size());
@@ -144,8 +153,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
 
         try {
-            // Use the new query that eagerly fetches all relations including records
-            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByIdWithAllRelations(ledgerDetailId);
+            // Use the broker-aware query that eagerly fetches all relations including records
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndIdWithAllRelations(currentBrokerId, ledgerDetailId);
 
             if (ledgerOptional.isPresent()) {
                 LedgerDetails ledgerDetails = ledgerOptional.get();
@@ -179,8 +189,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
 
         try {
-            // Use the new query that eagerly fetches all relations including records
-            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByIdWithAllRelations(ledgerDetailId);
+            // Use the broker-aware query that eagerly fetches all relations including records
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndIdWithAllRelations(currentBrokerId, ledgerDetailId);
 
             if (ledgerOptional.isPresent()) {
                 LedgerDetails ledgerDetails = ledgerOptional.get();
@@ -203,7 +214,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId) {
         List<DisplayLedgerDetailDTO> ledgerDetailsDTOList = new ArrayList<>();
 
-        List<DateLedgerRecordDTO> ledgerRecordsOnDate = ledgerDetailsRepository.findLedgersOnDate(date);
+        // Use current broker context instead of passed brokerId for security
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<DateLedgerRecordDTO> ledgerRecordsOnDate = ledgerDetailsRepository.findLedgersOnDateByBrokerId(currentBrokerId, date);
 
         for(DateLedgerRecordDTO dateLedgerRecord : ledgerRecordsOnDate){
             DisplayLedgerDetailDTO existingLedgerDetail = checkSellerExists(ledgerDetailsDTOList,userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());

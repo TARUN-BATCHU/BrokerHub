@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.ProductBasicInfoDTO;
+import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.Product;
 import com.brokerhub.brokerageapp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,8 @@ public class ProductServiceImpl implements ProductService{
     @Autowired
     ProductCacheService productCacheService;
 
+    @Autowired
+    TenantContextService tenantContextService;
 
     public ResponseEntity<String> createProduct(Product product) {
         // Validate input parameters
@@ -29,8 +32,16 @@ public class ProductServiceImpl implements ProductService{
             return ResponseEntity.badRequest().body("Invalid product data");
         }
 
-        // Check if a product with the same name, quality, and quantity already exists
-        List<Product> existingProducts = productRepository.findByProductNameAndQualityAndQuantity(product.getProductName(), product.getQuality(), product.getQuantity());
+        // Get current broker for multi-tenant isolation
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+        Long currentBrokerId = currentBroker.getBrokerId();
+
+        // Set the broker for multi-tenant isolation
+        product.setBroker(currentBroker);
+
+        // Check if a product with the same name, quality, and quantity already exists for this broker
+        List<Product> existingProducts = productRepository.findByBrokerBrokerIdAndProductNameAndQualityAndQuantity(
+            currentBrokerId, product.getProductName(), product.getQuality(), product.getQuantity());
 
         if (!existingProducts.isEmpty()) {
             return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Product with the same name, quality, and quantity already exists");
@@ -72,15 +83,27 @@ public class ProductServiceImpl implements ProductService{
     }
 
     public List<Product> getAllProducts(Pageable pageable) {
-        List<Product> products = productRepository.findAll(pageable).getContent();
-        if(products.size()>=1){
-            return products;
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<Product> allProducts = productRepository.findByBrokerBrokerId(currentBrokerId);
+
+        // Apply pagination manually since we're using a custom query
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allProducts.size());
+
+        if (start >= allProducts.size()) {
+            return null;
+        }
+
+        List<Product> paginatedProducts = allProducts.subList(start, end);
+        if(paginatedProducts.size()>=1){
+            return paginatedProducts;
         }
         return null;
     }
 
     public List<Product> getAllProductsByName(String productName){
-        List<Product> products = productRepository.findByProductName(productName);
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<Product> products = productRepository.findByBrokerBrokerIdAndProductName(currentBrokerId, productName);
         if(products.size()>=1){
             return products;
         }
