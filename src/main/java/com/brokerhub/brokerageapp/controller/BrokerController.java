@@ -103,5 +103,15 @@ public class BrokerController {
         return brokerService.createPassword(createPasswordDTO);
     }
 
+    @GetMapping("/generateHash/{password}")
+    public String generatePasswordHash(@PathVariable String password){
+        return brokerService.generatePasswordHash(password);
+    }
+
+    @PostMapping("/resetAdminPassword/{newPassword}")
+    public ResponseEntity<String> resetAdminPassword(@PathVariable String newPassword){
+        return brokerService.resetAdminPassword(newPassword);
+    }
+
 
 }

@@ -266,5 +266,24 @@ public class BrokerServiceImpl implements BrokerService{
         }
     }
 
+    public String generatePasswordHash(String password) {
+        return passwordEncoder.encode(password);
+    }
+
+    public ResponseEntity<String> resetAdminPassword(String newPassword) {
+        try {
+            Broker admin = brokerRepository.findByUserName("admin")
+                .orElseThrow(() -> new RuntimeException("Admin user not found"));
+
+            String hashedPassword = passwordEncoder.encode(newPassword);
+            admin.setPassword(hashedPassword);
+            brokerRepository.save(admin);
+
+            return ResponseEntity.ok("Admin password reset successfully. New password: " + newPassword);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to reset password: " + e.getMessage());
+        }
+    }
+
 
 }

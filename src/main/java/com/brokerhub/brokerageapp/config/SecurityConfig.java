@@ -18,6 +18,8 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
@@ -32,12 +34,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/BrokerHub/Broker/login", "/BrokerHub/user/createUser", "/BrokerHub/user/bulkUpload", "/BrokerHub/user/downloadTemplate", "/login", "/BrokerHub/Dashboard/**").permitAll()
+                        .requestMatchers("/","/BrokerHub/Broker/createBroker","/BrokerHub/Broker/", "/BrokerHub/Broker/login", "/BrokerHub/Broker/generateHash/**", "/BrokerHub/Broker/resetAdminPassword/**", "/BrokerHub/user/createUser", "/BrokerHub/user/bulkUpload", "/BrokerHub/user/downloadTemplate", "/login", "/BrokerHub/Dashboard/**").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(withDefaults())
-                .formLogin(form -> form
-                        .successHandler(authenticationSuccessHandler())
-                        .permitAll())
                 .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
