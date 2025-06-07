@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class BrokerServiceImpl implements BrokerService{
 
     @Autowired
@@ -253,6 +255,7 @@ public class BrokerServiceImpl implements BrokerService{
         return ResponseEntity.status(HttpStatus.CREATED).body("Password created");
     }
 
+    @Transactional(readOnly = true)
     public ResponseEntity login(BrokerLoginDTO brokerLoginDTO){
         Broker broker = brokerRepository.findByUserName(brokerLoginDTO.getUserName()).orElseThrow(() -> new RuntimeException("Broker not found with this userName: " + brokerLoginDTO.getUserName()));
         String password = brokerLoginDTO.getPassword();
@@ -263,6 +266,26 @@ public class BrokerServiceImpl implements BrokerService{
         }
         else{
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is wrong");
+        }
+    }
+
+    public String generatePasswordHash(String password) {
+        return passwordEncoder.encode(password);
+    }
+
+    @Transactional
+    public ResponseEntity<String> resetAdminPassword(String newPassword) {
+        try {
+            Broker admin = brokerRepository.findByUserName("admin")
+                .orElseThrow(() -> new RuntimeException("Admin user not found"));
+
+            String hashedPassword = passwordEncoder.encode(newPassword);
+            admin.setPassword(hashedPassword);
+            brokerRepository.save(admin);
+
+            return ResponseEntity.ok("Admin password reset successfully. New password: " + newPassword);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to reset password: " + e.getMessage());
         }
     }
 
