@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,7 +34,7 @@ class BrokerServiceImplTest {
     private UserService userService;
 
     @Mock
-    private BankDetailsService bankDetailsService;
+    private BrokerBankDetailsService brokerBankDetailsService;
 
     @Mock
     private AddressService addressService;

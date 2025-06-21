@@ -54,8 +54,8 @@ public class User {
     private String email;
 
     @ManyToOne
-    @JoinColumn(name = "bankDetails_id")
-    private BankDetails bankDetails;
+    @JoinColumn(name = "merchantBankDetailsId")
+    private MerchantBankDetails bankDetails;
 
     private List<String> phoneNumbers;
 

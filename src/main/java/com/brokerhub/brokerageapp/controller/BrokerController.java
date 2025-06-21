@@ -114,5 +114,15 @@ public class BrokerController {
         return brokerService.resetAdminPassword(newPassword);
     }
 
+    @GetMapping("/UserNameExists/{userName}")
+    public Boolean checkUserNameExists(@PathVariable String UserName){
+        return brokerService.findBrokerUserNameAvailability(UserName);
+    }
+
+    @GetMapping("/BrokerFirmNameExists/{FirmName}")
+    public Boolean checkBrokerFirmNameExists(@PathVariable String FirmName){
+        return brokerService.findBrokerFirmNameAvailability(FirmName);
+    }
+
 
 }

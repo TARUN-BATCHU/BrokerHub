@@ -32,7 +32,7 @@ public class UserServiceImpl implements UserService {
     UserDTOMapper userDTOMapper;
 
     @Autowired
-    BankDetailsService bankDetailsService;
+    MerchantBankDetailsService merchantBankDetailsService;
 
     @Autowired
     AddressService addressService;
@@ -83,16 +83,16 @@ public class UserServiceImpl implements UserService {
 
             // Handle bank details creation
             if(userDTO.getAccountNumber() != null && !userDTO.getAccountNumber().trim().isEmpty()) {
-                BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+                MerchantBankDetails bankDetails = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(userDTO.getAccountNumber());
                 if(bankDetails == null) {
                     // Create new bank details if not found
-                    bankDetails = new BankDetails();
+                    bankDetails = new MerchantBankDetails();
                     bankDetails.setAccountNumber(userDTO.getAccountNumber());
                     if(userDTO.getBankName() != null) bankDetails.setBankName(userDTO.getBankName());
                     if(userDTO.getIfscCode() != null) bankDetails.setIfscCode(userDTO.getIfscCode());
                     if(userDTO.getBranch() != null) bankDetails.setBranch(userDTO.getBranch());
                     // Save the bank details first
-                    bankDetails = bankDetailsService.saveBankDetails(bankDetails);
+                    bankDetails = merchantBankDetailsService.saveMerchantBankDetails(bankDetails);
                 }
                 user.setBankDetails(bankDetails);
             }
@@ -131,7 +131,7 @@ public class UserServiceImpl implements UserService {
             user.setAddress(address);
         }
         if(user.getBankDetails() != null && user.getBankDetails().getAccountNumber() != null) {
-            BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
+            MerchantBankDetails bankDetails = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
             user.setBankDetails(bankDetails);
         }
 
@@ -253,17 +253,17 @@ public class UserServiceImpl implements UserService {
     }
 
     private void linkBankDetailsToUser(UserDTO userDTO,User user) {
-        if(bankDetailsService.ifBankDetailsExists(userDTO.getAccountNumber())) {
-            BankDetails bankAccount = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+        if(merchantBankDetailsService.ifMerchantBankDetailsExists(userDTO.getAccountNumber())) {
+            MerchantBankDetails bankAccount = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(userDTO.getAccountNumber());
             user.setBankDetails(bankAccount);
         }
         else {
-            BankDetails bankDetails = new BankDetails();
+            MerchantBankDetails bankDetails = new MerchantBankDetails();
             bankDetails.setBankName(userDTO.getBankName());
             bankDetails.setAccountNumber(userDTO.getAccountNumber());
             bankDetails.setBranch(userDTO.getBranch());
             bankDetails.setIfscCode(userDTO.getIfscCode());
-            bankDetailsService.createBankDetails(bankDetails);
+            merchantBankDetailsService.createMerchantBankDetails(bankDetails);
             user.setBankDetails(bankDetails);
         }
     }

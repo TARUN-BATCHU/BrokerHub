@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.*;
+import com.brokerhub.brokerageapp.helper.RazorPayHelper;
 import com.brokerhub.brokerageapp.mapper.BrokerDTOMapper;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
@@ -19,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -43,7 +45,7 @@ public class BrokerServiceImpl implements BrokerService{
     UserService userService;
 
     @Autowired
-    BankDetailsService bankDetailsService;
+    BrokerBankDetailsService brokerBankDetailsService;
 
     @Autowired
     BrokerDTOMapper brokerDTOMapper;
@@ -63,23 +65,27 @@ public class BrokerServiceImpl implements BrokerService{
     @Autowired
     AddressRepository addressRepository;
 
+    @Autowired
+    RazorPayHelper razorPayHelper;
+
     public ResponseEntity createBroker(BrokerDTO brokerDTO) throws IOException, InterruptedException {
         String brokerFirmName = brokerDTO.getBrokerageFirmName();
         String brokerEmail = brokerDTO.getEmail();
         String brokerPhoneNumber = brokerDTO.getPhoneNumber();
-        if(!brokerRepository.findByBrokerageFirmName(brokerFirmName).isPresent() && !brokerRepository.findByEmail(brokerEmail).isPresent() && !brokerRepository.findByPhoneNumber(brokerPhoneNumber).isPresent()) {
+        if(!brokerRepository.existsByBrokerageFirmName(brokerFirmName) && !brokerRepository.findByEmail(brokerEmail).isPresent() && !brokerRepository.findByPhoneNumber(brokerPhoneNumber).isPresent()) {
             Broker broker = brokerDTOMapper.convertBrokerDTOtoBroker(brokerDTO);
             broker.setTotalBrokerage(BigDecimal.valueOf(0));
             BrokersAddress address = addressService.findBrokersAddressByPincode(brokerDTO.getPincode());
             if(null != address){
                 broker.setAddress(address);
             }
-            if(null != brokerDTO.getAccountNumber() && null!= brokerDTO.getBranch() && null!=brokerDTO.getBankName() && null!=brokerDTO.getIfscCode()){
+            if(null != brokerDTO.getAccountNumber() && null!=brokerDTO.getIfscCode()){
                 linkBankDetailsToBroker(brokerDTO,broker);
             }
             broker.setPassword(passwordEncoder.encode(brokerDTO.getPassword()));
             broker.setOtp(null);
             broker.setOtpGeneratedTime(null);
+
             brokerRepository.save(broker);
             return ResponseEntity.status(HttpStatus.CREATED).body("Broker account successfully created");
         }
@@ -87,20 +93,86 @@ public class BrokerServiceImpl implements BrokerService{
     }
 
     private void linkBankDetailsToBroker(BrokerDTO brokerDTO, Broker broker) {
-        if(bankDetailsService.ifBankDetailsExists(brokerDTO.getAccountNumber())) {
-            BankDetails bankAccount = bankDetailsService.getBankDetailsByAccountNumber(brokerDTO.getAccountNumber());
+        if(brokerBankDetailsService.ifBrokerBankDetailsExists(brokerDTO.getAccountNumber())) {
+            BrokerBankDetails bankAccount = brokerBankDetailsService.getBrokerBankDetailsByAccountNumber(brokerDTO.getAccountNumber());
             broker.setBankDetails(bankAccount);
         }
         else {
-            BankDetails bankDetails = new BankDetails();
-            bankDetails.setBankName(brokerDTO.getBankName());
-            bankDetails.setAccountNumber(brokerDTO.getAccountNumber());
-            bankDetails.setBranch(brokerDTO.getBranch());
-            bankDetails.setIfscCode(brokerDTO.getIfscCode());
-            bankDetailsService.createBankDetails(bankDetails);
+            BrokerBankDetails bankDetails = new BrokerBankDetails();
+            BankDetailsDTO bankDetailsDTO;
+            try{
+                bankDetailsDTO = razorPayHelper.fetchBankDetails(brokerDTO.getIfscCode());
+            }catch (Exception e){
+                bankDetailsDTO = null;
+            }
+            if(null != bankDetailsDTO) {
+                mapBankDetails(bankDetailsDTO, bankDetails, brokerDTO.getAccountNumber(), brokerDTO.getIfscCode());
+            }else{
+                if (StringUtils.hasText(brokerDTO.getAccountNumber())) {
+                    bankDetails.setAccountNumber(brokerDTO.getAccountNumber());
+                }
+
+                if (StringUtils.hasText(brokerDTO.getIfscCode())) {
+                    bankDetails.setIfscCode(brokerDTO.getIfscCode());
+                }
+            }
+            brokerBankDetailsService.createBrokerBankDetails(bankDetails);
             broker.setBankDetails(bankDetails);
         }
     }
+
+    public void mapBankDetails(BankDetailsDTO bankDetailsDTO, BrokerBankDetails bankDetails, String accountNumber, String ifscCode) {
+        // Set required fields (with basic null/empty validation)
+        if (StringUtils.hasText(accountNumber)) {
+            bankDetails.setAccountNumber(accountNumber);
+        }
+
+        if (StringUtils.hasText(ifscCode)) {
+            bankDetails.setIfscCode(ifscCode);
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getBankName())) {
+            bankDetails.setBankName(bankDetailsDTO.getBankName());
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getBankAddress())) {
+            bankDetails.setBankAddress(bankDetailsDTO.getBankAddress());
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getBankCode())) {
+            bankDetails.setBankCode(bankDetailsDTO.getBankCode());
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getBankContact())) {
+            bankDetails.setBankContact(bankDetailsDTO.getBankContact());
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getBranch())) {
+            bankDetails.setBranch(bankDetailsDTO.getBranch());
+        }
+
+        if (StringUtils.hasText(bankDetailsDTO.getMICR())) {
+            bankDetails.setMICR(bankDetailsDTO.getMICR());
+        }
+
+        // Set Boolean flags (no null check needed unless you want to preserve existing values)
+        if (bankDetailsDTO.getIMPS() != null) {
+            bankDetails.setIMPS(bankDetailsDTO.getIMPS());
+        }
+
+        if (bankDetailsDTO.getNEFT() != null) {
+            bankDetails.setNEFT(bankDetailsDTO.getNEFT());
+        }
+
+        if (bankDetailsDTO.getRTGS() != null) {
+            bankDetails.setRTGS(bankDetailsDTO.getRTGS());
+        }
+
+        if (bankDetailsDTO.getUPI() != null) {
+            bankDetails.setUPI(bankDetailsDTO.getUPI());
+        }
+    }
+
 
     public ResponseEntity updateBroker(UpdateBrokerDTO updateBrokerDTO) {
         Optional<Broker> broker = brokerRepository.findById(updateBrokerDTO.getBrokerId());
@@ -301,6 +373,14 @@ public class BrokerServiceImpl implements BrokerService{
         // During broker creation, we can't use tenant context, so we'll find any address with this pincode
         // or return null to let the system handle it
         return addressRepository.findByPincode(pincode);
+    }
+
+    public Boolean findBrokerUserNameAvailability(String userName){
+        return brokerRepository.existsByUserName(userName);
+    }
+
+    public Boolean findBrokerFirmNameAvailability(String FirmName){
+        return brokerRepository.existsByBrokerageFirmName(FirmName);
     }
 
 }

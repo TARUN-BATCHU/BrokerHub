@@ -43,4 +43,8 @@ public interface BrokerService {
     String generatePasswordHash(String password);
 
     ResponseEntity<String> resetAdminPassword(String newPassword);
+
+    Boolean findBrokerUserNameAvailability(String userName);
+
+    Boolean findBrokerFirmNameAvailability(String firmName);
 }

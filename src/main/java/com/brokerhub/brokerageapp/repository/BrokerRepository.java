@@ -19,4 +19,8 @@ public interface BrokerRepository extends JpaRepository<Broker, Long> {
     BigDecimal findTotalBrokerageOfCity(String city);
 
     Optional<Broker> findByUserName(String userName);
+
+    boolean existsByUserName(String username);
+
+    boolean existsByBrokerageFirmName(String firmName);
 }

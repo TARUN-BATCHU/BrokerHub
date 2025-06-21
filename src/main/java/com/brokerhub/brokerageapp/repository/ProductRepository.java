@@ -35,34 +35,4 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p.productId, p.productName, p.quality, p.quantity FROM Product p WHERE p.broker.brokerId = :brokerId")
     List<Object[]> findProductNamesQualitiesAndQuantitiesWithIdsByBrokerId(@Param("brokerId") Long brokerId);
 
-    // Legacy methods (deprecated - use broker-aware versions)
-    @Deprecated
-    List<Product> findByProductName(String productName);
-
-    @Deprecated
-    List<Product> findByProductNameAndQualityAndQuantity(String productName, String productQuality, Integer quantity);
-
-    @Deprecated
-    @Query("SELECT p.productId, p.productName FROM Product p")
-    List<Object[]> findProductIdsAndNames();
-
-    @Deprecated
-    @Query("SELECT p.productName FROM Product p")
-    List<String> findAllProductNames();
-
-    @Deprecated
-    @Query("SELECT DISTINCT p.productName FROM Product p")
-    List<String> findDistinctProductNames();
-
-    @Deprecated
-    @Query("SELECT p.productId, p.productName, p.productBrokerage, p.quality, p.price FROM Product p")
-    List<Object[]> findBasicProductInfo();
-
-    @Deprecated
-    @Query("SELECT p.productName, p.quality FROM Product p")
-    List<Object[]> findProductNamesAndQualities();
-
-    @Deprecated
-    @Query("SELECT p.productId, p.productName, p.quality, p.quantity FROM Product p")
-    List<Object[]> findProductNamesQualitiesAndQuantitiesWithIds();
 }

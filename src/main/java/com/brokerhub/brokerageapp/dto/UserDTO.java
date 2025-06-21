@@ -1,11 +1,6 @@
 package com.brokerhub.brokerageapp.dto;
 
-import com.brokerhub.brokerageapp.entity.Address;
-import com.brokerhub.brokerageapp.entity.BankDetails;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -52,7 +52,7 @@ public class Broker {
 
     @OneToOne
     @PrimaryKeyJoinColumn
-    private BankDetails bankDetails;
+    private BrokerBankDetails bankDetails;
 
     private Integer otp = null;
 

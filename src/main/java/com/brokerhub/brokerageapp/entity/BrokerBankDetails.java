@@ -7,32 +7,50 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.Map;
+
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class BankDetails {
+public class BrokerBankDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long bankDetailsId;
+    private Long brokerBankDetailsId;
 
     /**
-     * The broker who owns this bank details.
-     * This enables multi-tenant isolation.
+     * which broker is the owner of this bank.
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "broker_id", nullable = false)
     @NotNull
     private Broker broker;
 
-    private String bankName;
-
     private String accountNumber;
 
     private String ifscCode;
 
+    private String bankName;
+
     private String branch;
+
+    private String BankContact;
+
+    private String BankAddress;
+
+    private String BankCode;
+
+    private String MICR;
+
+    private Boolean RTGS;
+
+    private Boolean IMPS;
+
+    private Boolean UPI;
+
+    private Boolean NEFT;
 
 }
