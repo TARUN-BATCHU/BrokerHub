@@ -39,7 +39,7 @@ public class Broker {
 
     @ManyToOne
     @JoinColumn(name = "address_id")
-    private Address address;
+    private BrokersAddress address;
 
     @Email
     private String email;

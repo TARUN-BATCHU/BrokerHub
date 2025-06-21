@@ -1,13 +1,11 @@
 package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.*;
-import com.brokerhub.brokerageapp.entity.Address;
-import com.brokerhub.brokerageapp.entity.BankDetails;
-import com.brokerhub.brokerageapp.entity.Broker;
-import com.brokerhub.brokerageapp.entity.User;
+import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.mapper.BrokerDTOMapper;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
+import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.utils.OtpUtil;
 import com.brokerhub.brokerageapp.utils.EmailUtil;
 import com.brokerhub.brokerageapp.constants.Constants;
@@ -16,7 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Collections;
 
 
 import java.math.BigDecimal;
@@ -55,14 +60,17 @@ public class BrokerServiceImpl implements BrokerService{
     @Autowired
     EmailUtil emailUtil;
 
-    public ResponseEntity createBroker(BrokerDTO brokerDTO) {
+    @Autowired
+    AddressRepository addressRepository;
+
+    public ResponseEntity createBroker(BrokerDTO brokerDTO) throws IOException, InterruptedException {
         String brokerFirmName = brokerDTO.getBrokerageFirmName();
         String brokerEmail = brokerDTO.getEmail();
         String brokerPhoneNumber = brokerDTO.getPhoneNumber();
         if(!brokerRepository.findByBrokerageFirmName(brokerFirmName).isPresent() && !brokerRepository.findByEmail(brokerEmail).isPresent() && !brokerRepository.findByPhoneNumber(brokerPhoneNumber).isPresent()) {
             Broker broker = brokerDTOMapper.convertBrokerDTOtoBroker(brokerDTO);
             broker.setTotalBrokerage(BigDecimal.valueOf(0));
-            Address address = addressService.findAddressByPincode(brokerDTO.getPincode());
+            BrokersAddress address = addressService.findBrokersAddressByPincode(brokerDTO.getPincode());
             if(null != address){
                 broker.setAddress(address);
             }
@@ -259,6 +267,10 @@ public class BrokerServiceImpl implements BrokerService{
         Boolean isPasswordCorrect = passwordEncoder.matches(password, broker.getPassword());
         String brokerId = broker.getBrokerId().toString();
         if(isPasswordCorrect){
+            // Set authentication context for the broker
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                broker.getUserName(), null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_BROKER")));
+            SecurityContextHolder.getContext().setAuthentication(auth);
             return ResponseEntity.ok().body("Login successful "+brokerId);
         }
         else{
@@ -285,5 +297,10 @@ public class BrokerServiceImpl implements BrokerService{
         }
     }
 
+    private Address findOrCreateAddressForBroker(String pincode, Broker broker) {
+        // During broker creation, we can't use tenant context, so we'll find any address with this pincode
+        // or return null to let the system handle it
+        return addressRepository.findByPincode(pincode);
+    }
 
 }

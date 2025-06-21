@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ public class BrokerController {
 
     @PostMapping("/createBroker")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
+    public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO) throws IOException, InterruptedException {
         return brokerService.createBroker(brokerDTO);
     }
 

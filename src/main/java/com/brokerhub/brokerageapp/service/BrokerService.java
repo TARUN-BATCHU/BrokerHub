@@ -5,11 +5,12 @@ import com.brokerhub.brokerageapp.entity.Broker;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
 
 public interface BrokerService {
-    ResponseEntity createBroker(@Valid BrokerDTO broker);
+    ResponseEntity createBroker(@Valid BrokerDTO broker) throws IOException, InterruptedException;
 
     ResponseEntity updateBroker(UpdateBrokerDTO UpdateBrokerDTO);
 
