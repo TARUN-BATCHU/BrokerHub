@@ -46,12 +46,29 @@ public class SecurityConfig {
                         .requestMatchers("/BrokerHub/Dashboard/**").permitAll()
                         .requestMatchers("/BrokerHub/Broker/generateHash/**").permitAll()
                         .requestMatchers("/BrokerHub/Broker/resetAdminPassword/**").permitAll()
+                        .requestMatchers("/BrokerHub/Broker/UserNameExists/**").permitAll()
+                        .requestMatchers("/BrokerHub/Broker/BrokerFirmNameExists/**").permitAll()
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/login").permitAll()
+                        .requestMatchers("/BrokerHub/Broker/forgotPassword").permitAll()
+                        .requestMatchers("/BrokerHub/Broker/verify-account").permitAll()
+                        .requestMatchers("/BrokerHub/Broker/createPassword").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .httpBasic(AbstractHttpConfigurer::disable)
+                .httpBasic(httpBasic -> httpBasic
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Only send 401 for API calls, not browser requests
+                            String acceptHeader = request.getHeader("Accept");
+                            if (acceptHeader != null && acceptHeader.contains("application/json")) {
+                                response.setStatus(401);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                            } else {
+                                response.sendRedirect("/login");
+                            }
+                        })
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .build();
     }

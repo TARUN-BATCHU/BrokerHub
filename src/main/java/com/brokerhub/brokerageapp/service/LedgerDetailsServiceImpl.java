@@ -64,6 +64,10 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         // Set broker for multi-tenant isolation
         Broker currentBroker = tenantContextService.getCurrentBroker();
         ledgerDetails.setBroker(currentBroker);
+        
+        // Set broker-specific transaction number
+        Long nextTransactionNumber = ledgerDetailsRepository.findMaxTransactionNumberByBrokerId(currentBroker.getBrokerId()) + 1;
+        ledgerDetails.setBrokerTransactionNumber(nextTransactionNumber);
 
         if(dailyLedger != null){
             ledgerDetails.setDailyLedger(dailyLedger);
@@ -179,6 +183,39 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
     }
 
+    public LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId) {
+        log.info("Fetching ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+
+        if (transactionNumber == null) {
+            log.error("Transaction number cannot be null");
+            throw new IllegalArgumentException("Transaction number cannot be null");
+        }
+
+        try {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+
+            if (ledgerOptional.isPresent()) {
+                LedgerDetails ledgerDetails = ledgerOptional.get();
+                log.debug("Found ledger details with transaction number: {} and {} records",
+                         transactionNumber,
+                         ledgerDetails.getRecords() != null ? ledgerDetails.getRecords().size() : 0);
+
+                if (ledgerDetails.getRecords() != null) {
+                    ledgerDetails.getRecords().size();
+                }
+
+                return ledgerDetails;
+            } else {
+                log.warn("No ledger details found with transaction number: {}", transactionNumber);
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error fetching ledger details by transaction number: {}", transactionNumber, e);
+            throw new RuntimeException("Failed to fetch ledger details for transaction number: " + transactionNumber, e);
+        }
+    }
+
     @Override
     public OptimizedLedgerDetailsDTO getOptimizedLedgerDetailById(Long ledgerDetailId, Long brokerId) {
         log.info("Fetching optimized ledger details by ID: {} for broker: {}", ledgerDetailId, brokerId);
@@ -276,6 +313,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     private OptimizedLedgerDetailsDTO convertToOptimizedLedgerDetailsDTO(LedgerDetails ledgerDetails) {
         OptimizedLedgerDetailsDTO dto = OptimizedLedgerDetailsDTO.builder()
                 .ledgerDetailsId(ledgerDetails.getLedgerDetailsId())
+                .brokerTransactionNumber(ledgerDetails.getBrokerTransactionNumber())
                 .build();
 
         // Set transaction date
@@ -388,6 +426,34 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                 .build();
     }
 
+    @Override
+    public OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId) {
+        log.info("Fetching optimized ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
 
+        if (transactionNumber == null) {
+            log.error("Transaction number cannot be null");
+            throw new IllegalArgumentException("Transaction number cannot be null");
+        }
+
+        try {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+
+            if (ledgerOptional.isPresent()) {
+                LedgerDetails ledgerDetails = ledgerOptional.get();
+                log.debug("Found ledger details with transaction number: {} and {} records",
+                         transactionNumber,
+                         ledgerDetails.getRecords() != null ? ledgerDetails.getRecords().size() : 0);
+
+                return convertToOptimizedLedgerDetailsDTO(ledgerDetails);
+            } else {
+                log.warn("No ledger details found with transaction number: {}", transactionNumber);
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error fetching optimized ledger details by transaction number: {}", transactionNumber, e);
+            throw new RuntimeException("Failed to fetch optimized ledger details for transaction number: " + transactionNumber, e);
+        }
+    }
 
 }

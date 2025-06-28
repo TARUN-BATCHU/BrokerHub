@@ -115,8 +115,8 @@ public class BrokerController {
     }
 
     @GetMapping("/UserNameExists/{userName}")
-    public Boolean checkUserNameExists(@PathVariable String UserName){
-        return brokerService.findBrokerUserNameAvailability(UserName);
+    public Boolean checkUserNameExists(@PathVariable String userName){
+        return brokerService.findBrokerUserNameAvailability(userName);
     }
 
     @GetMapping("/BrokerFirmNameExists/{FirmName}")

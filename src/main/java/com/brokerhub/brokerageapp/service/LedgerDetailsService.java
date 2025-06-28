@@ -16,7 +16,11 @@ public interface LedgerDetailsService {
 
     LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId);
 
+    LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId);
+
     OptimizedLedgerDetailsDTO getOptimizedLedgerDetailById(Long ledgerDetailId, Long brokerId);
+
+    OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId);
 
     List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId);
 

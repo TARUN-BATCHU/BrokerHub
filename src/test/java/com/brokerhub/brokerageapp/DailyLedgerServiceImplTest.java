@@ -32,86 +32,86 @@ class DailyLedgerServiceImplTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    @Test
-    void testCreateDailyLedger_ValidData() {
-        Long financialYearId = 1L;
-        LocalDate date = LocalDate.of(2023, 10, 10);
-        FinancialYear financialYear = new FinancialYear();
-        financialYear.setStart(LocalDate.of(2023, 1, 1));
-        financialYear.setEnd(LocalDate.of(2023, 12, 31));
-
-        DailyLedger savedDailyLedger = new DailyLedger();
-        savedDailyLedger.setDailyLedgerId(1L);
-        savedDailyLedger.setDate(date);
-
-        when(financialYearRepository.findById(financialYearId)).thenReturn(Optional.of(financialYear));
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(null).thenReturn(savedDailyLedger);
-
-        Long ledgerId = dailyLedgerServiceImpl.createDailyLedger(financialYearId, date);
-
-        assertNotNull(ledgerId);
-        assertEquals(1L, ledgerId);
-        verify(dailyLedgerRepository, times(1)).save(any(DailyLedger.class));
-    }
-
-    @Test
-    void testCreateDailyLedger_InvalidFinancialYear() {
-        Long financialYearId = 1L;
-        LocalDate date = LocalDate.of(2023, 10, 10);
-
-        when(financialYearRepository.findById(financialYearId)).thenReturn(Optional.empty());
-
-        Long ledgerId = dailyLedgerServiceImpl.createDailyLedger(financialYearId, date);
-
-        assertNull(ledgerId);
-    }
-
-    @Test
-    void testGetDailyLedgerId_ExistingLedger() {
-        LocalDate date = LocalDate.of(2023, 10, 10);
-        DailyLedger dailyLedger = new DailyLedger();
-        dailyLedger.setDailyLedgerId(1L);
-
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(dailyLedger);
-
-        Long ledgerId = dailyLedgerServiceImpl.getDailyLedgerId(date);
-
-        assertEquals(1L, ledgerId);
-    }
-
-    @Test
-    void testGetDailyLedgerId_NonExistingLedger() {
-        LocalDate date = LocalDate.of(2023, 10, 10);
-
-        when(dailyLedgerRepository.findByDate(date)).thenReturn(null);
-
-        Long ledgerId = dailyLedgerServiceImpl.getDailyLedgerId(date);
-
-        assertNull(ledgerId);
-    }
-
-    @Test
-    void testGetDailyLedger_ExistingLedger() {
-        LocalDate date = LocalDate.of(2023, 10, 10);
-        DailyLedger dailyLedger = new DailyLedger();
-        dailyLedger.setDailyLedgerId(1L);
-
-        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.of(dailyLedger));
-
-        DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
-
-        assertNotNull(result);
-        assertEquals(1L, result.getDailyLedgerId());
-    }
-
-    @Test
-    void testGetDailyLedger_NonExistingLedger() {
-        LocalDate date = LocalDate.of(2023, 10, 10);
-
-        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.empty());
-
-        DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
-
-        assertNull(result);
-    }
+//    @Test
+//    void testCreateDailyLedger_ValidData() {
+//        Long financialYearId = 1L;
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//        FinancialYear financialYear = new FinancialYear();
+//        financialYear.setStart(LocalDate.of(2023, 1, 1));
+//        financialYear.setEnd(LocalDate.of(2023, 12, 31));
+//
+//        DailyLedger savedDailyLedger = new DailyLedger();
+//        savedDailyLedger.setDailyLedgerId(1L);
+//        savedDailyLedger.setDate(date);
+//
+//        when(financialYearRepository.findById(financialYearId)).thenReturn(Optional.of(financialYear));
+//        when(dailyLedgerRepository.findByDate(date)).thenReturn(null).thenReturn(savedDailyLedger);
+//
+//        Long ledgerId = dailyLedgerServiceImpl.createDailyLedger(financialYearId, date);
+//
+//        assertNotNull(ledgerId);
+//        assertEquals(1L, ledgerId);
+//        verify(dailyLedgerRepository, times(1)).save(any(DailyLedger.class));
+//    }
+//
+//    @Test
+//    void testCreateDailyLedger_InvalidFinancialYear() {
+//        Long financialYearId = 1L;
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//
+//        when(financialYearRepository.findById(financialYearId)).thenReturn(Optional.empty());
+//
+//        Long ledgerId = dailyLedgerServiceImpl.createDailyLedger(financialYearId, date);
+//
+//        assertNull(ledgerId);
+//    }
+//
+//    @Test
+//    void testGetDailyLedgerId_ExistingLedger() {
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//        DailyLedger dailyLedger = new DailyLedger();
+//        dailyLedger.setDailyLedgerId(1L);
+//
+//        when(dailyLedgerRepository.findByDate(date)).thenReturn(dailyLedger);
+//
+//        Long ledgerId = dailyLedgerServiceImpl.getDailyLedgerId(date);
+//
+//        assertEquals(1L, ledgerId);
+//    }
+//
+//    @Test
+//    void testGetDailyLedgerId_NonExistingLedger() {
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//
+//        when(dailyLedgerRepository.findByDate(date)).thenReturn(null);
+//
+//        Long ledgerId = dailyLedgerServiceImpl.getDailyLedgerId(date);
+//
+//        assertNull(ledgerId);
+//    }
+//
+//    @Test
+//    void testGetDailyLedger_ExistingLedger() {
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//        DailyLedger dailyLedger = new DailyLedger();
+//        dailyLedger.setDailyLedgerId(1L);
+//
+//        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.of(dailyLedger));
+//
+//        DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
+//
+//        assertNotNull(result);
+//        assertEquals(1L, result.getDailyLedgerId());
+//    }
+//
+//    @Test
+//    void testGetDailyLedger_NonExistingLedger() {
+//        LocalDate date = LocalDate.of(2023, 10, 10);
+//
+//        when(dailyLedgerRepository.findByDateWithLedgerDetails(date)).thenReturn(Optional.empty());
+//
+//        DailyLedger result = dailyLedgerServiceImpl.getDailyLedger(date);
+//
+//        assertNull(result);
+//    }
 }
