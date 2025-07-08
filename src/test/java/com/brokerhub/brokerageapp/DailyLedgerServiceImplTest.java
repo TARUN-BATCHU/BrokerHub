@@ -1,9 +1,10 @@
-package com.brokerhub.brokerageapp.service;
+package com.brokerhub.brokerageapp;
 
 import com.brokerhub.brokerageapp.entity.DailyLedger;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
 import com.brokerhub.brokerageapp.repository.DailyLedgerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
+import com.brokerhub.brokerageapp.service.DailyLedgerServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
