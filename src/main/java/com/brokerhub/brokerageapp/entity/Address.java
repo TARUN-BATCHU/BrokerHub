@@ -30,6 +30,7 @@ public class Address {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "broker_id", nullable = false)
     @NotNull
+    @JsonIgnore
     private Broker broker;
 
     @NotNull

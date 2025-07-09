@@ -38,7 +38,7 @@ public interface BrokerService {
 
     ResponseEntity<String> createPassword(CreatePasswordDTO createPasswordDTO);
 
-    ResponseEntity login(BrokerLoginDTO brokerLoginDTO);
+    ResponseEntity<?> login(BrokerLoginDTO brokerLoginDTO);
 
     String generatePasswordHash(String password);
 

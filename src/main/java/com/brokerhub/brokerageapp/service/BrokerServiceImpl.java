@@ -333,20 +333,43 @@ public class BrokerServiceImpl implements BrokerService{
         return ResponseEntity.status(HttpStatus.CREATED).body("Password created");
     }
 
-    public ResponseEntity login(BrokerLoginDTO brokerLoginDTO){
-        Broker broker = brokerRepository.findByUserName(brokerLoginDTO.getUserName()).orElseThrow(() -> new RuntimeException("Broker not found with this userName: " + brokerLoginDTO.getUserName()));
-        String password = brokerLoginDTO.getPassword();
-        Boolean isPasswordCorrect = passwordEncoder.matches(password, broker.getPassword());
-        String brokerId = broker.getBrokerId().toString();
-        if(isPasswordCorrect){
-            // Set authentication context for the broker
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                broker.getUserName(), null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_BROKER")));
-            SecurityContextHolder.getContext().setAuthentication(auth);
-            return ResponseEntity.ok().body("Login successful "+brokerId);
-        }
-        else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is wrong");
+    @Autowired
+    private com.brokerhub.brokerageapp.security.JwtUtil jwtUtil;
+
+    @Autowired
+    private org.springframework.security.authentication.AuthenticationManager authenticationManager;
+
+    public ResponseEntity<?> login(BrokerLoginDTO brokerLoginDTO){
+        try {
+            // Authenticate user
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    brokerLoginDTO.getUserName(), 
+                    brokerLoginDTO.getPassword()
+                )
+            );
+
+            // Get broker details
+            Broker broker = brokerRepository.findByUserName(brokerLoginDTO.getUserName())
+                .orElseThrow(() -> new RuntimeException("Broker not found"));
+
+            // Generate JWT token
+            String token = jwtUtil.generateToken(broker.getUserName(), broker.getBrokerId());
+
+            // Create response
+            AuthResponseDTO response = AuthResponseDTO.builder()
+                .token(token)
+                .username(broker.getUserName())
+                .brokerId(broker.getBrokerId())
+                .brokerName(broker.getBrokerName())
+                .message("Login successful")
+                .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("Invalid username or password");
         }
     }
 

@@ -21,9 +21,9 @@ public class BrokerController {
     BrokerService brokerService;
 
     @PostMapping("/login")
-    public ResponseEntity login(@RequestBody BrokerLoginDTO brokerLoginDTO){
+    public ResponseEntity<?> login(@RequestBody BrokerLoginDTO brokerLoginDTO){
         if(null == brokerLoginDTO.getUserName() || null == brokerLoginDTO.getPassword()){
-            return new ResponseEntity("Username or password is missing",HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Username or password is missing",HttpStatus.BAD_REQUEST);
         }
         return brokerService.login(brokerLoginDTO);
     }
@@ -115,8 +115,8 @@ public class BrokerController {
     }
 
     @GetMapping("/UserNameExists/{userName}")
-    public Boolean checkUserNameExists(@PathVariable String UserName){
-        return brokerService.findBrokerUserNameAvailability(UserName);
+    public Boolean checkUserNameExists(@PathVariable String userName){
+        return brokerService.findBrokerUserNameAvailability(userName);
     }
 
     @GetMapping("/BrokerFirmNameExists/{FirmName}")

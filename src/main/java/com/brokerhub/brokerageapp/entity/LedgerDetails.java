@@ -24,6 +24,13 @@ public class LedgerDetails {
     private Long ledgerDetailsId;
 
     /**
+     * Broker-specific transaction number that starts from 1 for each broker
+     * This is what brokers use in their physical books
+     */
+    @Column(name = "broker_transaction_number", nullable = false)
+    private Long brokerTransactionNumber;
+
+    /**
      * The broker who owns this ledger details.
      * This enables multi-tenant isolation.
      */

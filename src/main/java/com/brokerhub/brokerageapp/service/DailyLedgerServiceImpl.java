@@ -4,12 +4,6 @@ import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.repository.DailyLedgerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
-import com.itextpdf.kernel.color.Color;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.property.TextAlignment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,8 +20,7 @@ import java.util.*;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
+// PDF imports removed - not needed for core functionality
 
 @Service
 @Transactional
@@ -223,58 +216,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
 //            return null;
 //        }
 //        return new DailyLedger();
-            PdfWriter writer = new PdfWriter(filePath);
-            PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf);
-
-            // Header table with Date and Financial Year
-            Table headerTable = new Table(2);
-            headerTable.setWidthPercent(100);
-            Cell dateCell = new Cell();
-            dateCell.add(new Paragraph("Date: " + date.toString()).setBold().setFontSize(12));
-            dateCell.setTextAlignment(TextAlignment.LEFT);
-            headerTable.addCell(dateCell);
-
-            Cell financialYearCell = new Cell();
-            financialYearCell.add(new Paragraph("Financial Year: " + dailyLedger.get().getFinancialYear().getFinancialYearName()).setBold().setFontSize(12));
-            financialYearCell.setTextAlignment(TextAlignment.RIGHT);
-            headerTable.addCell(financialYearCell);
-
-            document.add(headerTable);
-
-            // Loop through each ledger detail and create a separate table
-            for (LedgerDetails ledgerDetail : dailyLedger.get().getLedgerDetails()) {
-                Table ledgerTable = new Table(new float[] { 100, 150, 200, }); // Adjust column widths as needed
-                //ledgerTable.setBorderColor(Color.BLACK);
-
-                // Ledger Detail heading (Firm Name)
-                Cell firmNameCell = new Cell().setBackgroundColor(Color.WHITE);
-                firmNameCell.add(new Paragraph("Firm Name: " + ledgerDetail.getFromSeller().getFirmName()).setBold());
-                ledgerTable.addCell(firmNameCell);
-
-
-                // Table headers (ID, Name, Product, Quantity, Brokerage, Product Cost, Total Cost, Total Brokerage)
-                Cell idCell = new Cell().setBackgroundColor(Color.DARK_GRAY);
-                idCell.add(new Paragraph("ID"));
-                ledgerTable.addCell(idCell);
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Name")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Product")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Quantity")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Brokerage")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Product Cost")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Total Cost")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Total Brokerage")));
-
-                // Loop through each record in the ledger detail and add data to the table
-                double totalBrokerage = 0;
-                for (LedgerRecord record : ledgerDetail.getRecords()) {
-                    ledgerTable.addCell(new Cell().add(new Paragraph(String.valueOf(record.getLedgerRecordId()))));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(record.getToBuyer().getFirmName())));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(record.getProduct().getProductName())));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(String.valueOf(record.getQuantity()))));
-                }
-            }
-            return new DailyLedger();
+            // PDF generation functionality temporarily disabled
+            // TODO: Implement PDF generation when iText dependencies are properly configured
+            return dailyLedger.get();
     }
 
     @Override

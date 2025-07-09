@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -28,6 +29,7 @@ public class FinancialYear {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "broker_id", nullable = false)
     @NotNull
+    @JsonIgnore
     private Broker broker;
 
     @NotNull

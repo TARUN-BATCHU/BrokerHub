@@ -49,5 +49,20 @@ public interface LedgerDetailsRepository extends JpaRepository<LedgerDetails, Lo
 
     List<LedgerDetails> findByBrokerBrokerIdAndFromSellerUserId(Long brokerId, Long sellerId);
 
+    @Query("SELECT DISTINCT ld FROM LedgerDetails ld " +
+           "LEFT JOIN FETCH ld.records lr " +
+           "LEFT JOIN FETCH lr.toBuyer tb " +
+           "LEFT JOIN FETCH tb.address " +
+           "LEFT JOIN FETCH lr.product " +
+           "LEFT JOIN FETCH ld.fromSeller fs " +
+           "LEFT JOIN FETCH fs.address " +
+           "LEFT JOIN FETCH ld.dailyLedger dl " +
+           "LEFT JOIN FETCH dl.financialYear " +
+           "WHERE ld.broker.brokerId = :brokerId AND ld.brokerTransactionNumber = :transactionNumber")
+    Optional<LedgerDetails> findByBrokerIdAndTransactionNumberWithAllRelations(@Param("brokerId") Long brokerId, @Param("transactionNumber") Long transactionNumber);
+
+    @Query("SELECT COALESCE(MAX(ld.brokerTransactionNumber), 0) FROM LedgerDetails ld WHERE ld.broker.brokerId = :brokerId")
+    Long findMaxTransactionNumberByBrokerId(@Param("brokerId") Long brokerId);
+
 
 }

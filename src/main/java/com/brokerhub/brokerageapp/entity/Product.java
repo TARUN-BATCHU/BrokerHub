@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -27,6 +28,7 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "broker_id", nullable = false)
     @NotNull
+    @JsonIgnore
     private Broker broker;
 
     @NotNull
