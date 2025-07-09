@@ -33,6 +33,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u.userId, u.firmName, u.userType, u.gstNumber, u.ownerName FROM User u WHERE u.broker.brokerId = :brokerId")
     List<Object[]> findBasicUserInfoByBrokerId(@Param("brokerId") Long brokerId);
 
+    @Query("SELECT u.userId, u.firmName, u.address.city FROM User u WHERE u.broker.brokerId = :brokerId")
+    List<Object[]> findUserIdsAndFirmNamesAndCitiesByBrokerId(@Param("brokerId") Long brokerId);
+
     // Legacy methods (deprecated - use broker-aware versions)
     @Deprecated
     Optional<User> findByFirmName(String firmName);

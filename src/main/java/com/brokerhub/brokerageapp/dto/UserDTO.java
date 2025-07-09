@@ -23,13 +23,15 @@ public class UserDTO {
     private String area;
     private String pincode;
     private String email;
-    private String BankName;
-    private String AccountNumber;
-    private String IfscCode;
-    private String Branch;
+    private String bankName;
+    private String accountNumber;
+    private String ifscCode;
+    private String branch;
     private List<String> phoneNumbers;
     private Integer brokerageRate;
     private String shopNumber;
     private String byProduct;
+    private String addressHint;
+    private String collectionRote;
 
 }

@@ -456,4 +456,92 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
     }
 
+    @Override
+    public ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, LedgerDetailsDTO ledgerDetailsDTO) {
+        log.info("Updating ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+
+        if (transactionNumber == null) {
+            throw new IllegalArgumentException("Transaction number cannot be null");
+        }
+
+        try {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> existingLedgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+
+            if (!existingLedgerOptional.isPresent()) {
+                log.warn("No ledger details found with transaction number: {}", transactionNumber);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Ledger details not found with transaction number: " + transactionNumber);
+            }
+
+            LedgerDetails existingLedger = existingLedgerOptional.get();
+            
+            // Update seller if provided
+            if (ledgerDetailsDTO.getFromSeller() != null) {
+                Optional<User> sellerOptional = userRepository.findById(ledgerDetailsDTO.getFromSeller());
+                if (sellerOptional.isPresent()) {
+                    existingLedger.setFromSeller(sellerOptional.get());
+                }
+            }
+
+            // Update daily ledger if date is provided
+            if (ledgerDetailsDTO.getDate() != null) {
+                DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(ledgerDetailsDTO.getDate());
+                if (dailyLedger != null) {
+                    existingLedger.setDailyLedger(dailyLedger);
+                }
+            }
+
+            // Update ledger records if provided
+            if (ledgerDetailsDTO.getLedgerRecordDTOList() != null && !ledgerDetailsDTO.getLedgerRecordDTOList().isEmpty()) {
+                // Delete existing records
+                if (existingLedger.getRecords() != null) {
+                    ledgerRecordRepository.deleteAll(existingLedger.getRecords());
+                }
+
+                // Create new records
+                for (LedgerRecordDTO recordDTO : ledgerDetailsDTO.getLedgerRecordDTOList()) {
+                    LedgerRecord newRecord = new LedgerRecord();
+                    newRecord.setLedgerDetails(existingLedger);
+                    newRecord.setBroker(existingLedger.getBroker());
+                    
+                    if (recordDTO.getBrokerage() != null) {
+                        newRecord.setBrokerage(recordDTO.getBrokerage());
+                    }
+                    if (recordDTO.getQuantity() != null) {
+                        newRecord.setQuantity(recordDTO.getQuantity());
+                    }
+                    if (recordDTO.getProductCost() != null) {
+                        newRecord.setProductCost(recordDTO.getProductCost());
+                    }
+                    if (recordDTO.getProductId() != null) {
+                        Optional<Product> productOptional = productRepository.findById(recordDTO.getProductId());
+                        productOptional.ifPresent(newRecord::setProduct);
+                    }
+                    if (recordDTO.getBuyerName() != null) {
+                        Optional<User> buyerOptional = userRepository.findByFirmName(recordDTO.getBuyerName());
+                        buyerOptional.ifPresent(newRecord::setToBuyer);
+                    }
+                    
+                    // Calculate totals
+                    if (newRecord.getQuantity() != null && newRecord.getBrokerage() != null) {
+                        newRecord.setTotalBrokerage(newRecord.getQuantity() * newRecord.getBrokerage());
+                    }
+                    if (newRecord.getQuantity() != null && newRecord.getProductCost() != null) {
+                        newRecord.setTotalProductsCost(newRecord.getQuantity() * newRecord.getProductCost());
+                    }
+                    
+                    ledgerRecordRepository.save(newRecord);
+                }
+            }
+
+            ledgerDetailsRepository.save(existingLedger);
+            log.info("Successfully updated ledger details with transaction number: {}", transactionNumber);
+            return ResponseEntity.ok("Ledger details updated successfully");
+
+        } catch (Exception e) {
+            log.error("Error updating ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update ledger details: " + e.getMessage());
+        }
+    }
+
 }

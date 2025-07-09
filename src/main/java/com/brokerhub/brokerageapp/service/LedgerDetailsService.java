@@ -25,4 +25,6 @@ public interface LedgerDetailsService {
     List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId);
 
     List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId);
+
+    ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, LedgerDetailsDTO ledgerDetailsDTO);
 }

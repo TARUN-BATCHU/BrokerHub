@@ -120,6 +120,25 @@ public class LedgerDetailsController {
     public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
         return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
     }
+
+    @PutMapping("/updateLedgerDetailByTransactionNumber")
+    public ResponseEntity<String> updateLedgerDetailByTransactionNumber(
+            @RequestParam Long transactionNumber,
+            @RequestParam Long brokerId,
+            @RequestBody LedgerDetailsDTO ledgerDetailsDTO) {
+        
+        log.info("Updating ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+        
+        try {
+            return ledgerDetailsService.updateLedgerDetailByTransactionNumber(transactionNumber, brokerId, ledgerDetailsDTO);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for updateLedgerDetailByTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error updating ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update ledger details");
+        }
+    }
 //
 //    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")
 //    public List<LedgerDetailsDTO> getAllLedgerDetailsOfAllUsersFromCity(@RequestParam String city,@RequestParam Long brokerId,){

@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -242,6 +243,21 @@ public class UserServiceImpl implements UserService {
         return userCacheService.getAllUserNames();
     }
 
+    public List<HashMap<String, Object>> getFirmNamesIdsAndCities() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<Object[]> results = userRepository.findUserIdsAndFirmNamesAndCitiesByBrokerId(currentBrokerId);
+        
+        return results.stream()
+                .map(row -> {
+                    HashMap<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("id", (Long) row[0]);
+                    userInfo.put("firmName", (String) row[1]);
+                    userInfo.put("city", (String) row[2]);
+                    return userInfo;
+                })
+                .collect(Collectors.toList());
+    }
+
 
     private boolean checkUserGSTNumberExists(String gstNumber) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
@@ -330,6 +346,40 @@ public class UserServiceImpl implements UserService {
                     // Validate required fields
                     if (userDTO.getFirmName() == null || userDTO.getFirmName().trim().isEmpty()) {
                         errorMessages.add("Row " + rowNumber + ": Firm name is required");
+                        failedRecords++;
+                        continue;
+                    }
+                    
+                    if (userDTO.getPincode() == null || userDTO.getPincode().trim().isEmpty()) {
+                        errorMessages.add("Row " + rowNumber + ": Pincode is required");
+                        failedRecords++;
+                        continue;
+                    }
+                    
+                    // Validate email format if provided
+                    if (userDTO.getEmail() != null && !userDTO.getEmail().trim().isEmpty()) {
+                        if (!userDTO.getEmail().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                            errorMessages.add("Row " + rowNumber + ": Invalid email format");
+                            failedRecords++;
+                            continue;
+                        }
+                    }
+                    
+                    // Validate user type
+                    if (userDTO.getUserType() != null && !userDTO.getUserType().trim().isEmpty()) {
+                        String userType = userDTO.getUserType().trim().toUpperCase();
+                        if (!userType.equals("TRADER") && !userType.equals("MILLER")) {
+                            errorMessages.add("Row " + rowNumber + ": User type must be TRADER or MILLER");
+                            failedRecords++;
+                            continue;
+                        }
+                        userDTO.setUserType(userType);
+                    }
+                    
+                    // Validate byProduct for MILLER type
+                    if ("MILLER".equals(userDTO.getUserType()) && 
+                        (userDTO.getByProduct() == null || userDTO.getByProduct().trim().isEmpty())) {
+                        errorMessages.add("Row " + rowNumber + ": By-product is required for MILLER type users");
                         failedRecords++;
                         continue;
                     }

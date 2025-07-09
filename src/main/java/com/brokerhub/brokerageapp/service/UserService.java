@@ -37,5 +37,7 @@ public interface UserService {
 
     List<String> getUserNames();
 
+    List<HashMap<String, Object>> getFirmNamesIdsAndCities();
+
     BulkUploadResponseDTO bulkUploadUsers(MultipartFile file);
 }

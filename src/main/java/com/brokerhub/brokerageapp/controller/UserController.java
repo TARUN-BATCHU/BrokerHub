@@ -120,6 +120,11 @@ public class UserController {
         return userService.getUserNames();
     }
 
+    @GetMapping("/getFirmNamesIdsAndCities")
+    public List<HashMap<String,Object>> getFirmNamesIdsAndCities(){
+        return userService.getFirmNamesIdsAndCities();
+    }
+
 //    @PutMapping("/updateBrokerage")
 //    public void updateUserBrokerage(Long UserId, int brokerage){
 //        return userService.updateBrokerage();
