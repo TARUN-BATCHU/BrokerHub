@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.repository;
 
 import com.brokerhub.brokerageapp.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,6 +25,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByBrokerBrokerId(Long brokerId);
 
+    Page<User> findByBrokerBrokerId(Long brokerId, Pageable pageable);
+
     // Optimized queries with broker filtering
     @Query("SELECT u.userId, u.firmName FROM User u WHERE u.broker.brokerId = :brokerId")
     List<Object[]> findUserIdsAndFirmNamesByBrokerId(@Param("brokerId") Long brokerId);
@@ -35,6 +39,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u.userId, u.firmName, u.address.city FROM User u WHERE u.broker.brokerId = :brokerId")
     List<Object[]> findUserIdsAndFirmNamesAndCitiesByBrokerId(@Param("brokerId") Long brokerId);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.address LEFT JOIN FETCH u.bankDetails WHERE u.userId = :userId")
+    Optional<User> findByIdWithDetails(@Param("userId") Long userId);
 
     // Legacy methods (deprecated - use broker-aware versions)
     @Deprecated
