@@ -39,8 +39,11 @@ public class LedgerDetailsController {
     }
 
     @GetMapping("/getLedgerDetailsByTransactionNumber")
-    public LedgerDetails getLedgerDetailsByTransactionNumber(@RequestParam Long transactionNumber, @RequestParam Long brokerId){
-        return ledgerDetailsService.getLedgerDetailByTransactionNumber(transactionNumber,brokerId);
+    public LedgerDetails getLedgerDetailsByTransactionNumber(
+            @RequestParam Long transactionNumber, 
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId){
+        return ledgerDetailsService.getLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId);
     }
 
     /**
@@ -87,13 +90,14 @@ public class LedgerDetailsController {
     @GetMapping("/getOptimizedLedgerDetailsByTransactionNumber")
     public ResponseEntity<OptimizedLedgerDetailsDTO> getOptimizedLedgerDetailsByTransactionNumber(
             @RequestParam Long transactionNumber,
-            @RequestParam Long brokerId) {
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId) {
 
-        log.info("Fetching optimized ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+        log.info("Fetching optimized ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
 
         try {
             OptimizedLedgerDetailsDTO optimizedLedgerDetails =
-                    ledgerDetailsService.getOptimizedLedgerDetailByTransactionNumber(transactionNumber, brokerId);
+                    ledgerDetailsService.getOptimizedLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId);
 
             if (optimizedLedgerDetails != null) {
                 log.info("Successfully fetched optimized ledger details for transaction number: {}", transactionNumber);
@@ -125,12 +129,13 @@ public class LedgerDetailsController {
     public ResponseEntity<String> updateLedgerDetailByTransactionNumber(
             @RequestParam Long transactionNumber,
             @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId,
             @RequestBody LedgerDetailsDTO ledgerDetailsDTO) {
         
-        log.info("Updating ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+        log.info("Updating ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
         
         try {
-            return ledgerDetailsService.updateLedgerDetailByTransactionNumber(transactionNumber, brokerId, ledgerDetailsDTO);
+            return ledgerDetailsService.updateLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId, ledgerDetailsDTO);
         } catch (IllegalArgumentException e) {
             log.error("Invalid parameters for updateLedgerDetailByTransactionNumber: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());

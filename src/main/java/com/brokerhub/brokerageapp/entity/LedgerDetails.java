@@ -24,11 +24,17 @@ public class LedgerDetails {
     private Long ledgerDetailsId;
 
     /**
-     * Broker-specific transaction number that starts from 1 for each broker
+     * Broker-specific transaction number that starts from 1 for each broker per financial year
      * This is what brokers use in their physical books
      */
     @Column(name = "broker_transaction_number", nullable = false)
     private Long brokerTransactionNumber;
+
+    /**
+     * Financial year ID for transaction numbering isolation
+     */
+    @Column(name = "financial_year_id", nullable = false)
+    private Long financialYearId;
 
     /**
      * The broker who owns this ledger details.

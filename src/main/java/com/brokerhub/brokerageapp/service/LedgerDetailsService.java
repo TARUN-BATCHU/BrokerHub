@@ -16,15 +16,15 @@ public interface LedgerDetailsService {
 
     LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId);
 
-    LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId);
+    LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId);
 
     OptimizedLedgerDetailsDTO getOptimizedLedgerDetailById(Long ledgerDetailId, Long brokerId);
 
-    OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId);
+    OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId);
 
     List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId);
 
     List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId);
 
-    ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, LedgerDetailsDTO ledgerDetailsDTO);
+    ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId, LedgerDetailsDTO ledgerDetailsDTO);
 }

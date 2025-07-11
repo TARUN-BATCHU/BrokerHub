@@ -44,30 +44,42 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     @Autowired
     TenantContextService tenantContextService;
 
+    @Autowired
+    CurrentFinancialYearService currentFinancialYearService;
+
     public ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO) {
+        // Get current broker
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+        
+        // Get financial year ID - either from DTO or from current preference
+        Long financialYearId = ledgerDetailsDTO.getFinancialYearId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBroker.getBrokerId());
+            if (financialYearId == null) {
+                log.error("No financial year specified and no current financial year set for broker {}", currentBroker.getBrokerId());
+                return ResponseEntity.badRequest().body("Financial year ID is required. Please set current financial year first.");
+            }
+            log.info("Using current financial year {} for broker {}", financialYearId, currentBroker.getBrokerId());
+        }
+        
         LocalDate date = ledgerDetailsDTO.getDate();
         DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(date);
         Long sellerId = ledgerDetailsDTO.getFromSeller();
         User seller = null;
         Long sellerBrokerage = ledgerDetailsDTO.getBrokerage();
-//        if(sellerBrokerage<=0){sellerBrokerage= 1L;}
-        Long brokerId = ledgerDetailsDTO.getBrokerId();
-        Optional<Broker> brokerOptional = brokerRepository.findById(brokerId);
-        Broker broker = brokerOptional.orElse(null);
         if(null!=sellerId){
             Optional<User> sellerOptional = userRepository.findById(sellerId);
             seller = sellerOptional.orElse(null);
         }
 
         LedgerDetails ledgerDetails = new LedgerDetails();
-
-        // Set broker for multi-tenant isolation
-        Broker currentBroker = tenantContextService.getCurrentBroker();
         ledgerDetails.setBroker(currentBroker);
         
-        // Set broker-specific transaction number
-        Long nextTransactionNumber = ledgerDetailsRepository.findMaxTransactionNumberByBrokerId(currentBroker.getBrokerId()) + 1;
+        // Set broker and financial year specific transaction number
+        Long maxTransactionNumber = ledgerDetailsRepository.findMaxTransactionNumberByBrokerIdAndFinancialYearId(currentBroker.getBrokerId(), financialYearId);
+        Long nextTransactionNumber = (maxTransactionNumber != null ? maxTransactionNumber : 0L) + 1;
         ledgerDetails.setBrokerTransactionNumber(nextTransactionNumber);
+        ledgerDetails.setFinancialYearId(financialYearId);
 
         if(dailyLedger != null){
             ledgerDetails.setDailyLedger(dailyLedger);
@@ -85,6 +97,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             Long productCost = ledgerRecordDTOList.get(i).getProductCost();
             LedgerRecord ledgerRecord = new LedgerRecord();
             ledgerRecord.setLedgerDetails(ledgerDetails);
+            ledgerRecord.setBroker(currentBroker);
             ledgerRecord.setBrokerage((long) brokerage);
 
             Product product = productRepository.findById(ledgerRecordDTOList.get(i).getProductId()).get();
@@ -106,7 +119,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             buyer.setPayableAmount(buyer.getPayableAmount()+quantity*productCost);
             buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().add(totalBrokerage));
             seller.setReceivableAmount(seller.getReceivableAmount()+quantity*productCost);
-            broker.setTotalBrokerage(broker.getTotalBrokerage().add(totalBrokerage));
+            currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(totalBrokerage));
             userRepository.save(seller);
             userRepository.save(buyer);
             ledgerDetailsRepository.save(ledgerDetails);
@@ -118,8 +131,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
             userRepository.save(seller);
         }
-        if(broker != null) {
-            broker.setTotalBrokerage(broker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+        if(currentBroker != null) {
+            currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
         }
         ledgerDetailsRepository.save(ledgerDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
@@ -183,17 +196,28 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
     }
 
-    public LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId) {
-        log.info("Fetching ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+    public LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId) {
+        log.info("Fetching ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
 
         if (transactionNumber == null) {
             log.error("Transaction number cannot be null");
             throw new IllegalArgumentException("Transaction number cannot be null");
         }
+        
+        // Use current financial year if not provided
+        if (financialYearId == null) {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+            if (financialYearId == null) {
+                log.error("No financial year specified and no current financial year set for broker {}", currentBrokerId);
+                throw new IllegalArgumentException("Financial year ID is required. Please set current financial year first.");
+            }
+            log.info("Using current financial year {} for broker {}", financialYearId, currentBrokerId);
+        }
 
         try {
             Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberAndFinancialYearIdWithAllRelations(currentBrokerId, transactionNumber, financialYearId);
 
             if (ledgerOptional.isPresent()) {
                 LedgerDetails ledgerDetails = ledgerOptional.get();
@@ -253,7 +277,20 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
 
         // Use current broker context instead of passed brokerId for security
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-        List<DateLedgerRecordDTO> ledgerRecordsOnDate = ledgerDetailsRepository.findLedgersOnDateByBrokerId(currentBrokerId, date);
+        List<Object[]> rawResults = ledgerDetailsRepository.findLedgersOnDateByBrokerIdRaw(currentBrokerId, date);
+        
+        // Convert Object[] to DTOs
+        List<DateLedgerRecordDTO> ledgerRecordsOnDate = rawResults.stream()
+                .map(row -> DateLedgerRecordDTO.builder()
+                        .sellerId(((Number) row[0]).longValue())
+                        .ledgerDetailsId(((Number) row[1]).longValue())
+                        .buyerId(((Number) row[2]).longValue())
+                        .productId(((Number) row[3]).longValue())
+                        .quantity(((Number) row[4]).longValue())
+                        .brokerage(((Number) row[5]).longValue())
+                        .productCost(((Number) row[6]).longValue())
+                        .build())
+                .collect(Collectors.toList());
 
         for(DateLedgerRecordDTO dateLedgerRecord : ledgerRecordsOnDate){
             DisplayLedgerDetailDTO existingLedgerDetail = checkSellerExists(ledgerDetailsDTOList,userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());
@@ -427,17 +464,28 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     }
 
     @Override
-    public OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId) {
-        log.info("Fetching optimized ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+    public OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId) {
+        log.info("Fetching optimized ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
 
         if (transactionNumber == null) {
             log.error("Transaction number cannot be null");
             throw new IllegalArgumentException("Transaction number cannot be null");
         }
+        
+        // Use current financial year if not provided
+        if (financialYearId == null) {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+            if (financialYearId == null) {
+                log.error("No financial year specified and no current financial year set for broker {}", currentBrokerId);
+                throw new IllegalArgumentException("Financial year ID is required. Please set current financial year first.");
+            }
+            log.info("Using current financial year {} for broker {}", financialYearId, currentBrokerId);
+        }
 
         try {
             Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+            Optional<LedgerDetails> ledgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberAndFinancialYearIdWithAllRelations(currentBrokerId, transactionNumber, financialYearId);
 
             if (ledgerOptional.isPresent()) {
                 LedgerDetails ledgerDetails = ledgerOptional.get();
@@ -457,16 +505,27 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     }
 
     @Override
-    public ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, LedgerDetailsDTO ledgerDetailsDTO) {
-        log.info("Updating ledger details by transaction number: {} for broker: {}", transactionNumber, brokerId);
+    public ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId, LedgerDetailsDTO ledgerDetailsDTO) {
+        log.info("Updating ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
 
         if (transactionNumber == null) {
             throw new IllegalArgumentException("Transaction number cannot be null");
         }
+        
+        // Use current financial year if not provided
+        if (financialYearId == null) {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+            if (financialYearId == null) {
+                log.error("No financial year specified and no current financial year set for broker {}", currentBrokerId);
+                throw new IllegalArgumentException("Financial year ID is required. Please set current financial year first.");
+            }
+            log.info("Using current financial year {} for broker {}", financialYearId, currentBrokerId);
+        }
 
         try {
             Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-            Optional<LedgerDetails> existingLedgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberWithAllRelations(currentBrokerId, transactionNumber);
+            Optional<LedgerDetails> existingLedgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberAndFinancialYearIdWithAllRelations(currentBrokerId, transactionNumber, financialYearId);
 
             if (!existingLedgerOptional.isPresent()) {
                 log.warn("No ledger details found with transaction number: {}", transactionNumber);
