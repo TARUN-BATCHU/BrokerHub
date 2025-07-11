@@ -1,18 +1,21 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.ProductBasicInfoDTO;
+import com.brokerhub.brokerageapp.dto.ProductDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.Product;
 import com.brokerhub.brokerageapp.repository.ProductRepository;
+import com.brokerhub.brokerageapp.utils.ProductExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.io.IOException;
+import java.util.*;
 
 @Service
 public class ProductServiceImpl implements ProductService{
@@ -147,6 +150,118 @@ public class ProductServiceImpl implements ProductService{
     public List<HashMap<String, Long>> getProductNamesAndQualitiesAndQuantitiesWithIds() {
         // Optimized: Use cache service to get product names, qualities, quantities with IDs
         return productCacheService.getProductNamesAndQualitiesAndQuantitiesWithIds();
+    }
+
+    @Override
+    public BulkUploadResponseDTO bulkUploadProducts(MultipartFile file) {
+        List<String> errorMessages = new ArrayList<>();
+        int totalRecords = 0;
+        int successfulRecords = 0;
+        int failedRecords = 0;
+
+        try {
+            // Validate file format
+            if (!ProductExcelUtil.hasExcelFormat(file)) {
+                return BulkUploadResponseDTO.builder()
+                        .totalRecords(0)
+                        .successfulRecords(0)
+                        .failedRecords(0)
+                        .errorMessages(Arrays.asList("Please upload a valid Excel file (.xlsx)"))
+                        .message("Invalid file format")
+                        .build();
+            }
+
+            // Parse Excel file
+            List<ProductDTO> productDTOs = ProductExcelUtil.excelToProductDTOs(file.getInputStream());
+            totalRecords = productDTOs.size();
+
+            if (totalRecords == 0) {
+                return BulkUploadResponseDTO.builder()
+                        .totalRecords(0)
+                        .successfulRecords(0)
+                        .failedRecords(0)
+                        .errorMessages(Arrays.asList("No valid product records found in the Excel file"))
+                        .message("No data to process")
+                        .build();
+            }
+
+            // Get current broker
+            Broker currentBroker = tenantContextService.getCurrentBroker();
+
+            // Process each product
+            for (int i = 0; i < productDTOs.size(); i++) {
+                ProductDTO productDTO = productDTOs.get(i);
+                int rowNumber = i + 2; // +2 because Excel rows start from 1 and we skip header
+
+                try {
+                    // Only validate product name as required
+                    if (productDTO.getProductName() == null || productDTO.getProductName().trim().isEmpty()) {
+                        errorMessages.add("Row " + rowNumber + ": Product name is required");
+                        failedRecords++;
+                        continue;
+                    }
+
+                    // Create product entity
+                    Product product = Product.builder()
+                            .broker(currentBroker)
+                            .productName(productDTO.getProductName().trim())
+                            .productBrokerage(productDTO.getProductBrokerage() != null ? productDTO.getProductBrokerage() : 0.0f)
+                            .quantity(productDTO.getQuantity() != null ? productDTO.getQuantity() : 0)
+                            .price(productDTO.getPrice() != null ? productDTO.getPrice() : 0)
+                            .quality(productDTO.getQuality() != null ? productDTO.getQuality().trim() : null)
+                            .imgLink(productDTO.getImgLink() != null ? productDTO.getImgLink().trim() : null)
+                            .build();
+
+                    // Save product (duplicates are allowed for products)
+                    productRepository.save(product);
+                    successfulRecords++;
+
+                } catch (Exception e) {
+                    errorMessages.add("Row " + rowNumber + ": Error processing product - " + e.getMessage());
+                    failedRecords++;
+                }
+            }
+
+        } catch (IOException e) {
+            return BulkUploadResponseDTO.builder()
+                    .totalRecords(0)
+                    .successfulRecords(0)
+                    .failedRecords(0)
+                    .errorMessages(Arrays.asList("Error reading Excel file: " + e.getMessage()))
+                    .message("File processing failed")
+                    .build();
+        } catch (Exception e) {
+            return BulkUploadResponseDTO.builder()
+                    .totalRecords(totalRecords)
+                    .successfulRecords(successfulRecords)
+                    .failedRecords(failedRecords)
+                    .errorMessages(Arrays.asList("Unexpected error: " + e.getMessage()))
+                    .message("Bulk upload failed")
+                    .build();
+        }
+
+        // Clear product caches if any products were successfully created
+        if (successfulRecords > 0) {
+            productCacheService.clearProductCaches();
+        }
+
+        // Prepare response message
+        String message;
+        if (failedRecords == 0) {
+            message = "All products uploaded successfully";
+        } else if (successfulRecords == 0) {
+            message = "No products were uploaded";
+        } else {
+            message = "Partial success: " + successfulRecords + " products uploaded, " + failedRecords + " failed";
+        }
+
+        return BulkUploadResponseDTO.builder()
+                .totalRecords(totalRecords)
+                .successfulRecords(successfulRecords)
+                .failedRecords(failedRecords)
+                .errorMessages(errorMessages)
+                .message(message)
+                .build();
     }
 }
 

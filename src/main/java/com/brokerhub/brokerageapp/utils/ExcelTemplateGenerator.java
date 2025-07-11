@@ -15,19 +15,19 @@ public class ExcelTemplateGenerator {
     private static final String[] HEADERS = {
         "userType", "gstNumber", "firmName", "ownerName", "city", "area", "pincode",
         "email", "bankName", "accountNumber", "ifscCode", "branch", "phoneNumbers",
-        "brokerageRate", "shopNumber", "byProduct"
+        "brokerageRate", "shopNumber", "byProduct", "addressHint", "collectionRote"
     };
 
     private static final String[] SAMPLE_DATA = {
         "TRADER", "GST123456789", "ABC Trading Co", "John Doe", "Mumbai", "Andheri", "400058",
         "john@abctrading.com", "HDFC Bank", "1234567890", "HDFC0001234", "Andheri Branch", "9876543210,9876543211",
-        "5", "Shop-101", ""
+        "5", "Shop-101", "", "Near Main Market", "Route-A"
     };
 
     private static final String[] SAMPLE_DATA_MILLER = {
         "MILLER", "GST987654321", "XYZ Mills Pvt Ltd", "Jane Smith", "Delhi", "Karol Bagh", "110005",
         "jane@xyzmills.com", "SBI", "0987654321", "SBIN0001234", "Karol Bagh Branch", "9123456789",
-        "3", "Mill-205", "Rice Bran"
+        "3", "Mill-205", "Rice Bran", "Industrial Area Gate 2", "Route-B"
     };
 
     public static ResponseEntity<ByteArrayResource> generateTemplate() {
@@ -90,22 +90,30 @@ public class ExcelTemplateGenerator {
                 "7. Upload the file using the bulk upload endpoint",
                 "",
                 "Field Descriptions:",
-                "- userType: TRADER or MILLER",
-                "- gstNumber: GST registration number",
+                "- userType: TRADER or MILLER (default: TRADER)",
+                "- gstNumber: GST registration number (optional)",
                 "- firmName: Company/Firm name (Required)",
-                "- ownerName: Owner's name",
-                "- city: City name",
-                "- area: Area/locality",
+                "- ownerName: Owner's name (optional)",
+                "- city: City name (optional)",
+                "- area: Area/locality (optional)",
                 "- pincode: Postal code (Required)",
-                "- email: Email address",
-                "- bankName: Bank name",
-                "- accountNumber: Bank account number",
-                "- ifscCode: Bank IFSC code",
-                "- branch: Bank branch name",
-                "- phoneNumbers: Phone numbers (comma-separated)",
-                "- brokerageRate: Brokerage rate percentage",
-                "- shopNumber: Shop/office number",
-                "- byProduct: By-product (for MILLER only)"
+                "- email: Email address (optional)",
+                "- bankName: Bank name (optional)",
+                "- accountNumber: Bank account number (optional)",
+                "- ifscCode: Bank IFSC code (optional)",
+                "- branch: Bank branch name (optional)",
+                "- phoneNumbers: Phone numbers, comma-separated (optional)",
+                "- brokerageRate: Brokerage rate percentage (optional)",
+                "- shopNumber: Shop/office number (optional)",
+                "- byProduct: By-product name (required for MILLER only)",
+                "- addressHint: Additional address information (optional)",
+                "- collectionRote: Collection route information (optional)",
+                "",
+                "Notes:",
+                "- Duplicate firm names or GST numbers will be rejected",
+                "- Invalid email formats will be rejected",
+                "- Numeric fields should contain only numbers",
+                "- Empty rows will be skipped"
             };
 
             for (int i = 0; i < instructions.length; i++) {

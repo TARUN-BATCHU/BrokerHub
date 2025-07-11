@@ -8,6 +8,12 @@ Authorization: Bearer <your-jwt-token>
 Content-Type: application/json
 ```
 
+### Base URL:
+```
+Development: http://localhost:8080
+Production: https://your-domain.com
+```
+
 ---
 
 ## 🟢 Public Endpoints (No Authentication Required)
@@ -150,9 +156,32 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl -X POST http://localhost:8080/BrokerHub/user/createUser \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userType": "TRADER",
+    "gstNumber": "GST123456789",
+    "firmName": "XYZ Traders",
+    "ownerName": "Jane Smith",
+    "city": "Mumbai",
+    "area": "Andheri",
+    "pincode": "400001",
+    "email": "jane@xyztraders.com",
+    "phoneNumbers": ["9876543210", "9876543211"],
+    "brokerageRate": 10
+  }'
+```
+
 **Response (201):**
 ```json
 "User created successfully"
+```
+
+**Response (400):**
+```json
+"Firm name is required"
 ```
 
 ---
@@ -311,6 +340,34 @@ Content-Type: application/json
 }
 ```
 
+**cURL:**
+```bash
+curl -X POST http://localhost:8080/BrokerHub/payments/1/brokerage/1/part-payment \
+  -H "Authorization: Bearer <your-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000.00,
+    "paymentMethod": "CASH",
+    "notes": "Partial payment received",
+    "paymentDate": "2024-01-15"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "message": "Part payment added successfully",
+  "data": {
+    "paymentId": 1,
+    "partPaymentId": 123,
+    "amount": 1000.00,
+    "remainingAmount": 1250.00,
+    "paymentStatus": "PARTIAL_PAID"
+  }
+}
+```
+
 ### User Management APIs
 
 #### 1. Get All Users
@@ -384,6 +441,28 @@ Content-Type: application/json
   "area": "Andheri",
   "pincode": "400001"
 }
+```
+
+**cURL:**
+```bash
+curl -X POST http://localhost:8080/BrokerHub/Address/createAddress \
+  -H "Authorization: Bearer <your-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "Mumbai",
+    "area": "Andheri",
+    "pincode": "400001"
+  }'
+```
+
+**Response (200):**
+```json
+"Address created successfully with id: 123"
+```
+
+**Response (409):**
+```json
+"Address already exists for this broker"
 ```
 
 ---

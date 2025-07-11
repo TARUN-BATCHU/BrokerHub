@@ -17,7 +17,7 @@ public class ExcelUtil {
     public static String TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     static String[] HEADERS = {"userType", "gstNumber", "firmName", "ownerName", "city", "area", "pincode",
                               "email", "bankName", "accountNumber", "ifscCode", "branch", "phoneNumbers",
-                              "brokerageRate", "shopNumber", "byProduct"};
+                              "brokerageRate", "shopNumber", "byProduct", "addressHint", "collectionRote"};
     static String SHEET = "Users";
 
     public static boolean hasExcelFormat(MultipartFile file) {
@@ -120,14 +120,22 @@ public class ExcelUtil {
                         case 15: // byProduct (for MILLER type)
                             userDTO.setByProduct(getCellValueAsString(currentCell));
                             break;
+                        case 16: // addressHint
+                            userDTO.setAddressHint(getCellValueAsString(currentCell));
+                            break;
+                        case 17: // collectionRote
+                            userDTO.setCollectionRote(getCellValueAsString(currentCell));
+                            break;
                         default:
                             break;
                     }
                     cellIdx++;
                 }
 
-                // Only add if firmName is present (required field)
+                // Only add if firmName is present (required field) and row is not completely empty
                 if (userDTO.getFirmName() != null && !userDTO.getFirmName().trim().isEmpty()) {
+                    // Trim all string fields
+                    trimUserDTOFields(userDTO);
                     userDTOs.add(userDTO);
                 }
 
@@ -149,7 +157,8 @@ public class ExcelUtil {
 
         switch (cell.getCellType()) {
             case STRING:
-                return cell.getStringCellValue();
+                String stringValue = cell.getStringCellValue();
+                return stringValue != null ? stringValue.trim() : null;
             case NUMERIC:
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return cell.getDateCellValue().toString();
@@ -166,8 +175,29 @@ public class ExcelUtil {
                 return String.valueOf(cell.getBooleanCellValue());
             case FORMULA:
                 return cell.getCellFormula();
+            case BLANK:
+                return null;
             default:
                 return null;
         }
+    }
+    
+    private static void trimUserDTOFields(UserDTO userDTO) {
+        if (userDTO.getUserType() != null) userDTO.setUserType(userDTO.getUserType().trim());
+        if (userDTO.getGstNumber() != null) userDTO.setGstNumber(userDTO.getGstNumber().trim());
+        if (userDTO.getFirmName() != null) userDTO.setFirmName(userDTO.getFirmName().trim());
+        if (userDTO.getOwnerName() != null) userDTO.setOwnerName(userDTO.getOwnerName().trim());
+        if (userDTO.getCity() != null) userDTO.setCity(userDTO.getCity().trim());
+        if (userDTO.getArea() != null) userDTO.setArea(userDTO.getArea().trim());
+        if (userDTO.getPincode() != null) userDTO.setPincode(userDTO.getPincode().trim());
+        if (userDTO.getEmail() != null) userDTO.setEmail(userDTO.getEmail().trim());
+        if (userDTO.getBankName() != null) userDTO.setBankName(userDTO.getBankName().trim());
+        if (userDTO.getAccountNumber() != null) userDTO.setAccountNumber(userDTO.getAccountNumber().trim());
+        if (userDTO.getIfscCode() != null) userDTO.setIfscCode(userDTO.getIfscCode().trim());
+        if (userDTO.getBranch() != null) userDTO.setBranch(userDTO.getBranch().trim());
+        if (userDTO.getShopNumber() != null) userDTO.setShopNumber(userDTO.getShopNumber().trim());
+        if (userDTO.getByProduct() != null) userDTO.setByProduct(userDTO.getByProduct().trim());
+        if (userDTO.getAddressHint() != null) userDTO.setAddressHint(userDTO.getAddressHint().trim());
+        if (userDTO.getCollectionRote() != null) userDTO.setCollectionRote(userDTO.getCollectionRote().trim());
     }
 }
