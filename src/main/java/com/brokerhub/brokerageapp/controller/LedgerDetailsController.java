@@ -23,8 +23,22 @@ public class LedgerDetailsController {
     LedgerDetailsService ledgerDetailsService;
 
     @PostMapping("/createLedgerDetails")
-    public ResponseEntity<String> createLedgerDetails(@RequestBody LedgerDetailsDTO ledgerDetailsDTO){
+    public ResponseEntity<Long> createLedgerDetails(@RequestBody LedgerDetailsDTO ledgerDetailsDTO){
         return ledgerDetailsService.createLedgerDetails(ledgerDetailsDTO);
+    }
+
+    @GetMapping("/getNextTransactionNumber")
+    public ResponseEntity<Long> getNextTransactionNumber(@RequestParam(required = false) Long financialYearId) {
+        try {
+            Long nextTransactionNumber = ledgerDetailsService.getNextTransactionNumber(financialYearId);
+            return ResponseEntity.ok(nextTransactionNumber);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for getNextTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error getting next transaction number", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
 

@@ -1,7 +1,325 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.dto.BrokerageSummaryDTO;
+import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
+import com.brokerhub.brokerageapp.entity.User;
+import com.brokerhub.brokerageapp.repository.BrokerageRepository;
+import com.brokerhub.brokerageapp.repository.BrokerRepository;
+import com.brokerhub.brokerageapp.repository.UserBrokerageRepository;
+import com.brokerhub.brokerageapp.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 @Service
-public class BrokerageServiceImpl {
+@Slf4j
+public class BrokerageServiceImpl implements BrokerageService {
+    
+    @Autowired
+    private BrokerageRepository brokerageRepository;
+    
+    @Autowired
+    private UserBrokerageRepository userBrokerageRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private TenantContextService tenantContextService;
+    
+    @Autowired
+    private CurrentFinancialYearService currentFinancialYearService;
+    
+    @Autowired
+    private PdfGenerationService pdfGenerationService;
+    
+    @Autowired
+    private BulkBillGenerationService bulkBillGenerationService;
+    
+    @Autowired
+    private BrokerRepository brokerRepository;
+    
+    @Autowired
+    private ExcelGenerationService excelGenerationService;
+    
+    @Override
+    @Cacheable(value = "totalBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #financialYearId")
+    public BigDecimal getTotalBrokerageInFinancialYear(Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        Long totalBrokerage = brokerageRepository.getTotalBrokerageByBrokerAndFinancialYear(currentBrokerId, financialYearId);
+        return BigDecimal.valueOf(totalBrokerage != null ? totalBrokerage : 0L);
+    }
+    
+    @Override
+    @Cacheable(value = "brokerageSummary", key = "#root.target.tenantContextService.currentBrokerId + '_' + #financialYearId")
+    public BrokerageSummaryDTO getBrokerageSummaryInFinancialYear(Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        Long totalBrokerageAmount = brokerageRepository.getTotalBrokerageByBrokerAndFinancialYear(currentBrokerId, financialYearId);
+        Long brokerageFromSellersAmount = brokerageRepository.getTotalBrokerageFromSellers(currentBrokerId, financialYearId);
+        Long brokerageFromBuyersAmount = brokerageRepository.getTotalBrokerageFromBuyers(currentBrokerId, financialYearId);
+        
+        BigDecimal totalBrokerage = BigDecimal.valueOf(totalBrokerageAmount != null ? totalBrokerageAmount : 0L);
+        BigDecimal brokerageFromSellers = BigDecimal.valueOf(brokerageFromSellersAmount != null ? brokerageFromSellersAmount : 0L);
+        BigDecimal brokerageFromBuyers = BigDecimal.valueOf(brokerageFromBuyersAmount != null ? brokerageFromBuyersAmount : 0L);
+        
+        List<Object[]> cityData = brokerageRepository.getCityWiseBrokerage(currentBrokerId, financialYearId);
+        List<BrokerageSummaryDTO.CityBrokerageDTO> cityBrokerage = cityData.stream()
+                .map(row -> BrokerageSummaryDTO.CityBrokerageDTO.builder()
+                        .city((String) row[0])
+                        .totalBrokerage(BigDecimal.valueOf(((Number) row[1]).longValue()))
+                        .build())
+                .collect(Collectors.toList());
+        
+        List<Object[]> productData = brokerageRepository.getProductWiseBrokerage(currentBrokerId, financialYearId);
+        List<BrokerageSummaryDTO.ProductBrokerageDTO> productBrokerage = productData.stream()
+                .map(row -> BrokerageSummaryDTO.ProductBrokerageDTO.builder()
+                        .productName((String) row[0])
+                        .totalBrokerage(BigDecimal.valueOf(((Number) row[1]).longValue()))
+                        .build())
+                .collect(Collectors.toList());
+        
+        return BrokerageSummaryDTO.builder()
+                .totalBrokerageEarned(totalBrokerage)
+                .totalBrokerageFromSellers(brokerageFromSellers)
+                .totalBrokerageFromBuyers(brokerageFromBuyers)
+                .cityWiseBrokerage(cityBrokerage)
+                .productWiseBrokerage(productBrokerage)
+                .build();
+    }
+    
+    @Override
+    @Cacheable(value = "userBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #userId + '_' + #financialYearId")
+    public BigDecimal getUserTotalBrokerageInFinancialYear(Long userId, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        Long userBrokerage = brokerageRepository.getUserTotalBrokerage(currentBrokerId, financialYearId, userId);
+        return BigDecimal.valueOf(userBrokerage != null ? userBrokerage : 0L);
+    }
+    
+    @Override
+    @Cacheable(value = "cityBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #city + '_' + #financialYearId")
+    public BigDecimal getCityTotalBrokerageInFinancialYear(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        Long cityBrokerage = brokerageRepository.getCityTotalBrokerage(currentBrokerId, financialYearId, city);
+        return BigDecimal.valueOf(cityBrokerage != null ? cityBrokerage : 0L);
+    }
+    
+    @Override
+    @Cacheable(value = "userBrokerageDetail", key = "#root.target.tenantContextService.currentBrokerId + '_' + #userId + '_' + #financialYearId")
+    public UserBrokerageDetailDTO getUserBrokerageDetailInFinancialYear(Long userId, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (!userOpt.isPresent()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = userOpt.get();
+        
+        // Basic user info
+        UserBrokerageDetailDTO.UserBasicInfo basicInfo = UserBrokerageDetailDTO.UserBasicInfo.builder()
+                .firmName(user.getFirmName())
+                .ownerName(user.getOwnerName())
+                .city(user.getAddress() != null ? user.getAddress().getCity() : null)
+                .build();
+        
+        // Brokerage summary
+        Long totalBagsSold = userBrokerageRepository.getUserTotalBagsSold(currentBrokerId, financialYearId, userId);
+        Long totalBagsBought = userBrokerageRepository.getUserTotalBagsBought(currentBrokerId, financialYearId, userId);
+        
+        List<Object[]> productsBoughtData = userBrokerageRepository.getUserProductsBought(currentBrokerId, financialYearId, userId);
+        List<UserBrokerageDetailDTO.ProductSummary> productsBought = productsBoughtData.stream()
+                .map(row -> UserBrokerageDetailDTO.ProductSummary.builder()
+                        .productName((String) row[0])
+                        .totalBags(((Number) row[1]).longValue())
+                        .build())
+                .collect(Collectors.toList());
+        
+        List<Object[]> productsSoldData = userBrokerageRepository.getUserProductsSold(currentBrokerId, financialYearId, userId);
+        List<UserBrokerageDetailDTO.ProductSummary> productsSold = productsSoldData.stream()
+                .map(row -> UserBrokerageDetailDTO.ProductSummary.builder()
+                        .productName((String) row[0])
+                        .totalBags(((Number) row[1]).longValue())
+                        .build())
+                .collect(Collectors.toList());
+        
+        List<Object[]> citiesSoldToData = userBrokerageRepository.getUserCitiesSoldTo(currentBrokerId, financialYearId, userId);
+        List<UserBrokerageDetailDTO.CitySummary> citiesSoldTo = citiesSoldToData.stream()
+                .map(row -> UserBrokerageDetailDTO.CitySummary.builder()
+                        .city((String) row[0])
+                        .totalBags(((Number) row[1]).longValue())
+                        .build())
+                .collect(Collectors.toList());
+        
+        List<Object[]> citiesBoughtFromData = userBrokerageRepository.getUserCitiesBoughtFrom(currentBrokerId, financialYearId, userId);
+        List<UserBrokerageDetailDTO.CitySummary> citiesBoughtFrom = citiesBoughtFromData.stream()
+                .map(row -> UserBrokerageDetailDTO.CitySummary.builder()
+                        .city((String) row[0])
+                        .totalBags(((Number) row[1]).longValue())
+                        .build())
+                .collect(Collectors.toList());
+        
+        Long totalBrokeragePayableAmount = brokerageRepository.getUserTotalBrokerage(currentBrokerId, financialYearId, userId);
+        BigDecimal totalBrokeragePayable = BigDecimal.valueOf(totalBrokeragePayableAmount != null ? totalBrokeragePayableAmount : 0L);
+        Long totalAmountEarned = userBrokerageRepository.getUserTotalAmountEarned(currentBrokerId, financialYearId, userId);
+        Long totalAmountPaid = userBrokerageRepository.getUserTotalAmountPaid(currentBrokerId, financialYearId, userId);
+        
+        UserBrokerageDetailDTO.BrokerageSummary brokerageSummary = UserBrokerageDetailDTO.BrokerageSummary.builder()
+                .totalBagsSold(totalBagsSold)
+                .totalBagsBought(totalBagsBought)
+                .productsBought(productsBought)
+                .productsSold(productsSold)
+                .citiesSoldTo(citiesSoldTo)
+                .citiesBoughtFrom(citiesBoughtFrom)
+                .totalBrokeragePayable(totalBrokeragePayable)
+                .totalAmountEarned(totalAmountEarned)
+                .totalAmountPaid(totalAmountPaid)
+                .build();
+        
+        // Transaction details
+        List<Object[]> transactionData = userBrokerageRepository.getUserTransactionDetails(currentBrokerId, financialYearId, userId);
+        List<UserBrokerageDetailDTO.TransactionDetail> transactionDetails = transactionData.stream()
+                .map(row -> UserBrokerageDetailDTO.TransactionDetail.builder()
+                        .transactionNumber(((Number) row[0]).longValue())
+                        .transactionDate((LocalDate) row[1])
+                        .counterPartyFirmName((String) row[2])
+                        .productName((String) row[3])
+                        .productCost(((Number) row[4]).longValue())
+                        .quantity(((Number) row[5]).longValue())
+                        .brokerage(BigDecimal.valueOf(((Number) row[6]).longValue()))
+                        .build())
+                .collect(Collectors.toList());
+        
+        return UserBrokerageDetailDTO.builder()
+                .userBasicInfo(basicInfo)
+                .brokerageSummary(brokerageSummary)
+                .transactionDetails(transactionDetails)
+                .build();
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailInFinancialYear(userId, brokerId, financialYearId);
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId);
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailInFinancialYear(userId, brokerId, financialYearId);
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return excelGenerationService.generateUserBrokerageExcel(userDetail, brokerOpt.get(), financialYearId);
+    }
+    
+    @Override
+    public byte[] generateBrokerageSummaryExcel(Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        BrokerageSummaryDTO summary = getBrokerageSummaryInFinancialYear(brokerId, financialYearId);
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return excelGenerationService.generateBrokerageSummaryExcel(summary, brokerOpt.get(), financialYearId);
+    }
+    
+    @Override
+    public byte[] generateCityBrokerageExcel(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        List<User> cityUsers = userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
+        List<UserBrokerageDetailDTO> cityUserDetails = cityUsers.stream()
+                .map(user -> getUserBrokerageDetailInFinancialYear(user.getUserId(), brokerId, financialYearId))
+                .collect(Collectors.toList());
+        
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return excelGenerationService.generateCityBrokerageExcel(city, cityUserDetails, brokerOpt.get(), financialYearId);
+    }
+    
+    @Override
+    public void generateBulkBillsForCity(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        bulkBillGenerationService.generateBulkBillsForCity(city, currentBrokerId, financialYearId);
+    }
+    
+    @Override
+    public void generateBulkBillsForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        bulkBillGenerationService.generateBulkBillsForUsers(userIds, currentBrokerId, financialYearId);
+    }
+    
+    @Override
+    public void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        bulkBillGenerationService.generateBulkExcelForCity(city, currentBrokerId, financialYearId);
+    }
+    
+    @Override
+    public void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        bulkBillGenerationService.generateBulkExcelForUsers(userIds, currentBrokerId, financialYearId);
+    }
 }
