@@ -51,7 +51,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     private ExcelGenerationService excelGenerationService;
     
     @Override
-    @Cacheable(value = "totalBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #financialYearId")
+    @Cacheable(value = "totalBrokerage", key = "#root.target.tenantContextService.getCurrentBrokerId() + '_' + #financialYearId")
     public BigDecimal getTotalBrokerageInFinancialYear(Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
@@ -62,7 +62,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    @Cacheable(value = "brokerageSummary", key = "#root.target.tenantContextService.currentBrokerId + '_' + #financialYearId")
+    @Cacheable(value = "brokerageSummary", key = "#root.target.tenantContextService.getCurrentBrokerId() + '_' + #financialYearId")
     public BrokerageSummaryDTO getBrokerageSummaryInFinancialYear(Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
@@ -103,7 +103,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    @Cacheable(value = "userBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #userId + '_' + #financialYearId")
+    @Cacheable(value = "userBrokerage", key = "#root.target.tenantContextService.getCurrentBrokerId() + '_' + #userId + '_' + #financialYearId")
     public BigDecimal getUserTotalBrokerageInFinancialYear(Long userId, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
@@ -114,7 +114,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    @Cacheable(value = "cityBrokerage", key = "#root.target.tenantContextService.currentBrokerId + '_' + #city + '_' + #financialYearId")
+    @Cacheable(value = "cityBrokerage", key = "#root.target.tenantContextService.getCurrentBrokerId() + '_' + #city + '_' + #financialYearId")
     public BigDecimal getCityTotalBrokerageInFinancialYear(String city, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
@@ -125,7 +125,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    @Cacheable(value = "userBrokerageDetail", key = "#root.target.tenantContextService.currentBrokerId + '_' + #userId + '_' + #financialYearId")
+    @Cacheable(value = "userBrokerageDetail", key = "#root.target.tenantContextService.getCurrentBrokerId() + '_' + #userId + '_' + #financialYearId")
     public UserBrokerageDetailDTO getUserBrokerageDetailInFinancialYear(Long userId, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
@@ -274,9 +274,12 @@ public class BrokerageServiceImpl implements BrokerageService {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
         }
         
+        final Long finalBrokerId = brokerId;
+        final Long finalFinancialYearId = financialYearId;
+        
         List<User> cityUsers = userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
         List<UserBrokerageDetailDTO> cityUserDetails = cityUsers.stream()
-                .map(user -> getUserBrokerageDetailInFinancialYear(user.getUserId(), brokerId, financialYearId))
+                .map(user -> getUserBrokerageDetailInFinancialYear(user.getUserId(), finalBrokerId, finalFinancialYearId))
                 .collect(Collectors.toList());
         
         Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);

@@ -9,6 +9,7 @@ import com.brokerhub.brokerageapp.repository.GeneratedDocumentRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class BulkBillGenerationServiceImpl implements BulkBillGenerationService {
     
     @Autowired
+    @Lazy
     private BrokerageService brokerageService;
     
     @Autowired
@@ -48,8 +50,8 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     @Override
     @Async
     public void generateBulkBillsForCity(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
             Optional<Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
             if (!brokerOpt.isPresent()) {
                 log.error("Broker not found: {}", currentBrokerId);
@@ -108,8 +110,8 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     @Override
     @Async
     public void generateBulkBillsForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
             Optional<Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
             if (!brokerOpt.isPresent()) {
                 log.error("Broker not found: {}", currentBrokerId);
@@ -200,8 +202,8 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     @Override
     @Async
     public void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
             Optional<Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
             if (!brokerOpt.isPresent()) {
                 log.error("Broker not found: {}", currentBrokerId);
@@ -247,8 +249,8 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     @Override
     @Async
     public void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
             Optional<Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
             if (!brokerOpt.isPresent()) {
                 log.error("Broker not found: {}", currentBrokerId);
