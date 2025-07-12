@@ -22,4 +22,6 @@ public interface AddressService {
     public ResponseEntity updateAddress(Address address);
 
     public BrokersAddress findBrokersAddressByPincode(String pincode) throws IOException, InterruptedException;
+
+    public List<Object[]> getCitiesWithAddressId();
 }

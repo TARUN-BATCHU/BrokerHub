@@ -153,4 +153,10 @@ public class AddressServiceImpl implements AddressService{
         addressRepository.save(address);
         return ResponseEntity.ok().body("Address updated successfully");
     }
+
+    @Override
+    public List<Object[]> getCitiesWithAddressId() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        return addressRepository.findCitiesWithAddressIdByBrokerId(currentBrokerId);
+    }
 }
