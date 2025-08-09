@@ -10,7 +10,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface LedgerDetailsService {
-    ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO);
+    ResponseEntity<Long> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO);
+    
+    Long getNextTransactionNumber(Long financialYearId);
 
     List<LedgerDetails> getAllLedgerDetails();
 

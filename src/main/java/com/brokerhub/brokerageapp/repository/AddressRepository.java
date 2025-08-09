@@ -26,6 +26,9 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
 
     List<Address> findByBrokerBrokerId(Long brokerId);
 
+    @Query("SELECT a.city, a.addressId FROM Address a WHERE a.broker.brokerId = :brokerId")
+    List<Object[]> findCitiesWithAddressIdByBrokerId(@Param("brokerId") Long brokerId);
+
     // Legacy methods (deprecated - use broker-aware versions)
     @Deprecated
     Long findAddressIdByCityAndArea(String city, String area);

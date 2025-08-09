@@ -46,8 +46,14 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
 
     @Autowired
     CurrentFinancialYearService currentFinancialYearService;
+    
+    @Autowired
+    BrokerageService brokerageService;
+    
+    @Autowired
+    BrokerageCacheService brokerageCacheService;
 
-    public ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO) {
+    public ResponseEntity<Long> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO) {
         // Get current broker
         Broker currentBroker = tenantContextService.getCurrentBroker();
         
@@ -57,7 +63,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBroker.getBrokerId());
             if (financialYearId == null) {
                 log.error("No financial year specified and no current financial year set for broker {}", currentBroker.getBrokerId());
-                return ResponseEntity.badRequest().body("Financial year ID is required. Please set current financial year first.");
+                return ResponseEntity.badRequest().body(null);
             }
             log.info("Using current financial year {} for broker {}", financialYearId, currentBroker.getBrokerId());
         }
@@ -135,7 +141,13 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
         }
         ledgerDetailsRepository.save(ledgerDetails);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Successfully");
+        
+        // Clear brokerage cache after transaction creation
+        brokerageCacheService.evictBrokerageCache(financialYearId);
+        
+        log.info("Transaction {} created successfully for broker {}", nextTransactionNumber, currentBroker.getBrokerId());
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(nextTransactionNumber);
     }
 
 
@@ -594,6 +606,10 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             }
 
             ledgerDetailsRepository.save(existingLedger);
+            
+            // Clear brokerage cache after transaction update
+            brokerageCacheService.evictBrokerageCache(financialYearId);
+            
             log.info("Successfully updated ledger details with transaction number: {}", transactionNumber);
             return ResponseEntity.ok("Ledger details updated successfully");
 
@@ -601,6 +617,22 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             log.error("Error updating ledger details for transaction number: {}", transactionNumber, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update ledger details: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Long getNextTransactionNumber(Long financialYearId) {
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+        
+        // Use provided financial year or current one
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBroker.getBrokerId());
+            if (financialYearId == null) {
+                throw new IllegalArgumentException("Financial year ID is required. Please set current financial year first.");
+            }
+        }
+        
+        Long maxTransactionNumber = ledgerDetailsRepository.findMaxTransactionNumberByBrokerIdAndFinancialYearId(currentBroker.getBrokerId(), financialYearId);
+        return (maxTransactionNumber != null ? maxTransactionNumber : 0L) + 1;
     }
 
 }

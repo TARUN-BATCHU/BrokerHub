@@ -194,14 +194,18 @@ curl -X POST "http://localhost:8080/BrokerHub/LedgerDetails/createLedgerDetails"
 
 ### Success Response (201 Created)
 ```json
-"Successfully"
+5
 ```
+*Note: Returns the generated transaction number (e.g., 5 means this is the 5th transaction for this broker in this financial year)*
 
 ### Transaction Number Assignment
-If this is:
-- **First transaction** for Broker 1 in FY 2024 → Gets transaction number **1**
-- **Fifth transaction** for Broker 1 in FY 2024 → Gets transaction number **5**
-- **First transaction** for Broker 1 in FY 2025 → Gets transaction number **1** (resets)
+The system automatically generates and returns the transaction number:
+- **First transaction** for Broker 1 in FY 2024 → Returns **1**
+- **Fifth transaction** for Broker 1 in FY 2024 → Returns **5**
+- **First transaction** for Broker 1 in FY 2025 → Returns **1** (resets)
+
+### Response Format
+The API now returns the generated transaction number as a JSON integer instead of a success message.
 
 ### Error Responses
 
@@ -229,7 +233,55 @@ If this is:
 
 ---
 
-## 2. Get All Ledger Details
+## 2. Get Next Transaction Number
+**GET** `/getNextTransactionNumber`
+
+### Description
+Returns the next available transaction number for the broker's financial year without creating a transaction.
+
+### Query Parameters
+- `financialYearId` (Long, optional) - Financial year ID. If not provided, uses current financial year
+
+### Headers
+- `Authorization: Bearer <token>` (required) - JWT token
+
+### cURL Command
+```bash
+curl -X GET "http://localhost:8080/BrokerHub/LedgerDetails/getNextTransactionNumber?financialYearId=2024" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### cURL Command (Using Current Financial Year)
+```bash
+curl -X GET "http://localhost:8080/BrokerHub/LedgerDetails/getNextTransactionNumber" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Success Response (200 OK)
+```json
+6
+```
+*Note: Returns the next transaction number that will be assigned (e.g., 6 means the next transaction will be #6)*
+
+### Error Responses
+#### 400 Bad Request
+```json
+// When no financial year is specified and no current financial year is set
+```
+
+#### 401 Unauthorized
+```json
+// Invalid or missing authorization token
+```
+
+#### 500 Internal Server Error
+```json
+// Server error while calculating next transaction number
+```
+
+---
+
+## 3. Get All Ledger Details
 **GET** `/getAllLedgerDetails`
 
 ### Description
@@ -337,7 +389,7 @@ curl -X GET "http://localhost:8080/BrokerHub/LedgerDetails/getAllLedgerDetails" 
 
 ---
 
-## 3. Get Ledger Details by ID
+## 4. Get Ledger Details by ID
 **GET** `/getLedgerDetailsById`
 
 ### Query Parameters
@@ -363,7 +415,7 @@ GET /getLedgerDetailsById?ledgerDetailId=1&brokerId=1
 
 ---
 
-## 4. Get Ledger Details by Transaction Number
+## 5. Get Ledger Details by Transaction Number
 **GET** `/getLedgerDetailsByTransactionNumber`
 
 ### Description
@@ -497,7 +549,7 @@ curl -X GET "http://localhost:8080/BrokerHub/LedgerDetails/getLedgerDetailsByTra
 
 ---
 
-## 5. Get Optimized Ledger Details by ID
+## 6. Get Optimized Ledger Details by ID
 **GET** `/getOptimizedLedgerDetailsById`
 
 ### Query Parameters
@@ -558,7 +610,7 @@ GET /getOptimizedLedgerDetailsById?ledgerDetailId=1&brokerId=1
 
 ---
 
-## 6. Get Optimized Ledger Details by Transaction Number
+## 7. Get Optimized Ledger Details by Transaction Number
 **GET** `/getOptimizedLedgerDetailsByTransactionNumber`
 
 ### Description
@@ -705,7 +757,7 @@ curl -X GET "http://localhost:8080/BrokerHub/LedgerDetails/getOptimizedLedgerDet
 
 ---
 
-## 7. Get Ledger Details by Date
+## 8. Get Ledger Details by Date
 **GET** `/getLedgerDetailsByDate`
 
 ### Query Parameters
@@ -739,7 +791,7 @@ GET /getLedgerDetailsByDate?date=2024-01-15&brokerId=1
 
 ---
 
-## 8. Get Ledger Details by Seller
+## 9. Get Ledger Details by Seller
 **GET** `/getLedgerDetailsBySeller`
 
 ### Query Parameters
@@ -766,7 +818,7 @@ GET /getLedgerDetailsBySeller?sellerId=123&brokerId=1
 
 ---
 
-## 9. Update Ledger Details by Transaction Number
+## 10. Update Ledger Details by Transaction Number
 **PUT** `/updateLedgerDetailByTransactionNumber`
 
 ### Description
