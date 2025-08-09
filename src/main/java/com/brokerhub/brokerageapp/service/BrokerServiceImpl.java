@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class BrokerServiceImpl implements BrokerService{
 
     @Autowired
