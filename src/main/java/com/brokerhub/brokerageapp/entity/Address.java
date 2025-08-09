@@ -23,6 +23,16 @@ public class Address {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long addressId;
 
+    /**
+     * The broker who owns this address.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    @JsonIgnore
+    private Broker broker;
+
     @NotNull
     @Size(min = 2, max = 50)
     private String city;
@@ -36,8 +46,5 @@ public class Address {
     @JsonIgnore
     private List<User> users;
 
-    @OneToMany(mappedBy = "address")
-    @JsonIgnore
-    private List<Broker> brokers;
 
 }

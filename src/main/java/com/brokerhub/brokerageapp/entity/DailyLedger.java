@@ -24,6 +24,15 @@ public class DailyLedger {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long dailyLedgerId;
 
+    /**
+     * The broker who owns this daily ledger.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
+
     @NotNull
     private LocalDate date;
 

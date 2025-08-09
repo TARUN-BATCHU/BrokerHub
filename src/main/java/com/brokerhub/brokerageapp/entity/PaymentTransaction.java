@@ -28,6 +28,15 @@ public class PaymentTransaction {
     private Long id;
 
     /**
+     * The broker who owns this payment transaction.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
+
+    /**
      * Unique transaction identifier
      */
     @Column(name = "transaction_id", unique = true)

@@ -1,5 +1,6 @@
 package com.brokerhub.brokerageapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,16 @@ public class FinancialYear {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long yearId;
+
+    /**
+     * The broker who owns this financial year.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    @JsonIgnore
+    private Broker broker;
 
     @NotNull
     private LocalDate start;

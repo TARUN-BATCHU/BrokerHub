@@ -19,6 +19,9 @@ public class ProductCacheService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private TenantContextService tenantContextService;
+
     private static final String PRODUCT_NAMES_CACHE = "productNames";
     private static final String PRODUCT_NAMES_IDS_CACHE = "productNamesAndIds";
     private static final String PRODUCT_BASIC_INFO_CACHE = "productBasicInfo";
@@ -27,31 +30,34 @@ public class ProductCacheService {
     private static final String PRODUCT_NAMES_QUALITIES_QUANTITIES_IDS_CACHE = "productNamesQualitiesQuantitiesIds";
 
     /**
-     * Get all product names with Redis caching (1 hour TTL)
+     * Get all product names with Redis caching (1 hour TTL) - Multi-tenant aware
      */
-    @Cacheable(value = PRODUCT_NAMES_CACHE, key = "'all'")
+    @Cacheable(value = PRODUCT_NAMES_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<String> getAllProductNames() {
-        log.info("Fetching product names from database - cache miss");
-        return productRepository.findAllProductNames();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching product names from database for broker {} - cache miss", currentBrokerId);
+        return productRepository.findAllProductNamesByBrokerId(currentBrokerId);
     }
 
     /**
-     * Get distinct product names with Redis caching (1 hour TTL)
+     * Get distinct product names with Redis caching (1 hour TTL) - Multi-tenant aware
      */
-    @Cacheable(value = DISTINCT_PRODUCT_NAMES_CACHE, key = "'all'")
+    @Cacheable(value = DISTINCT_PRODUCT_NAMES_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<String> getDistinctProductNames() {
-        log.info("Fetching distinct product names from database - cache miss");
-        return productRepository.findDistinctProductNames();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching distinct product names from database for broker {} - cache miss", currentBrokerId);
+        return productRepository.findDistinctProductNamesByBrokerId(currentBrokerId);
     }
 
     /**
-     * Get product names and IDs as HashMap with Redis caching (1 hour TTL)
+     * Get product names and IDs as HashMap with Redis caching (1 hour TTL) - Multi-tenant aware
      */
-    @Cacheable(value = PRODUCT_NAMES_IDS_CACHE, key = "'all'")
+    @Cacheable(value = PRODUCT_NAMES_IDS_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<HashMap<String, Long>> getProductNamesAndIds() {
-        log.info("Fetching product names and IDs from database - cache miss");
-        List<Object[]> results = productRepository.findProductIdsAndNames();
-        
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching product names and IDs from database for broker {} - cache miss", currentBrokerId);
+        List<Object[]> results = productRepository.findProductIdsAndNamesByBrokerId(currentBrokerId);
+
         return results.stream()
                 .map(row -> {
                     HashMap<String, Long> productInfo = new HashMap<>();
@@ -62,25 +68,34 @@ public class ProductCacheService {
     }
 
     /**
-     * Get basic product information with Redis caching (1 hour TTL)
+     * Helper method for cache key generation
      */
-    @Cacheable(value = PRODUCT_BASIC_INFO_CACHE, key = "'all'")
+    public Long getCurrentBrokerId() {
+        return tenantContextService.getCurrentBrokerId();
+    }
+
+    /**
+     * Get basic product information with Redis caching (1 hour TTL) - Multi-tenant aware
+     */
+    @Cacheable(value = PRODUCT_BASIC_INFO_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<ProductBasicInfoDTO> getAllBasicProductInfo() {
-        log.info("Fetching basic product info from database - cache miss");
-        List<Object[]> results = productRepository.findBasicProductInfo();
-        
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching basic product info from database for broker {} - cache miss", currentBrokerId);
+        List<Object[]> results = productRepository.findBasicProductInfoByBrokerId(currentBrokerId);
+
         return results.stream()
                 .map(ProductBasicInfoDTO::new)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get product names and qualities with Redis caching (1 hour TTL)
+     * Get product names and qualities with Redis caching (1 hour TTL) - Multi-tenant aware
      */
-    @Cacheable(value = PRODUCT_NAMES_QUALITIES_CACHE, key = "'all'")
+    @Cacheable(value = PRODUCT_NAMES_QUALITIES_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<ProductBasicInfoDTO> getProductNamesAndQualities() {
-        log.info("Fetching product names and qualities from database - cache miss");
-        List<Object[]> results = productRepository.findProductNamesAndQualities();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching product names and qualities from database for broker {} - cache miss", currentBrokerId);
+        List<Object[]> results = productRepository.findProductNamesAndQualitiesByBrokerId(currentBrokerId);
 
         return results.stream()
                 .map(row -> new ProductBasicInfoDTO((String) row[0], (String) row[1]))
@@ -88,12 +103,13 @@ public class ProductCacheService {
     }
 
     /**
-     * Get product names, qualities, quantities with IDs as HashMap with Redis caching (1 hour TTL)
+     * Get product names, qualities, quantities with IDs as HashMap with Redis caching (1 hour TTL) - Multi-tenant aware
      */
-    @Cacheable(value = PRODUCT_NAMES_QUALITIES_QUANTITIES_IDS_CACHE, key = "'all'")
+    @Cacheable(value = PRODUCT_NAMES_QUALITIES_QUANTITIES_IDS_CACHE, key = "#root.target.getCurrentBrokerId()")
     public List<HashMap<String, Long>> getProductNamesAndQualitiesAndQuantitiesWithIds() {
-        log.info("Fetching product names, qualities, quantities with IDs from database - cache miss");
-        List<Object[]> results = productRepository.findProductNamesQualitiesAndQuantitiesWithIds();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching product names, qualities, quantities with IDs from database for broker {} - cache miss", currentBrokerId);
+        List<Object[]> results = productRepository.findProductNamesQualitiesAndQuantitiesWithIdsByBrokerId(currentBrokerId);
 
         return results.stream()
                 .map(row -> {

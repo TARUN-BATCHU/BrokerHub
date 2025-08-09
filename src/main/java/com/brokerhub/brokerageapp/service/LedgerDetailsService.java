@@ -10,15 +10,23 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface LedgerDetailsService {
-    ResponseEntity<String> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO);
+    ResponseEntity<Long> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO);
+    
+    Long getNextTransactionNumber(Long financialYearId);
 
     List<LedgerDetails> getAllLedgerDetails();
 
     LedgerDetails getLedgerDetailById(Long ledgerDetailId, Long brokerId);
 
+    LedgerDetails getLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId);
+
     OptimizedLedgerDetailsDTO getOptimizedLedgerDetailById(Long ledgerDetailId, Long brokerId);
+
+    OptimizedLedgerDetailsDTO getOptimizedLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId);
 
     List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(LocalDate date, Long brokerId);
 
     List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId);
+
+    ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId, LedgerDetailsDTO ledgerDetailsDTO);
 }

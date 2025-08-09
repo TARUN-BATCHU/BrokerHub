@@ -2,16 +2,16 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
-import com.brokerhub.brokerageapp.entity.Address;
-import com.brokerhub.brokerageapp.entity.BankDetails;
-import com.brokerhub.brokerageapp.entity.Miller;
-import com.brokerhub.brokerageapp.entity.User;
+import com.brokerhub.brokerageapp.dto.UserSummaryDTO;
+import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.mapper.UserDTOMapper;
 import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
 import com.brokerhub.brokerageapp.constants.Constants;
 import com.brokerhub.brokerageapp.utils.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -35,7 +36,7 @@ public class UserServiceImpl implements UserService {
     UserDTOMapper userDTOMapper;
 
     @Autowired
-    BankDetailsService bankDetailsService;
+    MerchantBankDetailsService merchantBankDetailsService;
 
     @Autowired
     AddressService addressService;
@@ -43,52 +44,72 @@ public class UserServiceImpl implements UserService {
     @Autowired
     UserCacheService userCacheService;
 
-
+    @Autowired
+    TenantContextService tenantContextService;
 
     public ResponseEntity createUser(UserDTO userDTO) {
         String firmName = userDTO.getFirmName();
         String GSTNumber = userDTO.getGstNumber();
+
+        // Get current broker for multi-tenant isolation
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+
         if(!checkUserFirmExists(firmName) && !checkUserGSTNumberExists(GSTNumber)) {
             User user = userDTOMapper.convertUserDTOtoUser(userDTO);
             //User user = new User();
             if(user == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to convert UserDTO to User");
             }
+
+            // Set the broker for multi-tenant isolation
+            user.setBroker(currentBroker);
+
             user.setPayableAmount(0L);
             user.setReceivableAmount(0L);
             user.setTotalBagsBought(0L);
             user.setTotalBagsSold(0L);
             user.setTotalPayableBrokerage(BigDecimal.valueOf(0));
 
-            // Handle address creation if pincode is provided
+            // Handle address creation if pincode is provided (optional for bulk upload)
             if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
                 Address address = addressService.findAddressByPincode(userDTO.getPincode());
                 if(address == null) {
                     // Create a new address if not found
                     address = new Address();
                     address.setPincode(userDTO.getPincode());
-                    if(userDTO.getCity() != null) address.setCity(userDTO.getCity());
-                    if(userDTO.getArea() != null) address.setArea(userDTO.getArea());
+                    if(userDTO.getCity() != null && !userDTO.getCity().trim().isEmpty()) {
+                        address.setCity(userDTO.getCity());
+                    }
+                    if(userDTO.getArea() != null && !userDTO.getArea().trim().isEmpty()) {
+                        address.setArea(userDTO.getArea());
+                    }
                     // Save the address first
                     address = addressService.saveAddress(address);
                 }
                 user.setAddress(address);
             }
 
-            // Handle bank details creation
+            // Save user first to get the ID
+            user = userRepository.save(user);
+            
+            // Handle bank details creation after user is saved
             if(userDTO.getAccountNumber() != null && !userDTO.getAccountNumber().trim().isEmpty()) {
-                BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+                MerchantBankDetails bankDetails = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(userDTO.getAccountNumber());
                 if(bankDetails == null) {
                     // Create new bank details if not found
-                    bankDetails = new BankDetails();
+                    bankDetails = new MerchantBankDetails();
                     bankDetails.setAccountNumber(userDTO.getAccountNumber());
                     if(userDTO.getBankName() != null) bankDetails.setBankName(userDTO.getBankName());
                     if(userDTO.getIfscCode() != null) bankDetails.setIfscCode(userDTO.getIfscCode());
                     if(userDTO.getBranch() != null) bankDetails.setBranch(userDTO.getBranch());
-                    // Save the bank details first
-                    bankDetails = bankDetailsService.saveBankDetails(bankDetails);
+                    // CRITICAL FIX: Set the user reference
+                    bankDetails.setUser(user);
+                    // Save the bank details
+                    bankDetails = merchantBankDetailsService.saveMerchantBankDetails(bankDetails);
                 }
                 user.setBankDetails(bankDetails);
+                // Update user with bank details reference
+                user = userRepository.save(user);
             }
 
             if(userDTO.getUserType() != null && userDTO.getUserType().equalsIgnoreCase(Constants.USER_TYPE_MILLER)){
@@ -99,13 +120,9 @@ public class UserServiceImpl implements UserService {
             else{
                 user.setUserType("TRADER");
             }
-            //Address address = findAddressByCityArea(userDTO.getCity(),userDTO.getArea());
-            Address address = addressService.findAddressByPincode(userDTO.getPincode());
-            if(null != address) {
-                user.setAddress(address);
-            }
-            linkBankDetailsToUser(userDTO,user);
-            userRepository.save(user);
+            // Remove duplicate address handling - already handled above
+            // linkBankDetailsToUser is now handled above
+            // userRepository.save(user) is now handled above
 
             // Clear user caches after creating new user
             userCacheService.clearUserCaches();
@@ -125,7 +142,7 @@ public class UserServiceImpl implements UserService {
             user.setAddress(address);
         }
         if(user.getBankDetails() != null && user.getBankDetails().getAccountNumber() != null) {
-            BankDetails bankDetails = bankDetailsService.getBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
+            MerchantBankDetails bankDetails = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(user.getBankDetails().getAccountNumber());
             user.setBankDetails(bankDetails);
         }
 
@@ -165,7 +182,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<User> getAllUserDetails() {
-        List<User> allUsers = userRepository.findAll();
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<User> allUsers = userRepository.findByBrokerBrokerId(currentBrokerId);
         if(allUsers.size()>=1){
             return allUsers;
         }
@@ -175,21 +193,22 @@ public class UserServiceImpl implements UserService {
     }
 
     public Object getAllUsersByCity(String city) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         boolean isCityExists = addressService.isCityExists(city);
         if (!isCityExists) {
             return "City does not exist";
         }
 
-        List<User> usersInCity = userRepository.findByAddressCity(city);
+        List<User> usersInCity = userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
         return usersInCity.isEmpty() ? Collections.emptyList() : usersInCity;
     }
 
     public Optional<User> getUserById(Long userId) {
-        Optional<User> user = userRepository.findById(userId);
+        Optional<User> user = userRepository.findByIdWithDetails(userId);
         if(!user.isEmpty()){
             return user;
         }
-        return null;
+        return Optional.empty();
     }
 
     public List<User> getAllUsersHavingBrokerageMoreThan(int brokerage) {
@@ -209,12 +228,13 @@ public class UserServiceImpl implements UserService {
     }
 
     public Object getUserByProperty(String property, String value) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if(property.equalsIgnoreCase(Constants.USER_PROPERTY_FIRM_NAME)){
-            Optional<User> user = userRepository.findByFirmName(value);
+            Optional<User> user = userRepository.findByBrokerBrokerIdAndFirmName(currentBrokerId, value);
             return user.isEmpty()? null : user;
         }
         else if(property.equalsIgnoreCase(Constants.USER_PROPERTY_GST_NUMBER)){
-            Optional<User> user = userRepository.findByGstNumber(value);
+            Optional<User> user = userRepository.findByBrokerBrokerIdAndGstNumber(currentBrokerId, value);
             return user.isEmpty()? null : user;
         }
         else{
@@ -233,27 +253,51 @@ public class UserServiceImpl implements UserService {
         return userCacheService.getAllUserNames();
     }
 
+    public List<HashMap<String, Object>> getFirmNamesIdsAndCities() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        List<Object[]> results = userRepository.findUserIdsAndFirmNamesAndCitiesByBrokerId(currentBrokerId);
+        
+        return results.stream()
+                .map(row -> {
+                    HashMap<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("id", (Long) row[0]);
+                    userInfo.put("firmName", (String) row[1]);
+                    userInfo.put("city", (String) row[2]);
+                    return userInfo;
+                })
+                .collect(Collectors.toList());
+    }
+
 
     private boolean checkUserGSTNumberExists(String gstNumber) {
-        Optional<User> user = userRepository.findByGstNumber(gstNumber);
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<User> user = userRepository.findByBrokerBrokerIdAndGstNumber(currentBrokerId, gstNumber);
         if(user.isEmpty()){
             return false;
         }
         return true;
     }
 
-    private void linkBankDetailsToUser(UserDTO userDTO,User user) {
-        if(bankDetailsService.ifBankDetailsExists(userDTO.getAccountNumber())) {
-            BankDetails bankAccount = bankDetailsService.getBankDetailsByAccountNumber(userDTO.getAccountNumber());
+    private void linkBankDetailsToUser(UserDTO userDTO, User user) {
+        // Only create bank details if account number is provided
+        if (userDTO.getAccountNumber() == null || userDTO.getAccountNumber().trim().isEmpty()) {
+            return;
+        }
+        
+        if(merchantBankDetailsService.ifMerchantBankDetailsExists(userDTO.getAccountNumber())) {
+            MerchantBankDetails bankAccount = merchantBankDetailsService.getMerchantBankDetailsByAccountNumber(userDTO.getAccountNumber());
             user.setBankDetails(bankAccount);
         }
         else {
-            BankDetails bankDetails = new BankDetails();
+            MerchantBankDetails bankDetails = new MerchantBankDetails();
             bankDetails.setBankName(userDTO.getBankName());
             bankDetails.setAccountNumber(userDTO.getAccountNumber());
             bankDetails.setBranch(userDTO.getBranch());
             bankDetails.setIfscCode(userDTO.getIfscCode());
-            bankDetailsService.createBankDetails(bankDetails);
+            // CRITICAL FIX: Set the user reference before saving
+            bankDetails.setUser(user);
+            // Set broker will be handled in the service
+            merchantBankDetailsService.createMerchantBankDetails(bankDetails);
             user.setBankDetails(bankDetails);
         }
     }
@@ -269,7 +313,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public boolean checkUserFirmExists(String firmName){
-        Optional<User> user = userRepository.findByFirmName(firmName);
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<User> user = userRepository.findByBrokerBrokerIdAndFirmName(currentBrokerId, firmName);
         System.out.println(user);
         if(user.isEmpty()){
             return false;
@@ -316,11 +361,31 @@ public class UserServiceImpl implements UserService {
                 int rowNumber = i + 2; // +2 because Excel rows start from 1 and we skip header
 
                 try {
-                    // Validate required fields
+                    // Only validate firm name as required for bulk upload
                     if (userDTO.getFirmName() == null || userDTO.getFirmName().trim().isEmpty()) {
                         errorMessages.add("Row " + rowNumber + ": Firm name is required");
                         failedRecords++;
                         continue;
+                    }
+                    
+                    // Validate email format if provided (optional)
+                    if (userDTO.getEmail() != null && !userDTO.getEmail().trim().isEmpty()) {
+                        if (!userDTO.getEmail().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                            errorMessages.add("Row " + rowNumber + ": Invalid email format");
+                            failedRecords++;
+                            continue;
+                        }
+                    }
+                    
+                    // Validate and normalize user type if provided
+                    if (userDTO.getUserType() != null && !userDTO.getUserType().trim().isEmpty()) {
+                        String userType = userDTO.getUserType().trim().toUpperCase();
+                        if (!userType.equals("TRADER") && !userType.equals("MILLER")) {
+                            // Set to default instead of failing
+                            userDTO.setUserType("TRADER");
+                        } else {
+                            userDTO.setUserType(userType);
+                        }
                     }
 
                     // Check if user already exists
@@ -392,5 +457,33 @@ public class UserServiceImpl implements UserService {
                 .errorMessages(errorMessages)
                 .message(message)
                 .build();
+    }
+
+    @Override
+    public Page<UserSummaryDTO> getUserSummary(Pageable pageable) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Page<User> users = userRepository.findByBrokerBrokerId(currentBrokerId, pageable);
+        
+        List<UserSummaryDTO> userSummaries = users.getContent().stream()
+                .map(user -> {
+                    // Calculate total payable brokerage: (totalBagsSold + totalBagsBought) * brokerageRate
+                    Long totalBags = (user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L) + 
+                                   (user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L);
+                    BigDecimal brokerageRate = user.getBrokerageRate() != null ? BigDecimal.valueOf(user.getBrokerageRate()) : BigDecimal.ZERO;
+                    BigDecimal calculatedBrokerage = brokerageRate.multiply(BigDecimal.valueOf(totalBags));
+                    
+                    return UserSummaryDTO.builder()
+                            .userId(user.getUserId())
+                            .firmName(user.getFirmName())
+                            .city(user.getAddress() != null ? user.getAddress().getCity() : null)
+                            .totalBagsSold(user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L)
+                            .totalBagsBought(user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L)
+                            .brokeragePerBag(brokerageRate)
+                            .totalPayableBrokerage(calculatedBrokerage)
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(userSummaries, pageable, users.getTotalElements());
     }
 }

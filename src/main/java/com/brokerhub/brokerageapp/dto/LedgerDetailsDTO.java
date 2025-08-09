@@ -17,11 +17,17 @@ public class LedgerDetailsDTO {
 
     private Long brokerId;
 
+    private Long financialYearId;
+
+    private String sellerBrokerage;
+
     private Long brokerage;
 
     private Long fromSeller;
 
     private LocalDate date;
+
+    private List<SellerProductDTO> sellerProducts;
 
     private List<LedgerRecordDTO> ledgerRecordDTOList;
 }
