@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -20,10 +21,21 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
     @Override
     public byte[] generateUserBrokerageExcel(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
         try (Workbook workbook = new XSSFWorkbook()) {
-            createUserBrokerageSheet(workbook, userDetail, broker, financialYearId);
+            createUserBrokerageSheet(workbook, userDetail, broker, financialYearId, null);
             return writeWorkbookToBytes(workbook);
         } catch (IOException e) {
             log.error("Error generating user brokerage Excel", e);
+            throw new RuntimeException("Failed to generate Excel", e);
+        }
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageExcel(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            createUserBrokerageSheet(workbook, userDetail, broker, financialYearId, customBrokerage);
+            return writeWorkbookToBytes(workbook);
+        } catch (IOException e) {
+            log.error("Error generating user brokerage Excel with custom brokerage", e);
             throw new RuntimeException("Failed to generate Excel", e);
         }
     }
@@ -50,7 +62,7 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         }
     }
     
-    private void createUserBrokerageSheet(Workbook workbook, UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
+    private void createUserBrokerageSheet(Workbook workbook, UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
         Sheet sheet = workbook.createSheet("User Brokerage Bill");
         CellStyle headerStyle = createHeaderStyle(workbook);
         CellStyle boldStyle = createBoldStyle(workbook);
@@ -83,8 +95,14 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         createCell(sheet.createRow(rowNum++), 0, "Total Bags Bought:", boldStyle);
         createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsBought().toString(), null);
         
+        BigDecimal totalBrokeragePayable = calculateTotalBrokerage(userDetail, customBrokerage);
         createCell(sheet.createRow(rowNum++), 0, "Total Brokerage Payable:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, "₹" + userDetail.getBrokerageSummary().getTotalBrokeragePayable().toString(), null);
+        createCell(sheet.getRow(rowNum-1), 1, "₹" + totalBrokeragePayable.toString(), null);
+        
+        if (customBrokerage != null) {
+            createCell(sheet.createRow(rowNum++), 0, "Custom Brokerage Rate:", boldStyle);
+            createCell(sheet.getRow(rowNum-1), 1, "₹" + customBrokerage.toString() + " per bag", null);
+        }
         
         rowNum++; // Empty row
         
@@ -99,13 +117,17 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
             Row row = sheet.createRow(rowNum++);
+            BigDecimal transactionBrokerage = customBrokerage != null ? 
+                customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
+                transaction.getBrokerage();
+            
             createCell(row, 0, transaction.getTransactionNumber().toString(), null);
             createCell(row, 1, transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), null);
             createCell(row, 2, transaction.getCounterPartyFirmName(), null);
             createCell(row, 3, transaction.getProductName(), null);
             createCell(row, 4, transaction.getQuantity().toString(), null);
             createCell(row, 5, "₹" + transaction.getProductCost().toString(), null);
-            createCell(row, 6, "₹" + transaction.getBrokerage().toString(), null);
+            createCell(row, 6, "₹" + transactionBrokerage.toString(), null);
         }
         
         // Auto-size columns
@@ -235,5 +257,15 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
             workbook.write(outputStream);
             return outputStream.toByteArray();
         }
+    }
+    
+    private BigDecimal calculateTotalBrokerage(UserBrokerageDetailDTO userDetail, BigDecimal customBrokerage) {
+        if (customBrokerage == null) {
+            return userDetail.getBrokerageSummary().getTotalBrokeragePayable();
+        }
+        
+        return userDetail.getTransactionDetails().stream()
+            .map(transaction -> customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

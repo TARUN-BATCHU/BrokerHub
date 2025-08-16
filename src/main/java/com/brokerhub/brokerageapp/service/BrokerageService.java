@@ -20,7 +20,11 @@ public interface BrokerageService {
     
     byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId);
     
+    byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
+    
     byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId);
+    
+    byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
     byte[] generateBrokerageSummaryExcel(Long brokerId, Long financialYearId);
     
