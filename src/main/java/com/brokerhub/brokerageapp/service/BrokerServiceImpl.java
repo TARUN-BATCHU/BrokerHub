@@ -11,6 +11,7 @@ import com.brokerhub.brokerageapp.utils.OtpUtil;
 import com.brokerhub.brokerageapp.utils.EmailUtil;
 import com.brokerhub.brokerageapp.constants.Constants;
 import jakarta.mail.MessagingException;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
