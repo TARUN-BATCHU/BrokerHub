@@ -5,11 +5,12 @@ import com.brokerhub.brokerageapp.entity.Broker;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
 
 public interface BrokerService {
-    ResponseEntity createBroker(@Valid BrokerDTO broker);
+    ResponseEntity createBroker(@Valid BrokerDTO broker) throws IOException, InterruptedException;
 
     ResponseEntity updateBroker(UpdateBrokerDTO UpdateBrokerDTO);
 
@@ -37,5 +38,13 @@ public interface BrokerService {
 
     ResponseEntity<String> createPassword(CreatePasswordDTO createPasswordDTO);
 
-    ResponseEntity login(BrokerLoginDTO brokerLoginDTO);
+    ResponseEntity<?> login(BrokerLoginDTO brokerLoginDTO);
+
+    String generatePasswordHash(String password);
+
+    ResponseEntity<String> resetAdminPassword(String newPassword);
+
+    Boolean findBrokerUserNameAvailability(String userName);
+
+    Boolean findBrokerFirmNameAvailability(String firmName);
 }

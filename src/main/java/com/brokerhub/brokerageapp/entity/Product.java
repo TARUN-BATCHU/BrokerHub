@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -19,6 +20,16 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long productId;
+
+    /**
+     * The broker who owns this product.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    @JsonIgnore
+    private Broker broker;
 
     @NotNull
     private String productName;

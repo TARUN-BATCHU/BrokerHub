@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "BrokerHub API Collection (With Auth)",
+    "description": "Complete API collection for Daily Ledger, Ledger Details, and Financial Year controllers with authentication",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{username}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Financial Year APIs",
+      "item": [
+        {
+          "name": "Create Financial Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"financialYearName\": \"FY 2024-25\",\n  \"start\": \"2024-04-01\",\n  \"end\": \"2025-03-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/FinancialYear/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "FinancialYear", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get All Financial Year IDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/FinancialYear/getAllFinancialYearIds",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "FinancialYear", "getAllFinancialYearIds"]
+            }
+          }
+        },
+        {
+          "name": "Get All Financial Years",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/FinancialYear/getAllFinancialYears",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "FinancialYear", "getAllFinancialYears"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Daily Ledger APIs",
+      "item": [
+        {
+          "name": "Create Daily Ledger",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/create?financialYearId=1&date=2024-06-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "create"],
+              "query": [
+                {
+                  "key": "financialYearId",
+                  "value": "1"
+                },
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/getDailyLedger?date=2024-06-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "getDailyLedger"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Ledger On Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/getDailyLedgerOnDate?date=2024-06-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "getDailyLedgerOnDate"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Optimized Daily Ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/getOptimizedDailyLedger?date=2024-06-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "getOptimizedDailyLedger"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Ledger With Pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/getDailyLedgerWithPagination?date=2024-06-15&page=0&size=10&sortBy=ledgerDetailsId&sortDir=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "getDailyLedgerWithPagination"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "ledgerDetailsId"
+                },
+                {
+                  "key": "sortDir",
+                  "value": "asc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Optimized Daily Ledger With Pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/DailyLedger/getOptimizedDailyLedgerWithPagination?date=2024-06-15&page=0&size=10&sortBy=ledgerDetailsId&sortDir=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "DailyLedger", "getOptimizedDailyLedgerWithPagination"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "ledgerDetailsId"
+                },
+                {
+                  "key": "sortDir",
+                  "value": "asc"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ledger Details APIs",
+      "item": [
+        {
+          "name": "Create Ledger Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2024-06-15\",\n  \"fromSeller\": 1,\n  \"brokerage\": 50,\n  \"brokerId\": 10,\n  \"ledgerRecordDTOList\": [\n    {\n      \"productId\": 1,\n      \"buyerName\": \"ABC Traders\",\n      \"quantity\": 100,\n      \"brokerage\": 5,\n      \"productCost\": 1000\n    },\n    {\n      \"productId\": 2,\n      \"buyerName\": \"XYZ Corporation\",\n      \"quantity\": 50,\n      \"brokerage\": 8,\n      \"productCost\": 1500\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/createLedgerDetails",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "createLedgerDetails"]
+            }
+          }
+        },
+        {
+          "name": "Get All Ledger Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "10"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getAllLedgerDetails",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getAllLedgerDetails"]
+            }
+          }
+        },
+        {
+          "name": "Get Ledger Details By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getLedgerDetailsById?ledgerDetailId=1&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getLedgerDetailsById"],
+              "query": [
+                {
+                  "key": "ledgerDetailId",
+                  "value": "1"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ledger Details By Transaction Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getLedgerDetailsByTransactionNumber?transactionNumber=1001&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getLedgerDetailsByTransactionNumber"],
+              "query": [
+                {
+                  "key": "transactionNumber",
+                  "value": "1001"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Optimized Ledger Details By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getOptimizedLedgerDetailsById?ledgerDetailId=1&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getOptimizedLedgerDetailsById"],
+              "query": [
+                {
+                  "key": "ledgerDetailId",
+                  "value": "1"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Optimized Ledger Details By Transaction Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getOptimizedLedgerDetailsByTransactionNumber?transactionNumber=1001&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getOptimizedLedgerDetailsByTransactionNumber"],
+              "query": [
+                {
+                  "key": "transactionNumber",
+                  "value": "1001"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ledger Details By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getLedgerDetailsByDate?date=2024-06-15&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getLedgerDetailsByDate"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-06-15"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ledger Details By Seller",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/BrokerHub/LedgerDetails/getLedgerDetailsBySeller?sellerId=1&brokerId=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["BrokerHub", "LedgerDetails", "getLedgerDetailsBySeller"],
+              "query": [
+                {
+                  "key": "sellerId",
+                  "value": "1"
+                },
+                {
+                  "key": "brokerId",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "your_username",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "your_password",
+      "type": "string"
+    }
+  ]
+}

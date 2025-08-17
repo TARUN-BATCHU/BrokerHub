@@ -277,12 +277,15 @@ public class DashboardServiceImpl implements DashboardService {
             // Process merchant type analytics by month
             Map<YearMonth, Map<String, MerchantTypeAnalyticsDTO>> merchantTypeByMonth = new ConcurrentHashMap<>();
             merchantTypeData.parallelStream().forEach(row -> {
-                if (row[0] == null || row[1] == null) return;
+                if (row[0] == null || row[1] == null || row[2] == null) return;
                 YearMonth yearMonth = YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString()));
-                String merchantType = row[2] != null ? row[2].toString() : "";
-
-                merchantTypeByMonth.computeIfAbsent(yearMonth, k -> new ConcurrentHashMap<>())
-                        .merge(merchantType, mapToMerchantTypeAnalytics(row), this::mergeMerchantTypeAnalytics);
+                String merchantType = row[2].toString();
+                
+                MerchantTypeAnalyticsDTO mappedData = mapToMerchantTypeAnalytics(row);
+                if (mappedData != null) {
+                    merchantTypeByMonth.computeIfAbsent(yearMonth, k -> new ConcurrentHashMap<>())
+                            .merge(merchantType, mappedData, this::mergeMerchantTypeAnalytics);
+                }
             });
 
             // Combine all data efficiently
@@ -332,18 +335,26 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private MerchantTypeAnalyticsDTO mapToMerchantTypeAnalytics(Object[] row) {
+        if (row == null || row.length < 9) {
+            log.warn("Invalid row data for merchant type analytics: row is null or has insufficient data");
+            return null;
+        }
+        
         return MerchantTypeAnalyticsDTO.builder()
-                .merchantType(row[2] != null ? row[2].toString() : "")
-                .totalQuantitySold(row[3] != null ? Long.valueOf(row[3].toString()) : 0L)
-                .totalQuantityBought(row[4] != null ? Long.valueOf(row[4].toString()) : 0L)
-                .totalBrokeragePaid(row[5] != null ? new BigDecimal(row[5].toString()) : BigDecimal.ZERO)
-                .totalTransactionValue(row[6] != null ? new BigDecimal(row[6].toString()) : BigDecimal.ZERO)
-                .totalTransactions(row[7] != null ? Integer.valueOf(row[7].toString()) : 0)
-                .totalMerchants(row[8] != null ? Integer.valueOf(row[8].toString()) : 0)
+                .merchantType(row[2] != null ? row[2].toString() : "UNKNOWN")
+                .totalQuantitySold(safeLongConvert(row[3]))
+                .totalQuantityBought(safeLongConvert(row[4]))
+                .totalBrokeragePaid(safeBigDecimalConvert(row[5]))
+                .totalTransactionValue(safeBigDecimalConvert(row[6]))
+                .totalTransactions(safeIntegerConvert(row[7]))
+                .totalMerchants(safeIntegerConvert(row[8]))
                 .build();
     }
 
     private MerchantTypeAnalyticsDTO mergeMerchantTypeAnalytics(MerchantTypeAnalyticsDTO existing, MerchantTypeAnalyticsDTO newData) {
+        if (existing == null) return newData;
+        if (newData == null) return existing;
+        
         return MerchantTypeAnalyticsDTO.builder()
                 .merchantType(existing.getMerchantType())
                 .totalQuantitySold(existing.getTotalQuantitySold() + newData.getTotalQuantitySold())
@@ -394,8 +405,9 @@ public class DashboardServiceImpl implements DashboardService {
         List<Object[]> productData = dashboardRepository.getProductAnalyticsByMonth(financialYearId);
 
         return productData.parallelStream()
+                .filter(row -> row[2] != null) // Filter out null product IDs
                 .collect(Collectors.groupingByConcurrent(
-                    row -> row[2] != null ? Long.valueOf(row[2].toString()) : null,
+                    row -> Long.valueOf(row[2].toString()),
                     Collectors.reducing(null, this::mapToProductAnalytics, this::mergeProductAnalytics)
                 ))
                 .values()
@@ -409,8 +421,9 @@ public class DashboardServiceImpl implements DashboardService {
         List<Object[]> cityData = dashboardRepository.getCityAnalyticsByMonth(financialYearId);
 
         return cityData.parallelStream()
+                .filter(row -> row[2] != null) // Filter out null city names
                 .collect(Collectors.groupingByConcurrent(
-                    row -> row[2] != null ? row[2].toString() : "",
+                    row -> row[2].toString(),
                     Collectors.reducing(null, this::mapToCityAnalytics, this::mergeCityAnalytics)
                 ))
                 .values()
@@ -424,8 +437,9 @@ public class DashboardServiceImpl implements DashboardService {
         List<Object[]> merchantTypeData = dashboardRepository.getMerchantTypeAnalyticsByMonth(financialYearId);
 
         return merchantTypeData.parallelStream()
+                .filter(row -> row[2] != null) // Filter out null merchant types
                 .collect(Collectors.groupingByConcurrent(
-                    row -> row[2] != null ? row[2].toString() : "",
+                    row -> row[2].toString(),
                     Collectors.reducing(null, this::mapToMerchantTypeAnalytics, this::mergeMerchantTypeAnalytics)
                 ))
                 .values()
@@ -542,7 +556,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @CacheEvict(value = {"financialYearAnalytics", "topPerformers", "topBuyers", "topSellers", "topMerchants"}, key = "#financialYearId")
+    @CacheEvict(value = {"financialYearAnalytics", "topPerformers", "topBuyers", "topSellers", "topMerchants"}, allEntries = true)
     public void refreshAnalyticsCache(Long financialYearId) {
         log.info("Refreshing analytics cache for financial year: {}", financialYearId);
     }

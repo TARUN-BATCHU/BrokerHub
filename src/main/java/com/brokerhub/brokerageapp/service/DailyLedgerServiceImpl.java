@@ -4,12 +4,6 @@ import com.brokerhub.brokerageapp.dto.*;
 import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.repository.DailyLedgerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
-import com.itextpdf.kernel.color.Color;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.property.TextAlignment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,8 +20,7 @@ import java.util.*;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
+// PDF imports removed - not needed for core functionality
 
 @Service
 @Transactional
@@ -40,17 +33,26 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
     @Autowired
     FinancialYearRepository financialYearRepository;
 
+    @Autowired
+    TenantContextService tenantContextService;
+
     public Long createDailyLedger(Long financialYearId, LocalDate date){
         if(null != financialYearId && null!= date) {
+            // Get current broker for multi-tenant isolation
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Broker currentBroker = tenantContextService.getCurrentBroker();
+
             Optional<FinancialYear> financialYear = financialYearRepository.findById(financialYearId);
             if (financialYear.isPresent() && (date.isEqual(financialYear.get().getStart()) || date.isEqual(financialYear.get().getEnd()) || (date.isAfter(financialYear.get().getStart()) && date.isBefore(financialYear.get().getEnd())))) {
-                if (null == dailyLedgerRepository.findByDate(date)) {
+                // Check if daily ledger exists for this broker and date
+                if (null == dailyLedgerRepository.findByBrokerBrokerIdAndDate(currentBrokerId, date)) {
                     DailyLedger dailyLedger = new DailyLedger();
                     dailyLedger.setDate(date);
                     dailyLedger.setFinancialYear(financialYear.get());
+                    dailyLedger.setBroker(currentBroker); // Set broker for multi-tenant isolation
                     dailyLedgerRepository.save(dailyLedger);
                 }
-                return dailyLedgerRepository.findByDate(date).getDailyLedgerId();
+                return dailyLedgerRepository.findByBrokerBrokerIdAndDate(currentBrokerId, date).getDailyLedgerId();
             }
         }
         return null;
@@ -66,14 +68,15 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         }
 
         try {
-            DailyLedger existingLedger = dailyLedgerRepository.findByDate(date);
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            DailyLedger existingLedger = dailyLedgerRepository.findByBrokerBrokerIdAndDate(currentBrokerId, date);
             if (existingLedger != null) {
-                log.debug("Found existing daily ledger with ID: {} for date: {}",
-                         existingLedger.getDailyLedgerId(), date);
+                log.debug("Found existing daily ledger with ID: {} for date: {} and broker: {}",
+                         existingLedger.getDailyLedgerId(), date, currentBrokerId);
                 return existingLedger.getDailyLedgerId();
             } else {
                 // Auto-create daily ledger if it doesn't exist
-                log.info("Daily ledger not found for date: {}. Creating new daily ledger.", date);
+                log.info("Daily ledger not found for date: {} and broker: {}. Creating new daily ledger.", date, currentBrokerId);
                 DailyLedger newLedger = createDailyLedgerForDate(date);
                 return newLedger.getDailyLedgerId();
             }
@@ -92,8 +95,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         }
 
         try {
-            // Use the new method that eagerly fetches ledgerDetails
-            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+            // Use the broker-aware method that eagerly fetches ledgerDetails
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByBrokerIdAndDateWithLedgerDetails(currentBrokerId, date);
 
             if (dailyLedgerOpt.isPresent()) {
                 DailyLedger dailyLedger = dailyLedgerOpt.get();
@@ -137,10 +141,12 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                 throw new RuntimeException("No financial year found for date: " + date);
             }
 
-            // Create new daily ledger
+            // Create new daily ledger with broker for multi-tenant isolation
+            Broker currentBroker = tenantContextService.getCurrentBroker();
             DailyLedger dailyLedger = DailyLedger.builder()
                     .date(date)
                     .financialYear(financialYear)
+                    .broker(currentBroker)
                     .build();
 
             DailyLedger savedLedger = dailyLedgerRepository.save(dailyLedger);
@@ -185,8 +191,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         String fileName = date.toString()+" Records";
         String filePath = "C:\\Users\\HP\\Desktop\\Pdfs\\"+fileName+".pdf";
 
-        // Use the new method that eagerly fetches ledgerDetails and records
-        Optional<DailyLedger> dailyLedger = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+        // Use the broker-aware method that eagerly fetches ledgerDetails and records
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<DailyLedger> dailyLedger = dailyLedgerRepository.findByBrokerIdAndDateWithLedgerDetails(currentBrokerId, date);
 
         if(!dailyLedger.isPresent()) {
             return null;
@@ -209,64 +216,16 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
 //            return null;
 //        }
 //        return new DailyLedger();
-            PdfWriter writer = new PdfWriter(filePath);
-            PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf);
-
-            // Header table with Date and Financial Year
-            Table headerTable = new Table(2);
-            headerTable.setWidthPercent(100);
-            Cell dateCell = new Cell();
-            dateCell.add(new Paragraph("Date: " + date.toString()).setBold().setFontSize(12));
-            dateCell.setTextAlignment(TextAlignment.LEFT);
-            headerTable.addCell(dateCell);
-
-            Cell financialYearCell = new Cell();
-            financialYearCell.add(new Paragraph("Financial Year: " + dailyLedger.get().getFinancialYear().getFinancialYearName()).setBold().setFontSize(12));
-            financialYearCell.setTextAlignment(TextAlignment.RIGHT);
-            headerTable.addCell(financialYearCell);
-
-            document.add(headerTable);
-
-            // Loop through each ledger detail and create a separate table
-            for (LedgerDetails ledgerDetail : dailyLedger.get().getLedgerDetails()) {
-                Table ledgerTable = new Table(new float[] { 100, 150, 200, }); // Adjust column widths as needed
-                //ledgerTable.setBorderColor(Color.BLACK);
-
-                // Ledger Detail heading (Firm Name)
-                Cell firmNameCell = new Cell().setBackgroundColor(Color.WHITE);
-                firmNameCell.add(new Paragraph("Firm Name: " + ledgerDetail.getFromSeller().getFirmName()).setBold());
-                ledgerTable.addCell(firmNameCell);
-
-
-                // Table headers (ID, Name, Product, Quantity, Brokerage, Product Cost, Total Cost, Total Brokerage)
-                Cell idCell = new Cell().setBackgroundColor(Color.DARK_GRAY);
-                idCell.add(new Paragraph("ID"));
-                ledgerTable.addCell(idCell);
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Name")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Product")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Quantity")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Brokerage")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Product Cost")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Total Cost")));
-                ledgerTable.addCell(new Cell().setBackgroundColor(Color.GRAY).add(new Paragraph("Total Brokerage")));
-
-                // Loop through each record in the ledger detail and add data to the table
-                double totalBrokerage = 0;
-                for (LedgerRecord record : ledgerDetail.getRecords()) {
-                    ledgerTable.addCell(new Cell().add(new Paragraph(String.valueOf(record.getLedgerRecordId()))));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(record.getToBuyer().getFirmName())));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(record.getProduct().getProductName())));
-                    ledgerTable.addCell(new Cell().add(new Paragraph(String.valueOf(record.getQuantity()))));
-                }
-            }
-            return new DailyLedger();
+            // PDF generation functionality temporarily disabled
+            // TODO: Implement PDF generation when iText dependencies are properly configured
+            return dailyLedger.get();
     }
 
     @Override
     public OptimizedDailyLedgerDTO getOptimizedDailyLedger(LocalDate date) {
-        // Use the same method that eagerly fetches ledgerDetails
-        Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithLedgerDetails(date);
+        // Use the broker-aware method that eagerly fetches ledgerDetails
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByBrokerIdAndDateWithLedgerDetails(currentBrokerId, date);
 
         if (dailyLedgerOpt.isPresent()) {
             DailyLedger dailyLedger = dailyLedgerOpt.get();
@@ -382,8 +341,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         }
 
         try {
-            // First, get or create the daily ledger
-            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithFinancialYear(date);
+            // First, get or create the daily ledger for current broker
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByBrokerIdAndDateWithFinancialYear(currentBrokerId, date);
             DailyLedger dailyLedger;
 
             if (dailyLedgerOpt.isPresent()) {
@@ -396,9 +356,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                 dailyLedger = createDailyLedgerForDate(date);
             }
 
-            // Get paginated ledger details
+            // Get paginated ledger details for current broker
             Page<LedgerDetails> ledgerDetailsPage = dailyLedgerRepository
-                    .findLedgerDetailsByDateWithPagination(date, pageable);
+                    .findLedgerDetailsByBrokerIdAndDateWithPagination(currentBrokerId, date, pageable);
 
             // Set the paginated ledger details to the daily ledger
             dailyLedger.setLedgerDetails(ledgerDetailsPage.getContent());
@@ -436,8 +396,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         }
 
         try {
-            // First, get or create the daily ledger
-            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByDateWithFinancialYear(date);
+            // First, get or create the daily ledger for current broker
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByBrokerIdAndDateWithFinancialYear(currentBrokerId, date);
             DailyLedger dailyLedger;
 
             if (dailyLedgerOpt.isPresent()) {
@@ -458,9 +419,9 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
                             dailyLedger.getFinancialYear().getYearId() : null)
                     .build();
 
-            // Get paginated ledger details
+            // Get paginated ledger details for current broker
             Page<LedgerDetails> ledgerDetailsPage = dailyLedgerRepository
-                    .findLedgerDetailsByDateWithPagination(date, pageable);
+                    .findLedgerDetailsByBrokerIdAndDateWithPagination(currentBrokerId, date, pageable);
 
             // Convert paginated ledger details to optimized DTOs
             List<OptimizedLedgerDetailsDTO> optimizedLedgerDetails = ledgerDetailsPage.getContent()

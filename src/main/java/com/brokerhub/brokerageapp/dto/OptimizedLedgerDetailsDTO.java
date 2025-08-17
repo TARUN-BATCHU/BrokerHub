@@ -16,6 +16,7 @@ import java.util.List;
 public class OptimizedLedgerDetailsDTO {
 
     private Long ledgerDetailsId;
+    private Long brokerTransactionNumber;
     private LocalDate transactionDate;
     private OptimizedUserDTO fromSeller;
     private List<OptimizedLedgerRecordDTO> records;

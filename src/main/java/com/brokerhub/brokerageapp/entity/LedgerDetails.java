@@ -23,6 +23,28 @@ public class LedgerDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long ledgerDetailsId;
 
+    /**
+     * Broker-specific transaction number that starts from 1 for each broker per financial year
+     * This is what brokers use in their physical books
+     */
+    @Column(name = "broker_transaction_number", nullable = false)
+    private Long brokerTransactionNumber;
+
+    /**
+     * Financial year ID for transaction numbering isolation
+     */
+    @Column(name = "financial_year_id", nullable = false)
+    private Long financialYearId;
+
+    /**
+     * The broker who owns this ledger details.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     @NotNull

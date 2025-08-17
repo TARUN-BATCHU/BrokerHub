@@ -1,12 +1,14 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
+import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,8 +19,13 @@ public class FinancialYearServiceImpl implements FinancialYearService{
 
     @Autowired
     FinancialYearRepository financialYearRepository;
+    
+    @Autowired
+    BrokerRepository brokerRepository;
 
-    public ResponseEntity<String> createFinancialYear(FinancialYear financialYear) {
+    public ResponseEntity<String> createFinancialYear(FinancialYear financialYear, Long brokerId) {
+        Broker broker = brokerRepository.findById(brokerId)
+                .orElseThrow(() -> new RuntimeException("Broker not found with ID: " + brokerId));
         List<FinancialYear> overlappingFinancialYear = financialYearRepository.findOverlappingYears(financialYear.getStart(),financialYear.getEnd());
         List<FinancialYear> existingFinancialYear = financialYearRepository.findByStartAndEnd(financialYear.getStart(),financialYear.getEnd());
 
@@ -40,6 +47,7 @@ public class FinancialYearServiceImpl implements FinancialYearService{
                 if (existingFinancialYear.isEmpty() || existingYearForBills) {
                     if (overlappingFinancialYear.isEmpty() || overlappingYearForBills) {
                         FinancialYear newFinancialYear = new FinancialYear();
+                        newFinancialYear.setBroker(broker);
                         newFinancialYear.setStart(financialYear.getStart());
                         newFinancialYear.setEnd(financialYear.getEnd());
                         newFinancialYear.setFinancialYearName(financialYear.getFinancialYearName());
@@ -58,6 +66,7 @@ public class FinancialYearServiceImpl implements FinancialYearService{
                 }
             } else {
                 FinancialYear newFinancialYear = new FinancialYear();
+                newFinancialYear.setBroker(broker);
                 newFinancialYear.setStart(financialYear.getStart());
                 newFinancialYear.setEnd(financialYear.getEnd());
                 newFinancialYear.setFinancialYearName(financialYear.getFinancialYearName());
@@ -83,6 +92,7 @@ public class FinancialYearServiceImpl implements FinancialYearService{
         return null;
     }
 
+    @Transactional(readOnly = true)
     public List<FinancialYear> getAllFinancialYears(){
         List<FinancialYear> financialYears = financialYearRepository.findAll();
         if(!financialYears.isEmpty()){

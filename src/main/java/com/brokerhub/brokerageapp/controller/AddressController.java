@@ -38,5 +38,9 @@ public class AddressController {
         return addressService.updateAddress(address);
     }
 
+    @GetMapping("/getCitiesWithAddressId")
+    public List<Object[]> getCitiesWithAddressId(){
+        return addressService.getCitiesWithAddressId();
+    }
 
 }

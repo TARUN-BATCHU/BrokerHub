@@ -1,6 +1,7 @@
 package com.brokerhub.brokerageapp.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -36,6 +37,15 @@ public class User {
 
     private String ownerName;
 
+    /**
+     * The broker who owns this user/merchant.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    @JsonIgnore
+    private Broker broker;
 
     @ManyToOne
     @JoinColumn(name = "address_id")
@@ -46,8 +56,8 @@ public class User {
     private String email;
 
     @ManyToOne
-    @JoinColumn(name = "bankDetails_id")
-    private BankDetails bankDetails;
+    @JoinColumn(name = "merchantBankDetailsId")
+    private MerchantBankDetails bankDetails;
 
     private List<String> phoneNumbers;
 

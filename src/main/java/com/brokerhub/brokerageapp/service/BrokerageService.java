@@ -1,0 +1,40 @@
+package com.brokerhub.brokerageapp.service;
+
+import com.brokerhub.brokerageapp.dto.BrokerageSummaryDTO;
+import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+public interface BrokerageService {
+    
+    BigDecimal getTotalBrokerageInFinancialYear(Long brokerId, Long financialYearId);
+    
+    BrokerageSummaryDTO getBrokerageSummaryInFinancialYear(Long brokerId, Long financialYearId);
+    
+    BigDecimal getUserTotalBrokerageInFinancialYear(Long userId, Long brokerId, Long financialYearId);
+    
+    BigDecimal getCityTotalBrokerageInFinancialYear(String city, Long brokerId, Long financialYearId);
+    
+    UserBrokerageDetailDTO getUserBrokerageDetailInFinancialYear(Long userId, Long brokerId, Long financialYearId);
+    
+    byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId);
+    
+    byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
+    
+    byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId);
+    
+    byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
+    
+    byte[] generateBrokerageSummaryExcel(Long brokerId, Long financialYearId);
+    
+    byte[] generateCityBrokerageExcel(String city, Long brokerId, Long financialYearId);
+    
+    void generateBulkBillsForCity(String city, Long brokerId, Long financialYearId);
+    
+    void generateBulkBillsForUsers(List<Long> userIds, Long brokerId, Long financialYearId);
+    
+    void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId);
+    
+    void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId);
+}

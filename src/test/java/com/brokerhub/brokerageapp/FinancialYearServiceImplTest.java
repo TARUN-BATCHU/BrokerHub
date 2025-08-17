@@ -1,6 +1,8 @@
 package com.brokerhub.brokerageapp.service;
 
+import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
+import com.brokerhub.brokerageapp.repository.BrokerRepository;
 import com.brokerhub.brokerageapp.repository.FinancialYearRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Optional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -21,6 +25,9 @@ class FinancialYearServiceImplTest {
 
     @Mock
     private FinancialYearRepository financialYearRepository;
+    
+    @Mock
+    private BrokerRepository brokerRepository;
 
     @InjectMocks
     private FinancialYearServiceImpl financialYearServiceImpl;
@@ -37,10 +44,14 @@ class FinancialYearServiceImplTest {
         financialYear.setEnd(LocalDate.of(2023, 12, 31));
         financialYear.setForBills(false);
 
+        Broker mockBroker = new Broker();
+        mockBroker.setBrokerId(1L);
+        
+        when(brokerRepository.findById(1L)).thenReturn(Optional.of(mockBroker));
         when(financialYearRepository.findOverlappingYears(any(), any())).thenReturn(new ArrayList<>());
         when(financialYearRepository.findByStartAndEnd(any(), any())).thenReturn(new ArrayList<>());
 
-        ResponseEntity<String> response = financialYearServiceImpl.createFinancialYear(financialYear);
+        ResponseEntity<String> response = financialYearServiceImpl.createFinancialYear(financialYear, 1L);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         verify(financialYearRepository, times(1)).save(any(FinancialYear.class));
@@ -56,10 +67,14 @@ class FinancialYearServiceImplTest {
         List<FinancialYear> existingYears = new ArrayList<>();
         existingYears.add(financialYear);
 
+        Broker mockBroker = new Broker();
+        mockBroker.setBrokerId(1L);
+        
+        when(brokerRepository.findById(1L)).thenReturn(Optional.of(mockBroker));
         when(financialYearRepository.findOverlappingYears(any(), any())).thenReturn(existingYears);
         when(financialYearRepository.findByStartAndEnd(any(), any())).thenReturn(existingYears);
 
-        ResponseEntity<String> response = financialYearServiceImpl.createFinancialYear(financialYear);
+        ResponseEntity<String> response = financialYearServiceImpl.createFinancialYear(financialYear, 1L);
 
         assertEquals(HttpStatus.ALREADY_REPORTED, response.getStatusCode());
     }

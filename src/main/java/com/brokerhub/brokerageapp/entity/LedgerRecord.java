@@ -20,6 +20,15 @@ public class LedgerRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long ledgerRecordId;
 
+    /**
+     * The broker who owns this ledger record.
+     * This enables multi-tenant isolation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "broker_id", nullable = false)
+    @NotNull
+    private Broker broker;
+
     @ManyToOne
     @JsonIgnore
     private LedgerDetails ledgerDetails;

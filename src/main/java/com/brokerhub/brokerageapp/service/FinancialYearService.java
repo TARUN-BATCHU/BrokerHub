@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface FinancialYearService {
-   public ResponseEntity<String> createFinancialYear(FinancialYear financialYear);
+   public ResponseEntity<String> createFinancialYear(FinancialYear financialYear, Long brokerId);
 
    public List<Long> getAllFinancialYearIds();
 

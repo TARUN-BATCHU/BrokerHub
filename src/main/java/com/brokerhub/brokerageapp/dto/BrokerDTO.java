@@ -1,7 +1,5 @@
 package com.brokerhub.brokerageapp.dto;
 
-import com.brokerhub.brokerageapp.entity.Address;
-import com.brokerhub.brokerageapp.entity.BankDetails;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -34,9 +32,8 @@ public class BrokerDTO {
 
     private String phoneNumber;
 
-    private String BankName;
     private String AccountNumber;
+
     private String IfscCode;
-    private String Branch;
 
 }

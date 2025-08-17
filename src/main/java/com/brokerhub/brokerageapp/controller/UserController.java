@@ -2,12 +2,14 @@ package com.brokerhub.brokerageapp.controller;
 
 import com.brokerhub.brokerageapp.dto.BulkUploadResponseDTO;
 import com.brokerhub.brokerageapp.dto.UserDTO;
+import com.brokerhub.brokerageapp.dto.UserSummaryDTO;
 import com.brokerhub.brokerageapp.entity.User;
 import com.brokerhub.brokerageapp.service.UserService;
 import com.brokerhub.brokerageapp.utils.ExcelTemplateGenerator;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -90,8 +92,13 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public Optional<User> getUserById(@PathVariable Long userId){
-        return userService.getUserById(userId);
+    public ResponseEntity<User> getUserById(@PathVariable Long userId){
+        Optional<User> user = userService.getUserById(userId);
+        if(user.isPresent()) {
+            return ResponseEntity.ok(user.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/brokerageMoreThan/")
@@ -118,6 +125,16 @@ public class UserController {
     @GetMapping("/getUserNames")
     public List<String> getUserNames(){
         return userService.getUserNames();
+    }
+
+    @GetMapping("/getFirmNamesIdsAndCities")
+    public List<HashMap<String,Object>> getFirmNamesIdsAndCities(){
+        return userService.getFirmNamesIdsAndCities();
+    }
+
+    @GetMapping("/getUserSummary")
+    public Page<UserSummaryDTO> getUserSummary(Pageable pageable){
+        return userService.getUserSummary(pageable);
     }
 
 //    @PutMapping("/updateBrokerage")

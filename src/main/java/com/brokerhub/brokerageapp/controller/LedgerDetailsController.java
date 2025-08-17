@@ -23,8 +23,22 @@ public class LedgerDetailsController {
     LedgerDetailsService ledgerDetailsService;
 
     @PostMapping("/createLedgerDetails")
-    public ResponseEntity<String> createLedgerDetails(@RequestBody LedgerDetailsDTO ledgerDetailsDTO){
+    public ResponseEntity<Long> createLedgerDetails(@RequestBody LedgerDetailsDTO ledgerDetailsDTO){
         return ledgerDetailsService.createLedgerDetails(ledgerDetailsDTO);
+    }
+
+    @GetMapping("/getNextTransactionNumber")
+    public ResponseEntity<Long> getNextTransactionNumber(@RequestParam(required = false) Long financialYearId) {
+        try {
+            Long nextTransactionNumber = ledgerDetailsService.getNextTransactionNumber(financialYearId);
+            return ResponseEntity.ok(nextTransactionNumber);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for getNextTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error getting next transaction number", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
 
@@ -36,6 +50,14 @@ public class LedgerDetailsController {
     @GetMapping("/getLedgerDetailsById")
     public LedgerDetails getLedgerDetailById(@RequestParam Long ledgerDetailId, @RequestParam Long brokerId){
         return ledgerDetailsService.getLedgerDetailById(ledgerDetailId,brokerId);
+    }
+
+    @GetMapping("/getLedgerDetailsByTransactionNumber")
+    public LedgerDetails getLedgerDetailsByTransactionNumber(
+            @RequestParam Long transactionNumber, 
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId){
+        return ledgerDetailsService.getLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId);
     }
 
     /**
@@ -72,6 +94,41 @@ public class LedgerDetailsController {
         }
     }
 
+    /**
+     * Get optimized ledger details by broker transaction number - solves lazy loading issues
+     *
+     * @param transactionNumber The broker-specific transaction number to fetch
+     * @param brokerId The broker ID for authorization
+     * @return OptimizedLedgerDetailsDTO with all related data eagerly loaded
+     */
+    @GetMapping("/getOptimizedLedgerDetailsByTransactionNumber")
+    public ResponseEntity<OptimizedLedgerDetailsDTO> getOptimizedLedgerDetailsByTransactionNumber(
+            @RequestParam Long transactionNumber,
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId) {
+
+        log.info("Fetching optimized ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
+
+        try {
+            OptimizedLedgerDetailsDTO optimizedLedgerDetails =
+                    ledgerDetailsService.getOptimizedLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId);
+
+            if (optimizedLedgerDetails != null) {
+                log.info("Successfully fetched optimized ledger details for transaction number: {}", transactionNumber);
+                return ResponseEntity.ok(optimizedLedgerDetails);
+            } else {
+                log.warn("No ledger details found for transaction number: {}", transactionNumber);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for getOptimizedLedgerDetailsByTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Error fetching optimized ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/getLedgerDetailsByDate")
     public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
         return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
@@ -80,6 +137,26 @@ public class LedgerDetailsController {
     @GetMapping("/getLedgerDetailsBySeller")
     public List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(@RequestParam Long sellerId, @RequestParam Long brokerId){
         return ledgerDetailsService.getAllLedgerDetailsBySeller(sellerId,brokerId);
+    }
+
+    @PutMapping("/updateLedgerDetailByTransactionNumber")
+    public ResponseEntity<String> updateLedgerDetailByTransactionNumber(
+            @RequestParam Long transactionNumber,
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId,
+            @RequestBody LedgerDetailsDTO ledgerDetailsDTO) {
+        
+        log.info("Updating ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
+        
+        try {
+            return ledgerDetailsService.updateLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearId, ledgerDetailsDTO);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for updateLedgerDetailByTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error updating ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update ledger details");
+        }
     }
 //
 //    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")

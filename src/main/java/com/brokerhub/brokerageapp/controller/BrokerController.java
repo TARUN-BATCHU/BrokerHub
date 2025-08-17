@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
 
@@ -20,9 +21,9 @@ public class BrokerController {
     BrokerService brokerService;
 
     @PostMapping("/login")
-    public ResponseEntity login(@RequestBody BrokerLoginDTO brokerLoginDTO){
+    public ResponseEntity<?> login(@RequestBody BrokerLoginDTO brokerLoginDTO){
         if(null == brokerLoginDTO.getUserName() || null == brokerLoginDTO.getPassword()){
-            return new ResponseEntity("Username or password is missing",HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Username or password is missing",HttpStatus.BAD_REQUEST);
         }
         return brokerService.login(brokerLoginDTO);
     }
@@ -39,7 +40,7 @@ public class BrokerController {
 
     @PostMapping("/createBroker")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO){
+    public ResponseEntity createBroker(@RequestBody @Valid BrokerDTO brokerDTO) throws IOException, InterruptedException {
         return brokerService.createBroker(brokerDTO);
     }
 
@@ -101,6 +102,26 @@ public class BrokerController {
     @PutMapping("/createPassword")
     public ResponseEntity<String> createPassword(@RequestBody CreatePasswordDTO createPasswordDTO){
         return brokerService.createPassword(createPasswordDTO);
+    }
+
+    @GetMapping("/generateHash/{password}")
+    public String generatePasswordHash(@PathVariable String password){
+        return brokerService.generatePasswordHash(password);
+    }
+
+    @PostMapping("/resetAdminPassword/{newPassword}")
+    public ResponseEntity<String> resetAdminPassword(@PathVariable String newPassword){
+        return brokerService.resetAdminPassword(newPassword);
+    }
+
+    @GetMapping("/UserNameExists/{userName}")
+    public Boolean checkUserNameExists(@PathVariable String userName){
+        return brokerService.findBrokerUserNameAvailability(userName);
+    }
+
+    @GetMapping("/BrokerFirmNameExists/{FirmName}")
+    public Boolean checkBrokerFirmNameExists(@PathVariable String FirmName){
+        return brokerService.findBrokerFirmNameAvailability(FirmName);
     }
 
 
