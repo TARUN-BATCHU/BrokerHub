@@ -222,6 +222,11 @@ public class BrokerageServiceImpl implements BrokerageService {
     
     @Override
     public byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId) {
+        return generateUserBrokerageBill(userId, brokerId, financialYearId, null);
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
@@ -233,11 +238,19 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found");
         }
         
+        if (customBrokerage != null) {
+            return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage);
+        }
         return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId);
     }
     
     @Override
     public byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId) {
+        return generateUserBrokerageExcel(userId, brokerId, financialYearId, null);
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
@@ -249,6 +262,9 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found");
         }
         
+        if (customBrokerage != null) {
+            return excelGenerationService.generateUserBrokerageExcel(userDetail, brokerOpt.get(), financialYearId, customBrokerage);
+        }
         return excelGenerationService.generateUserBrokerageExcel(userDetail, brokerOpt.get(), financialYearId);
     }
     

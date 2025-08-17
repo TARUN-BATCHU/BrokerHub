@@ -86,9 +86,10 @@ public class BrokerageController {
     @GetMapping("/bill/{userId}/{financialYearId}")
     public ResponseEntity<byte[]> generateUserBrokerageBill(
             @PathVariable Long userId,
-            @PathVariable Long financialYearId) {
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] billPdf = brokerageService.generateUserBrokerageBill(userId, null, financialYearId);
+            byte[] billPdf = brokerageService.generateUserBrokerageBill(userId, null, financialYearId, customBrokerage);
             return ResponseEntity.ok()
                     .header("Content-Type", "text/html")
                     .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + ".html")
@@ -102,9 +103,10 @@ public class BrokerageController {
     @GetMapping("/excel/user/{userId}/{financialYearId}")
     public ResponseEntity<byte[]> generateUserBrokerageExcel(
             @PathVariable Long userId,
-            @PathVariable Long financialYearId) {
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] excelData = brokerageService.generateUserBrokerageExcel(userId, null, financialYearId);
+            byte[] excelData = brokerageService.generateUserBrokerageExcel(userId, null, financialYearId, customBrokerage);
             return ResponseEntity.ok()
                     .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + ".xlsx")

@@ -17,15 +17,20 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     
     @Override
     public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
+        return generateUserBrokerageBill(userDetail, broker, financialYearId, null);
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
         try {
-            return generateSimpleBill(userDetail, broker, financialYearId);
+            return generateSimpleBill(userDetail, broker, financialYearId, customBrokerage);
         } catch (Exception e) {
             log.error("Error generating PDF bill", e);
             throw new RuntimeException("Failed to generate PDF bill", e);
         }
     }
     
-    private byte[] generateSimpleBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) throws IOException {
+    private byte[] generateSimpleBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) throws IOException {
         StringBuilder html = new StringBuilder();
         
         html.append("<!DOCTYPE html><html><head>")
@@ -59,7 +64,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             .append("<tr><td>Total Bags Bought</td><td>").append(userDetail.getBrokerageSummary().getTotalBagsBought()).append("</td></tr>")
             .append("<tr><td>Total Amount Earned</td><td>₹").append(userDetail.getBrokerageSummary().getTotalAmountEarned()).append("</td></tr>")
             .append("<tr><td>Total Amount Paid</td><td>₹").append(userDetail.getBrokerageSummary().getTotalAmountPaid()).append("</td></tr>")
-            .append("<tr class='total'><td>Total Brokerage Payable</td><td>₹").append(userDetail.getBrokerageSummary().getTotalBrokeragePayable()).append("</td></tr>")
+            .append("<tr class='total'><td>Total Brokerage Payable</td><td>₹").append(calculateTotalBrokerage(userDetail, customBrokerage)).append("</td></tr>")
+            .append(customBrokerage != null ? "<tr><td>Custom Brokerage Rate</td><td>₹" + customBrokerage + " per bag</td></tr>" : "")
             .append("</table>");
         
         // Transaction Details
@@ -68,6 +74,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             .append("<tr><th>Transaction #</th><th>Date</th><th>Counter Party</th><th>Product</th><th>Quantity</th><th>Rate</th><th>Brokerage</th></tr>");
         
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
+            BigDecimal transactionBrokerage = customBrokerage != null ? 
+                customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
+                transaction.getBrokerage();
+            
             html.append("<tr>")
                 .append("<td>").append(transaction.getTransactionNumber()).append("</td>")
                 .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).append("</td>")
@@ -75,7 +85,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("<td>").append(transaction.getProductName()).append("</td>")
                 .append("<td>").append(transaction.getQuantity()).append("</td>")
                 .append("<td>₹").append(transaction.getProductCost()).append("</td>")
-                .append("<td>₹").append(transaction.getBrokerage()).append("</td>")
+                .append("<td>₹").append(transactionBrokerage).append("</td>")
                 .append("</tr>");
         }
         
@@ -93,5 +103,15 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         
         // For now, return HTML as bytes (in production, use a proper PDF library like iText)
         return html.toString().getBytes();
+    }
+    
+    private BigDecimal calculateTotalBrokerage(UserBrokerageDetailDTO userDetail, BigDecimal customBrokerage) {
+        if (customBrokerage == null) {
+            return userDetail.getBrokerageSummary().getTotalBrokeragePayable();
+        }
+        
+        return userDetail.getTransactionDetails().stream()
+            .map(transaction -> customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
