@@ -133,7 +133,12 @@ public class UserController {
     }
 
     @GetMapping("/getUserSummary")
-    public Page<UserSummaryDTO> getUserSummary(Pageable pageable){
+    public Page<UserSummaryDTO> getUserSummary(
+            @RequestParam(required = false) Long financialYearId,
+            Pageable pageable){
+        if (financialYearId != null) {
+            return userService.getUserSummaryByFinancialYear(financialYearId, pageable);
+        }
         return userService.getUserSummary(pageable);
     }
 

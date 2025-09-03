@@ -486,4 +486,32 @@ public class UserServiceImpl implements UserService {
         
         return new PageImpl<>(userSummaries, pageable, users.getTotalElements());
     }
+    
+    @Override
+    public Page<UserSummaryDTO> getUserSummaryByFinancialYear(Long financialYearId, Pageable pageable) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        Page<User> users = userRepository.findUsersByBrokerIdAndFinancialYear(currentBrokerId, financialYearId, pageable);
+        
+        List<UserSummaryDTO> userSummaries = users.getContent().stream()
+                .map(user -> {
+                    // Calculate total payable brokerage: (totalBagsSold + totalBagsBought) * brokerageRate
+                    Long totalBags = (user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L) + 
+                                   (user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L);
+                    BigDecimal brokerageRate = user.getBrokerageRate() != null ? BigDecimal.valueOf(user.getBrokerageRate()) : BigDecimal.ZERO;
+                    BigDecimal calculatedBrokerage = brokerageRate.multiply(BigDecimal.valueOf(totalBags));
+                    
+                    return UserSummaryDTO.builder()
+                            .userId(user.getUserId())
+                            .firmName(user.getFirmName())
+                            .city(user.getAddress() != null ? user.getAddress().getCity() : null)
+                            .totalBagsSold(user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L)
+                            .totalBagsBought(user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L)
+                            .brokeragePerBag(brokerageRate)
+                            .totalPayableBrokerage(calculatedBrokerage)
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(userSummaries, pageable, users.getTotalElements());
+    }
 }

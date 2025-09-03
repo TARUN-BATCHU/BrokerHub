@@ -39,6 +39,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u.userId, u.firmName, u.address.city FROM User u WHERE u.broker.brokerId = :brokerId")
     List<Object[]> findUserIdsAndFirmNamesAndCitiesByBrokerId(@Param("brokerId") Long brokerId);
+    
+    @Query("SELECT DISTINCT u FROM User u " +
+           "JOIN LedgerDetails ld ON u.userId = ld.fromSeller.userId " +
+           "JOIN DailyLedger dl ON ld.dailyLedger.dailyLedgerId = dl.dailyLedgerId " +
+           "WHERE u.broker.brokerId = :brokerId AND dl.financialYear.yearId = :financialYearId")
+    Page<User> findUsersByBrokerIdAndFinancialYear(@Param("brokerId") Long brokerId, 
+                                                   @Param("financialYearId") Long financialYearId, 
+                                                   Pageable pageable);
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.address LEFT JOIN FETCH u.bankDetails WHERE u.userId = :userId")
     Optional<User> findByIdWithDetails(@Param("userId") Long userId);

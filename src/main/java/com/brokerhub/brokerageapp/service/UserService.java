@@ -44,4 +44,6 @@ public interface UserService {
     BulkUploadResponseDTO bulkUploadUsers(MultipartFile file);
 
     Page<UserSummaryDTO> getUserSummary(Pageable pageable);
+    
+    Page<UserSummaryDTO> getUserSummaryByFinancialYear(Long financialYearId, Pageable pageable);
 }

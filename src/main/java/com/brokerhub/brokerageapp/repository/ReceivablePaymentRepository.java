@@ -26,8 +26,6 @@ public interface ReceivablePaymentRepository extends JpaRepository<ReceivablePay
            "JOIN FETCH rp.seller s " +
            "JOIN FETCH s.address a " +
            "LEFT JOIN FETCH rp.owedBy ob " +
-           "LEFT JOIN FETCH ob.buyer b " +
-           "LEFT JOIN FETCH ob.transactions t " +
            "WHERE rp.broker.brokerId = :brokerId " +
            "AND rp.totalReceivableAmount > 0 " +
            "ORDER BY rp.dueDate ASC, rp.totalReceivableAmount DESC")
@@ -40,7 +38,6 @@ public interface ReceivablePaymentRepository extends JpaRepository<ReceivablePay
            "JOIN FETCH rp.seller s " +
            "JOIN FETCH s.address a " +
            "LEFT JOIN FETCH rp.owedBy ob " +
-           "LEFT JOIN FETCH ob.buyer b " +
            "WHERE rp.broker.brokerId = :brokerId " +
            "AND LOWER(s.firmName) LIKE LOWER(CONCAT('%', :sellerFirm, '%')) " +
            "AND rp.totalReceivableAmount > 0 " +

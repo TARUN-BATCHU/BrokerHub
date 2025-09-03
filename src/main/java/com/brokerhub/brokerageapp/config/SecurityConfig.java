@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers("/BrokerHub/Broker/UserNameExists/**").permitAll()
                         .requestMatchers("/BrokerHub/user/createUser").permitAll()
                         .requestMatchers("/").permitAll()
+                        // Network test endpoints
+                        .requestMatchers("/api/network-test/**").permitAll()
                         // Static resources
                         .requestMatchers("/error/**").permitAll()
                         .requestMatchers("/templates/**").permitAll()

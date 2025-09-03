@@ -48,7 +48,6 @@ public class PaymentServiceImpl implements PaymentService {
     // ==================== FIRM NAMES API ====================
 
     @Override
-    @Cacheable(value = "firmNames", key = "#brokerId")
     public ResponseEntity<ApiResponseDTO<List<String>>> getAllFirmNames(Long brokerId) {
         try {
             log.info("Fetching all firm names for broker: {}", brokerId);
@@ -96,7 +95,6 @@ public class PaymentServiceImpl implements PaymentService {
     // ==================== BROKERAGE PAYMENTS APIs ====================
 
     @Override
-    @Cacheable(value = "brokeragePayments", key = "#brokerId")
     public ResponseEntity<ApiResponseDTO<List<BrokeragePaymentDTO>>> getAllBrokeragePayments(Long brokerId) {
         try {
             log.info("Fetching all brokerage payments for broker: {}", brokerId);
@@ -157,7 +155,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @CacheEvict(value = {"brokeragePayments", "paymentDashboard"}, key = "#brokerId")
     public ResponseEntity<ApiResponseDTO<AddPartPaymentResponseDTO>> addPartPayment(Long brokerId, Long paymentId, AddPartPaymentRequestDTO request) {
         try {
             log.info("Adding part payment for broker: {}, payment: {}, amount: {}", 
@@ -240,7 +237,6 @@ public class PaymentServiceImpl implements PaymentService {
     // ==================== PENDING PAYMENTS APIs ====================
 
     @Override
-    @Cacheable(value = "pendingPayments", key = "#brokerId")
     public ResponseEntity<ApiResponseDTO<List<PendingPaymentDTO>>> getAllPendingPayments(Long brokerId) {
         try {
             log.info("Fetching all pending payments for broker: {}", brokerId);
@@ -303,7 +299,6 @@ public class PaymentServiceImpl implements PaymentService {
     // ==================== RECEIVABLE PAYMENTS APIs ====================
 
     @Override
-    @Cacheable(value = "receivablePayments", key = "#brokerId")
     public ResponseEntity<ApiResponseDTO<List<ReceivablePaymentDTO>>> getAllReceivablePayments(Long brokerId) {
         try {
             log.info("Fetching all receivable payments for broker: {}", brokerId);
@@ -366,9 +361,9 @@ public class PaymentServiceImpl implements PaymentService {
     // ==================== UTILITY METHODS ====================
 
     @Override
-    @CacheEvict(value = {"firmNames", "brokeragePayments", "pendingPayments", "receivablePayments", "paymentDashboard"}, key = "#brokerId")
+    @CacheEvict(value = {"firmNames", "brokeragePayments", "pendingPayments", "receivablePayments", "paymentDashboard"}, allEntries = true)
     public void refreshPaymentCache(Long brokerId) {
-        log.info("Refreshing payment cache for broker: {}", brokerId);
+        log.info("Clearing all Redis cache entries for broker: {}", brokerId);
     }
 
     @Override
@@ -390,8 +385,7 @@ public class PaymentServiceImpl implements PaymentService {
             
             log.info("Updated {} overdue payment statuses for broker: {}", updatedCount, brokerId);
             
-            // Clear cache after status update
-            refreshPaymentCache(brokerId);
+            log.info("Overdue status update completed for broker: {}", brokerId);
             
             return updatedCount;
             
