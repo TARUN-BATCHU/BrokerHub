@@ -30,6 +30,12 @@ public class ExcelTemplateGenerator {
         "3", "Mill-205", "Rice Bran", "Industrial Area Gate 2", "Route-B"
     };
 
+    private static final String[] MANDATORY_SAMPLE = {
+        "TRADER", "GST111222333", "Sample Firm Name", "", "Sample City", "", "",
+        "", "", "", "", "", "9999999999",
+        "10", "", "", "", ""
+    };
+
     public static ResponseEntity<ByteArrayResource> generateTemplate() {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Users");
@@ -69,6 +75,13 @@ public class ExcelTemplateGenerator {
                 cell.setCellValue(SAMPLE_DATA_MILLER[i]);
             }
 
+            // Add mandatory fields only sample
+            Row sampleRow3 = sheet.createRow(3);
+            for (int i = 0; i < MANDATORY_SAMPLE.length; i++) {
+                Cell cell = sampleRow3.createCell(i);
+                cell.setCellValue(MANDATORY_SAMPLE[i]);
+            }
+
             // Auto-size columns
             for (int i = 0; i < HEADERS.length; i++) {
                 sheet.autoSizeColumn(i);
@@ -82,30 +95,30 @@ public class ExcelTemplateGenerator {
             String[] instructions = {
                 "",
                 "1. Fill the 'Users' sheet with user data",
-                "2. Required fields: firmName, pincode",
-                "3. userType: TRADER or MILLER (default: TRADER)",
-                "4. phoneNumbers: Use comma-separated values for multiple numbers",
-                "5. byProduct: Required only for MILLER type users",
+                "2. MANDATORY fields: userType, gstNumber, firmName, city, phoneNumbers, brokerageRate",
+                "3. All other fields are OPTIONAL",
+                "4. userType: TRADER or MILLER",
+                "5. phoneNumbers: Use comma-separated values for multiple numbers",
                 "6. Save the file as .xlsx format",
                 "7. Upload the file using the bulk upload endpoint",
                 "",
                 "Field Descriptions:",
-                "- userType: TRADER or MILLER (default: TRADER)",
-                "- gstNumber: GST registration number (optional)",
-                "- firmName: Company/Firm name (Required)",
+                "- userType: TRADER or MILLER (MANDATORY)",
+                "- gstNumber: GST registration number (MANDATORY)",
+                "- firmName: Company/Firm name (MANDATORY)",
                 "- ownerName: Owner's name (optional)",
-                "- city: City name (optional)",
+                "- city: City name (MANDATORY)",
                 "- area: Area/locality (optional)",
-                "- pincode: Postal code (Required)",
+                "- pincode: Postal code (optional)",
                 "- email: Email address (optional)",
                 "- bankName: Bank name (optional)",
                 "- accountNumber: Bank account number (optional)",
                 "- ifscCode: Bank IFSC code (optional)",
                 "- branch: Bank branch name (optional)",
-                "- phoneNumbers: Phone numbers, comma-separated (optional)",
-                "- brokerageRate: Brokerage rate percentage (optional)",
+                "- phoneNumbers: Phone numbers, comma-separated (MANDATORY)",
+                "- brokerageRate: Brokerage rate percentage (MANDATORY)",
                 "- shopNumber: Shop/office number (optional)",
-                "- byProduct: By-product name (required for MILLER only)",
+                "- byProduct: By-product name (optional, used for MILLER type)",
                 "- addressHint: Additional address information (optional)",
                 "- collectionRote: Collection route information (optional)",
                 "",
@@ -113,7 +126,8 @@ public class ExcelTemplateGenerator {
                 "- Duplicate firm names or GST numbers will be rejected",
                 "- Invalid email formats will be rejected",
                 "- Numeric fields should contain only numbers",
-                "- Empty rows will be skipped"
+                "- Empty rows will be skipped",
+                "- All MANDATORY fields must have values"
             };
 
             for (int i = 0; i < instructions.length; i++) {

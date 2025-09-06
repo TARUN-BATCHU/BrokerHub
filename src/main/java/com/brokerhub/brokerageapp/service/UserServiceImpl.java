@@ -70,18 +70,24 @@ public class UserServiceImpl implements UserService {
             user.setTotalBagsSold(0L);
             user.setTotalPayableBrokerage(BigDecimal.valueOf(0));
 
-            // Handle address creation if pincode is provided (optional for bulk upload)
-            if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
-                Address address = addressService.findAddressByPincode(userDTO.getPincode());
+            // Handle address creation - create address if city is provided (mandatory field)
+            if(userDTO.getCity() != null && !userDTO.getCity().trim().isEmpty()) {
+                Address address = null;
+                
+                // Try to find existing address by pincode if provided
+                if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
+                    address = addressService.findAddressByPincode(userDTO.getPincode());
+                }
+                
+                // If no existing address found, create new one
                 if(address == null) {
-                    // Create a new address if not found
                     address = new Address();
-                    address.setPincode(userDTO.getPincode());
-                    if(userDTO.getCity() != null && !userDTO.getCity().trim().isEmpty()) {
-                        address.setCity(userDTO.getCity());
-                    }
+                    address.setCity(userDTO.getCity().trim());
                     if(userDTO.getArea() != null && !userDTO.getArea().trim().isEmpty()) {
-                        address.setArea(userDTO.getArea());
+                        address.setArea(userDTO.getArea().trim());
+                    }
+                    if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
+                        address.setPincode(userDTO.getPincode().trim());
                     }
                     // Save the address first
                     address = addressService.saveAddress(address);
@@ -361,9 +367,29 @@ public class UserServiceImpl implements UserService {
                 int rowNumber = i + 2; // +2 because Excel rows start from 1 and we skip header
 
                 try {
-                    // Only validate firm name as required for bulk upload
+                    // Validate mandatory fields with detailed logging
+                    List<String> missingFields = new ArrayList<>();
+                    if (userDTO.getUserType() == null || userDTO.getUserType().trim().isEmpty()) {
+                        missingFields.add("userType (value: '" + userDTO.getUserType() + "')");
+                    }
+                    if (userDTO.getGstNumber() == null || userDTO.getGstNumber().trim().isEmpty()) {
+                        missingFields.add("gstNumber (value: '" + userDTO.getGstNumber() + "')");
+                    }
                     if (userDTO.getFirmName() == null || userDTO.getFirmName().trim().isEmpty()) {
-                        errorMessages.add("Row " + rowNumber + ": Firm name is required");
+                        missingFields.add("firmName (value: '" + userDTO.getFirmName() + "')");
+                    }
+                    if (userDTO.getCity() == null || userDTO.getCity().trim().isEmpty()) {
+                        missingFields.add("city (value: '" + userDTO.getCity() + "')");
+                    }
+                    if (userDTO.getPhoneNumbers() == null || userDTO.getPhoneNumbers().isEmpty()) {
+                        missingFields.add("phoneNumbers (value: " + userDTO.getPhoneNumbers() + ")");
+                    }
+                    if (userDTO.getBrokerageRate() == null) {
+                        missingFields.add("brokerageRate (value: " + userDTO.getBrokerageRate() + ")");
+                    }
+                    
+                    if (!missingFields.isEmpty()) {
+                        errorMessages.add("Row " + rowNumber + ": Missing mandatory fields: " + String.join(", ", missingFields));
                         failedRecords++;
                         continue;
                     }

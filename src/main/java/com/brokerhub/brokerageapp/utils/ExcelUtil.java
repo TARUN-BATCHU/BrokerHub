@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ExcelUtil {
 
@@ -49,12 +50,11 @@ public class ExcelUtil {
                     continue;
                 }
 
-                Iterator<Cell> cellsInRow = currentRow.iterator();
                 UserDTO userDTO = new UserDTO();
 
-                int cellIdx = 0;
-                while (cellsInRow.hasNext()) {
-                    Cell currentCell = cellsInRow.next();
+                // Read cells by index instead of iterator to handle missing cells
+                for (int cellIdx = 0; cellIdx < HEADERS.length; cellIdx++) {
+                    Cell currentCell = currentRow.getCell(cellIdx);
 
                     switch (cellIdx) {
                         case 0: // userType
@@ -97,10 +97,13 @@ public class ExcelUtil {
                             String phoneNumbersStr = getCellValueAsString(currentCell);
                             if (phoneNumbersStr != null && !phoneNumbersStr.trim().isEmpty()) {
                                 List<String> phoneNumbers = Arrays.asList(phoneNumbersStr.split(","));
-                                userDTO.setPhoneNumbers(phoneNumbers.stream()
+                                List<String> cleanPhoneNumbers = phoneNumbers.stream()
                                     .map(String::trim)
                                     .filter(s -> !s.isEmpty())
-                                    .toList());
+                                    .collect(Collectors.toList());
+                                userDTO.setPhoneNumbers(cleanPhoneNumbers);
+                            } else {
+                                userDTO.setPhoneNumbers(new ArrayList<>());
                             }
                             break;
                         case 13: // brokerageRate
@@ -129,7 +132,6 @@ public class ExcelUtil {
                         default:
                             break;
                     }
-                    cellIdx++;
                 }
 
                 // Only add if firmName is present (required field) and row is not completely empty

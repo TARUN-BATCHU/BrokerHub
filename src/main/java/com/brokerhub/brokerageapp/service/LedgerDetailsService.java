@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.DisplayLedgerDetailDTO;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
+import com.brokerhub.brokerageapp.dto.NewLedgerRequestDTO;
 import com.brokerhub.brokerageapp.dto.OptimizedLedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,8 @@ import java.util.List;
 
 public interface LedgerDetailsService {
     ResponseEntity<Long> createLedgerDetails(LedgerDetailsDTO ledgerDetailsDTO);
+    
+    ResponseEntity<Long> createLedgerDetailsFromNames(NewLedgerRequestDTO newLedgerRequestDTO);
     
     Long getNextTransactionNumber(Long financialYearId);
 

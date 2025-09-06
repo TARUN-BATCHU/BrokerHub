@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -633,6 +634,107 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         
         Long maxTransactionNumber = ledgerDetailsRepository.findMaxTransactionNumberByBrokerIdAndFinancialYearId(currentBroker.getBrokerId(), financialYearId);
         return (maxTransactionNumber != null ? maxTransactionNumber : 0L) + 1;
+    }
+
+    @Override
+    public ResponseEntity<Long> createLedgerDetailsFromNames(NewLedgerRequestDTO newLedgerRequestDTO) {
+        log.info("Creating ledger details from names for broker: {}", newLedgerRequestDTO.getBrokerId());
+        
+        try {
+            // Convert new format to existing format
+            LedgerDetailsDTO ledgerDetailsDTO = convertNewRequestToLedgerDetailsDTO(newLedgerRequestDTO);
+            
+            // Call existing service method
+            return createLedgerDetails(ledgerDetailsDTO);
+            
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            log.error("Error creating ledger details from names", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+    
+    private LedgerDetailsDTO convertNewRequestToLedgerDetailsDTO(NewLedgerRequestDTO newRequest) {
+        Broker currentBroker = tenantContextService.getCurrentBroker();
+        
+        // Validate seller name and get seller ID
+        Optional<User> sellerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), newRequest.getSeller_name());
+        if (!sellerOptional.isPresent()) {
+            throw new IllegalArgumentException("Seller name not found: " + newRequest.getSeller_name());
+        }
+        User seller = sellerOptional.get();
+        
+        // Parse date
+        LocalDate date;
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M/d/yyyy");
+            date = LocalDate.parse(newRequest.getOrder_date(), formatter);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid date format. Expected M/d/yyyy, got: " + newRequest.getOrder_date());
+        }
+        
+        // Create seller products list
+        List<SellerProductDTO> sellerProducts = new ArrayList<>();
+        for (NewLedgerRequestDTO.ProductListDTO productDto : newRequest.getProduct_list()) {
+            // Find product by name
+            List<Product> products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), productDto.getProduct_name());
+            if (products.isEmpty()) {
+                throw new IllegalArgumentException("Product not found: " + productDto.getProduct_name());
+            }
+            Product product = products.get(0); // Take first match
+            
+            SellerProductDTO sellerProduct = SellerProductDTO.builder()
+                    .productId(String.valueOf(product.getProductId()))
+                    .productCost(String.valueOf(productDto.getPrice()))
+                    .build();
+            sellerProducts.add(sellerProduct);
+        }
+        
+        // Create ledger records list
+        List<LedgerRecordDTO> ledgerRecords = new ArrayList<>();
+        for (NewLedgerRequestDTO.BuyerDTO buyerDto : newRequest.getBuyers()) {
+            // Validate buyer name
+            Optional<User> buyerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), buyerDto.getBuyer_name());
+            if (!buyerOptional.isPresent()) {
+                throw new IllegalArgumentException("Buyer name not found: " + buyerDto.getBuyer_name());
+            }
+            
+            for (NewLedgerRequestDTO.BuyerProductDTO buyerProduct : buyerDto.getProducts()) {
+                // Find product by name
+                List<Product> products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), buyerProduct.getProduct_name());
+                if (products.isEmpty()) {
+                    throw new IllegalArgumentException("Product not found: " + buyerProduct.getProduct_name());
+                }
+                Product product = products.get(0); // Take first match
+                
+                LedgerRecordDTO ledgerRecord = LedgerRecordDTO.builder()
+                        .buyerName(buyerDto.getBuyer_name())
+                        .productId(product.getProductId())
+                        .quantity(buyerProduct.getQuantity())
+                        .brokerage(buyerDto.getBuyerBrokerage())
+                        .productCost(buyerProduct.getPrice())
+                        .build();
+                ledgerRecords.add(ledgerRecord);
+            }
+        }
+        
+        // Calculate total brokerage (sum of all buyer brokerages * quantities)
+        Long totalBrokerage = ledgerRecords.stream()
+                .mapToLong(record -> record.getBrokerage() * record.getQuantity())
+                .sum();
+        
+        return LedgerDetailsDTO.builder()
+                .brokerId(newRequest.getBrokerId())
+                .financialYearId(newRequest.getFinancialYearId())
+                .sellerBrokerage(String.valueOf(newRequest.getSellerBrokerage()))
+                .brokerage(totalBrokerage)
+                .fromSeller(seller.getUserId())
+                .date(date)
+                .sellerProducts(sellerProducts)
+                .ledgerRecordDTOList(ledgerRecords)
+                .build();
     }
 
 }

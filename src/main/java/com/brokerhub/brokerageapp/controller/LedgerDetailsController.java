@@ -2,6 +2,7 @@ package com.brokerhub.brokerageapp.controller;
 
 import com.brokerhub.brokerageapp.dto.DisplayLedgerDetailDTO;
 import com.brokerhub.brokerageapp.dto.LedgerDetailsDTO;
+import com.brokerhub.brokerageapp.dto.NewLedgerRequestDTO;
 import com.brokerhub.brokerageapp.dto.OptimizedLedgerDetailsDTO;
 import com.brokerhub.brokerageapp.entity.LedgerDetails;
 import com.brokerhub.brokerageapp.service.LedgerDetailsService;
@@ -25,6 +26,11 @@ public class LedgerDetailsController {
     @PostMapping("/createLedgerDetails")
     public ResponseEntity<Long> createLedgerDetails(@RequestBody LedgerDetailsDTO ledgerDetailsDTO){
         return ledgerDetailsService.createLedgerDetails(ledgerDetailsDTO);
+    }
+
+    @PostMapping("/createLedgerDetailsWithExcelJson")
+    public ResponseEntity<Long> createLedgerDetailsWithExcelJson(@RequestBody NewLedgerRequestDTO newLedgerRequestDTO){
+        return ledgerDetailsService.createLedgerDetailsFromNames(newLedgerRequestDTO);
     }
 
     @GetMapping("/getNextTransactionNumber")
