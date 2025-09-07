@@ -107,9 +107,13 @@ public class BrokerageController {
             @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
             byte[] excelData = brokerageService.generateUserBrokerageExcel(userId, null, financialYearId, customBrokerage);
+            
+            // Get user details to create filename with firm name
+            String filename = brokerageService.generateExcelFilename(userId, financialYearId);
+            
             return ResponseEntity.ok()
                     .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + ".xlsx")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
                     .body(excelData);
         } catch (Exception e) {
             log.error("Error generating user brokerage Excel", e);

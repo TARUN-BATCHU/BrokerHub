@@ -5,6 +5,8 @@ import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
@@ -63,57 +65,71 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
     }
     
     private void createUserBrokerageSheet(Workbook workbook, UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
-        Sheet sheet = workbook.createSheet("User Brokerage Bill");
+        Sheet sheet = workbook.createSheet("Brokerage Bill");
+        sheet.setDisplayGridlines(false);
+        
+        // Create enhanced styles
+        CellStyle titleStyle = createTitleStyle(workbook);
         CellStyle headerStyle = createHeaderStyle(workbook);
         CellStyle boldStyle = createBoldStyle(workbook);
+        CellStyle dataStyle = createDataStyle(workbook);
+        CellStyle currencyStyle = createCurrencyStyle(workbook);
+        CellStyle totalStyle = createTotalStyle(workbook);
         
         int rowNum = 0;
         
-        // Header
-        Row headerRow = sheet.createRow(rowNum++);
-        createCell(headerRow, 0, "BROKERAGE BILL - " + broker.getBrokerageFirmName(), headerStyle);
+        // Main Title with enhanced styling
+        Row titleRow = sheet.createRow(rowNum++);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("BROKERAGE BILL");
+        titleCell.setCellStyle(titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 7));
         
         rowNum++; // Empty row
         
-        // User Details
-        createCell(sheet.createRow(rowNum++), 0, "Firm Name:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getFirmName(), null);
+        // Broker Details Section
+        Row brokerHeaderRow = sheet.createRow(rowNum++);
+        Cell brokerHeaderCell = brokerHeaderRow.createCell(0);
+        brokerHeaderCell.setCellValue("BROKER DETAILS");
+        brokerHeaderCell.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 7));
         
-        createCell(sheet.createRow(rowNum++), 0, "Owner Name:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getOwnerName(), null);
-        
-        createCell(sheet.createRow(rowNum++), 0, "City:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getCity(), null);
-        
-        rowNum++; // Empty row
-        
-        // Summary
-        createCell(sheet.createRow(rowNum++), 0, "SUMMARY", headerStyle);
-        createCell(sheet.createRow(rowNum++), 0, "Total Bags Sold:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsSold().toString(), null);
-        
-        createCell(sheet.createRow(rowNum++), 0, "Total Bags Bought:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsBought().toString(), null);
-        
-        BigDecimal totalBrokeragePayable = calculateTotalBrokerage(userDetail, customBrokerage);
-        createCell(sheet.createRow(rowNum++), 0, "Total Brokerage Payable:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, "₹" + totalBrokeragePayable.toString(), null);
-        
-        if (customBrokerage != null) {
-            createCell(sheet.createRow(rowNum++), 0, "Custom Brokerage Rate:", boldStyle);
-            createCell(sheet.getRow(rowNum-1), 1, "₹" + customBrokerage.toString() + " per bag", null);
-        }
+        createBrokerDetailsSection(sheet, broker, financialYearId, rowNum, boldStyle, dataStyle);
+        rowNum += 7; // Broker details take 7 rows
         
         rowNum++; // Empty row
         
-        // Transaction Details
-        createCell(sheet.createRow(rowNum++), 0, "TRANSACTION DETAILS", headerStyle);
+        // Merchant Details Section
+        Row merchantHeaderRow = sheet.createRow(rowNum++);
+        Cell merchantHeaderCell = merchantHeaderRow.createCell(0);
+        merchantHeaderCell.setCellValue("MERCHANT DETAILS");
+        merchantHeaderCell.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 7));
+        
+        createMerchantDetailsSection(sheet, userDetail, rowNum, boldStyle, dataStyle);
+        rowNum += 3; // Merchant details take 3 rows
+        
+        rowNum++; // Empty row
+        
+        // Transaction Details with new column order
+        Row transHeaderRow1 = sheet.createRow(rowNum++);
+        Cell transHeaderCell = transHeaderRow1.createCell(0);
+        transHeaderCell.setCellValue("TRANSACTION DETAILS");
+        transHeaderCell.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 7));
         
         Row transHeaderRow = sheet.createRow(rowNum++);
-        String[] headers = {"Transaction #", "Date", "Counter Party", "Product", "Quantity", "Rate", "Brokerage"};
+        String[] headers = {"S.No", "Date", "Buyer Name", "Product", "Quantity", "Rate", "Brokerage", "Transaction Number"};
         for (int i = 0; i < headers.length; i++) {
-            createCell(transHeaderRow, i, headers[i], boldStyle);
+            Cell headerCell = transHeaderRow.createCell(i);
+            headerCell.setCellValue(headers[i]);
+            headerCell.setCellStyle(boldStyle);
         }
+        
+        // Transaction data with totals calculation
+        Long totalQuantity = 0L;
+        BigDecimal totalBrokerage = BigDecimal.ZERO;
+        int serialNo = 1;
         
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
             Row row = sheet.createRow(rowNum++);
@@ -121,18 +137,53 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
                 customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
                 transaction.getBrokerage();
             
-            createCell(row, 0, transaction.getTransactionNumber().toString(), null);
-            createCell(row, 1, transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), null);
-            createCell(row, 2, transaction.getCounterPartyFirmName(), null);
-            createCell(row, 3, transaction.getProductName(), null);
-            createCell(row, 4, transaction.getQuantity().toString(), null);
-            createCell(row, 5, "₹" + transaction.getProductCost().toString(), null);
-            createCell(row, 6, "₹" + transactionBrokerage.toString(), null);
+            createCell(row, 0, String.valueOf(serialNo++), dataStyle);
+            createCell(row, 1, transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), dataStyle);
+            createCell(row, 2, transaction.getCounterPartyFirmName(), dataStyle);
+            createCell(row, 3, transaction.getProductName(), dataStyle);
+            createCell(row, 4, transaction.getQuantity().toString(), dataStyle);
+            createCell(row, 5, "₹" + transaction.getProductCost().toString(), currencyStyle);
+            createCell(row, 6, "₹" + transactionBrokerage.toString(), currencyStyle);
+            createCell(row, 7, transaction.getTransactionNumber().toString(), dataStyle);
+            
+            totalQuantity += transaction.getQuantity();
+            totalBrokerage = totalBrokerage.add(transactionBrokerage);
         }
         
-        // Auto-size columns
+        // Add totals row
+        Row totalRow = sheet.createRow(rowNum++);
+        createCell(totalRow, 0, "", totalStyle);
+        createCell(totalRow, 1, "", totalStyle);
+        createCell(totalRow, 2, "", totalStyle);
+        createCell(totalRow, 3, "TOTAL:", totalStyle);
+        createCell(totalRow, 4, totalQuantity.toString(), totalStyle);
+        createCell(totalRow, 5, "", totalStyle);
+        createCell(totalRow, 6, "₹" + totalBrokerage.toString(), totalStyle);
+        createCell(totalRow, 7, "", totalStyle);
+        
+        rowNum++; // Empty row
+        
+        // Summary Section
+        Row summaryHeaderRow = sheet.createRow(rowNum++);
+        Cell summaryHeaderCell = summaryHeaderRow.createCell(0);
+        summaryHeaderCell.setCellValue("SUMMARY");
+        summaryHeaderCell.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 7));
+        
+        createSummarySection(sheet, userDetail, totalBrokerage, customBrokerage, rowNum, boldStyle, dataStyle, currencyStyle);
+        
+        // Auto-size columns and apply formatting
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
+            sheet.setColumnWidth(i, Math.max(sheet.getColumnWidth(i), 3000));
+        }
+        
+        // Set row heights for better appearance
+        for (int i = 0; i <= rowNum + 10; i++) {
+            Row row = sheet.getRow(i);
+            if (row != null) {
+                row.setHeightInPoints(20);
+            }
         }
     }
     
@@ -227,12 +278,36 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         }
     }
     
+    private CellStyle createTitleStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 18);
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setBorderTop(BorderStyle.MEDIUM);
+        style.setBorderBottom(BorderStyle.MEDIUM);
+        style.setBorderLeft(BorderStyle.MEDIUM);
+        style.setBorderRight(BorderStyle.MEDIUM);
+        return style;
+    }
+    
     private CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
         font.setFontHeightInPoints((short) 14);
         style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setBorderTop(BorderStyle.MEDIUM);
+        style.setBorderBottom(BorderStyle.MEDIUM);
+        style.setBorderLeft(BorderStyle.MEDIUM);
+        style.setBorderRight(BorderStyle.MEDIUM);
         return style;
     }
     
@@ -240,7 +315,53 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
+        font.setFontHeightInPoints((short) 11);
         style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        return style;
+    }
+    
+    private CellStyle createDataStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 10);
+        style.setFont(font);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        return style;
+    }
+    
+    private CellStyle createCurrencyStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 10);
+        style.setFont(font);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        return style;
+    }
+    
+    private CellStyle createTotalStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 11);
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderTop(BorderStyle.MEDIUM);
+        style.setBorderBottom(BorderStyle.MEDIUM);
+        style.setBorderLeft(BorderStyle.MEDIUM);
+        style.setBorderRight(BorderStyle.MEDIUM);
         return style;
     }
     
@@ -249,6 +370,82 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         cell.setCellValue(value != null ? value : "");
         if (style != null) {
             cell.setCellStyle(style);
+        }
+    }
+    
+    private void createBrokerDetailsSection(Sheet sheet, Broker broker, Long financialYearId, int startRow, CellStyle boldStyle, CellStyle dataStyle) {
+        int rowNum = startRow;
+        
+        createCell(sheet.createRow(rowNum++), 0, "Broker Firm Name:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, broker.getBrokerageFirmName(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Broker Name:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, broker.getBrokerName(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "City:", boldStyle);
+        String city = (broker.getAddress() != null) ? broker.getAddress().getCity() : "N/A";
+        createCell(sheet.getRow(rowNum-1), 1, city, dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Phone Number:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A", dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Email:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, broker.getEmail() != null ? broker.getEmail() : "N/A", dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Bank Details:", boldStyle);
+        String bankDetails = "N/A";
+        if (broker.getBankDetails() != null) {
+            bankDetails = String.format("%s - %s (IFSC: %s)", 
+                broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A",
+                broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A",
+                broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A");
+        }
+        createCell(sheet.getRow(rowNum-1), 1, bankDetails, dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Period:", boldStyle);
+        String period = getFinancialYearPeriod(financialYearId);
+        createCell(sheet.getRow(rowNum-1), 1, period, dataStyle);
+    }
+    
+    private void createMerchantDetailsSection(Sheet sheet, UserBrokerageDetailDTO userDetail, int startRow, CellStyle boldStyle, CellStyle dataStyle) {
+        int rowNum = startRow;
+        
+        createCell(sheet.createRow(rowNum++), 0, "Merchant Firm Name:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getFirmName(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Owner Name:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getOwnerName(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "City:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, userDetail.getUserBasicInfo().getCity(), dataStyle);
+    }
+    
+    private String getFinancialYearPeriod(Long financialYearId) {
+        if (financialYearId == null) {
+            return "N/A";
+        }
+        
+        int startYear = financialYearId.intValue();
+        int endYear = startYear + 1;
+        
+        return String.format("01-04-%d to 31-03-%d", startYear, endYear);
+    }
+    
+    private void createSummarySection(Sheet sheet, UserBrokerageDetailDTO userDetail, BigDecimal totalBrokerage, BigDecimal customBrokerage, int startRow, CellStyle boldStyle, CellStyle dataStyle, CellStyle currencyStyle) {
+        int rowNum = startRow;
+        
+        createCell(sheet.createRow(rowNum++), 0, "Total Bags Sold:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsSold().toString(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Total Bags Bought:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsBought().toString(), dataStyle);
+        
+        createCell(sheet.createRow(rowNum++), 0, "Total Brokerage Payable:", boldStyle);
+        createCell(sheet.getRow(rowNum-1), 1, "₹" + totalBrokerage.toString(), currencyStyle);
+        
+        if (customBrokerage != null) {
+            createCell(sheet.createRow(rowNum++), 0, "Custom Brokerage Rate:", boldStyle);
+            createCell(sheet.getRow(rowNum-1), 1, "₹" + customBrokerage.toString() + " per bag", dataStyle);
         }
     }
     
@@ -261,7 +458,16 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
     
     private BigDecimal calculateTotalBrokerage(UserBrokerageDetailDTO userDetail, BigDecimal customBrokerage) {
         if (customBrokerage == null) {
-            return userDetail.getBrokerageSummary().getTotalBrokeragePayable();
+            // If no custom brokerage, calculate from transaction details to ensure accuracy
+            BigDecimal calculatedTotal = userDetail.getTransactionDetails().stream()
+                .map(UserBrokerageDetailDTO.TransactionDetail::getBrokerage)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // Use the calculated total if it's greater than 0, otherwise use the summary value
+            return calculatedTotal.compareTo(BigDecimal.ZERO) > 0 ? 
+                calculatedTotal : 
+                (userDetail.getBrokerageSummary().getTotalBrokeragePayable() != null ? 
+                    userDetail.getBrokerageSummary().getTotalBrokeragePayable() : BigDecimal.ZERO);
         }
         
         return userDetail.getTransactionDetails().stream()

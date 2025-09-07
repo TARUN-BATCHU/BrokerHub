@@ -342,4 +342,27 @@ public class BrokerageServiceImpl implements BrokerageService {
         }
         bulkBillGenerationService.generateBulkExcelForUsers(userIds, currentBrokerId, financialYearId);
     }
+    
+    @Override
+    public String generateExcelFilename(Long userId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (!userOpt.isPresent()) {
+            return "brokerage-bill-" + userId + ".xlsx";
+        }
+        
+        User user = userOpt.get();
+        String firmName = user.getFirmName();
+        
+        // Clean the firm name for filename (remove special characters)
+        String cleanFirmName = firmName != null ? 
+            firmName.replaceAll("[^a-zA-Z0-9\\s-_]", "").replaceAll("\\s+", "-") : 
+            "Unknown-Firm";
+        
+        return cleanFirmName + "-brokerage-bill-FY" + financialYearId + ".xlsx";
+    }
 }

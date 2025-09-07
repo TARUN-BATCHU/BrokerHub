@@ -37,4 +37,6 @@ public interface BrokerageService {
     void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId);
     
     void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId);
+    
+    String generateExcelFilename(Long userId, Long financialYearId);
 }
