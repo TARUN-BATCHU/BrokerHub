@@ -104,13 +104,14 @@ public class LedgerDetailsController {
      * Get optimized ledger details by broker transaction number - solves lazy loading issues
      *
      * @param transactionNumber The broker-specific transaction number to fetch
-     * @param brokerId The broker ID for authorization
+     * @param brokerId The broker ID for authorization (optional - can be picked from context)
+     * @param financialYearId The financial year ID (optional - defaults to current active financial year)
      * @return OptimizedLedgerDetailsDTO with all related data eagerly loaded
      */
     @GetMapping("/getOptimizedLedgerDetailsByTransactionNumber")
-    public ResponseEntity<OptimizedLedgerDetailsDTO> getOptimizedLedgerDetailsByTransactionNumber(
+    public ResponseEntity<?> getOptimizedLedgerDetailsByTransactionNumber(
             @RequestParam Long transactionNumber,
-            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long brokerId,
             @RequestParam(required = false) Long financialYearId) {
 
         log.info("Fetching optimized ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
@@ -123,21 +124,24 @@ public class LedgerDetailsController {
                 log.info("Successfully fetched optimized ledger details for transaction number: {}", transactionNumber);
                 return ResponseEntity.ok(optimizedLedgerDetails);
             } else {
-                log.warn("No ledger details found for transaction number: {}", transactionNumber);
-                return ResponseEntity.notFound().build();
+                log.warn("Transaction not found with transaction number: {}", transactionNumber);
+                return ResponseEntity.badRequest().body("Transaction does not exist with transaction number: " + transactionNumber);
             }
         } catch (IllegalArgumentException e) {
             log.error("Invalid parameters for getOptimizedLedgerDetailsByTransactionNumber: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             log.error("Error fetching optimized ledger details for transaction number: {}", transactionNumber, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error occurred");
         }
     }
 
     @GetMapping("/getLedgerDetailsByDate")
-    public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(@RequestParam LocalDate date, @RequestParam Long brokerId){
-        return ledgerDetailsService.getAllLedgerDetailsOnDate(date,brokerId);
+    public List<DisplayLedgerDetailDTO> getAllLedgerDetailsOnDate(
+            @RequestParam LocalDate date, 
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) Long financialYearId){
+        return ledgerDetailsService.getAllLedgerDetailsOnDate(date, brokerId, financialYearId);
     }
 
     @GetMapping("/getLedgerDetailsBySeller")

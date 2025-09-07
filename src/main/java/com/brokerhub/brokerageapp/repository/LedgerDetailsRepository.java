@@ -18,7 +18,7 @@ public interface LedgerDetailsRepository extends JpaRepository<LedgerDetails, Lo
     // Multi-tenant aware queries - all include broker filtering
     @Query(value = "SELECT ld.user_id, ld.ledger_details_id, " +
             "lr.to_buyer_user_id, lr.product_product_id, " +
-            "lr.quantity, lr.brokerage, lr.product_cost " +
+            "lr.quantity, lr.brokerage, lr.product_cost, ld.broker_transaction_number " +
             "FROM Ledger_record lr " +
             "JOIN Ledger_details ld ON lr.ledger_details_ledger_details_Id = ld.ledger_details_id " +
             "JOIN Daily_ledger dl ON ld.daily_ledger_daily_ledger_Id = dl.daily_ledger_id " +

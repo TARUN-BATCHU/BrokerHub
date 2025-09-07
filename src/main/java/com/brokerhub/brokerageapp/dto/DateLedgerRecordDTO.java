@@ -19,6 +19,7 @@ public class DateLedgerRecordDTO {
     private Long quantity;
     private Long brokerage;
     private Long productCost;
+    private Long transactionNumber;
 
 
 }

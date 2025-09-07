@@ -22,5 +22,11 @@ public class DisplayLedgerDetailDTO {
 
     private LocalDate date;
 
+    private Long transactionNumber;
+
+    private Long financialYearId;
+
+    private Long brokerId;
+
     private List<DisplayLedgerRecordDTO> displayLedgerRecordDTOList;
 }
