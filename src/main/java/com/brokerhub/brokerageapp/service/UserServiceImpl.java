@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -518,22 +519,40 @@ public class UserServiceImpl implements UserService {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         Page<User> users = userRepository.findUsersByBrokerIdAndFinancialYear(currentBrokerId, financialYearId, pageable);
         
+        // Get actual bag counts and brokerage for the specific financial year
+        List<Object[]> bagCountsAndBrokerage = userRepository.findUserBagCountsAndBrokerageByFinancialYear(currentBrokerId, financialYearId);
+        
+        // Create a map for quick lookup of financial year specific data
+        Map<Long, Object[]> userDataMap = bagCountsAndBrokerage.stream()
+                .collect(Collectors.toMap(
+                    row -> (Long) row[0], // userId
+                    row -> row
+                ));
+        
         List<UserSummaryDTO> userSummaries = users.getContent().stream()
                 .map(user -> {
-                    // Calculate total payable brokerage: (totalBagsSold + totalBagsBought) * brokerageRate
-                    Long totalBags = (user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L) + 
-                                   (user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L);
+                    Object[] userData = userDataMap.get(user.getUserId());
+                    
+                    Long bagsSold = 0L;
+                    Long bagsBought = 0L;
+                    BigDecimal actualBrokerage = BigDecimal.ZERO;
+                    
+                    if (userData != null) {
+                        bagsSold = userData[1] != null ? ((Number) userData[1]).longValue() : 0L;
+                        bagsBought = userData[2] != null ? ((Number) userData[2]).longValue() : 0L;
+                        actualBrokerage = userData[3] != null ? new BigDecimal(userData[3].toString()) : BigDecimal.ZERO;
+                    }
+                    
                     BigDecimal brokerageRate = user.getBrokerageRate() != null ? BigDecimal.valueOf(user.getBrokerageRate()) : BigDecimal.ZERO;
-                    BigDecimal calculatedBrokerage = brokerageRate.multiply(BigDecimal.valueOf(totalBags));
                     
                     return UserSummaryDTO.builder()
                             .userId(user.getUserId())
                             .firmName(user.getFirmName())
                             .city(user.getAddress() != null ? user.getAddress().getCity() : null)
-                            .totalBagsSold(user.getTotalBagsSold() != null ? user.getTotalBagsSold() : 0L)
-                            .totalBagsBought(user.getTotalBagsBought() != null ? user.getTotalBagsBought() : 0L)
+                            .totalBagsSold(bagsSold)
+                            .totalBagsBought(bagsBought)
                             .brokeragePerBag(brokerageRate)
-                            .totalPayableBrokerage(calculatedBrokerage)
+                            .totalPayableBrokerage(actualBrokerage)
                             .build();
                 })
                 .collect(Collectors.toList());

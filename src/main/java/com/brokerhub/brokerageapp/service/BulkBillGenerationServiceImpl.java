@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -190,7 +191,8 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
         
         byte[] excelData = excelGenerationService.generateUserBrokerageExcel(userDetail, broker, financialYearId);
         
-        String fileName = outputDir + "excel_" + user.getUserId() + "_" + user.getFirmName().replaceAll("[^a-zA-Z0-9]", "_") + ".xlsx";
+        String cleanFirmName = user.getFirmName().replaceAll("[^a-zA-Z0-9\\s-_]", "").replaceAll("\\s+", "-");
+        String fileName = outputDir + cleanFirmName + "-brokerage-bill-FY" + financialYearId + ".xlsx";
         
         try (FileOutputStream fos = new FileOutputStream(fileName)) {
             fos.write(excelData);
@@ -201,9 +203,13 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     
     @Override
     @Async
+    @Transactional
     public void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        GeneratedDocument document = null;
         try {
+            log.info("Starting bulk Excel generation for city: {} with brokerId: {}, financialYearId: {}", city, currentBrokerId, financialYearId);
+            
             Optional<Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
             if (!brokerOpt.isPresent()) {
                 log.error("Broker not found: {}", currentBrokerId);
@@ -212,9 +218,10 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
             Broker broker = brokerOpt.get();
             
             List<User> cityUsers = userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
-            log.info("Starting bulk Excel generation for {} users in city: {}", cityUsers.size(), city);
+            log.info("Found {} users in city: {}", cityUsers.size(), city);
             
-            GeneratedDocument document = GeneratedDocument.builder()
+            // Create document tracking record
+            document = GeneratedDocument.builder()
                     .broker(broker)
                     .financialYearId(financialYearId)
                     .documentType("BULK_CITY_EXCEL")
@@ -223,26 +230,42 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
                     .createdAt(LocalDateTime.now())
                     .build();
             document = documentRepository.save(document);
+            log.info("Created document tracking record with ID: {}", document.getDocumentId());
             
             String outputDir = "excel/" + currentBrokerId + "/" + financialYearId + "/" + city + "/";
             createDirectoryIfNotExists(outputDir);
             
+            int successCount = 0;
             for (User user : cityUsers) {
                 try {
                     generateUserExcel(user, broker, financialYearId, outputDir);
+                    successCount++;
                 } catch (Exception e) {
                     log.error("Failed to generate Excel for user: {}", user.getUserId(), e);
                 }
             }
             
+            // Update document status
             document.setStatus("COMPLETED");
             document.setCompletedAt(LocalDateTime.now());
             document.setFilePath(outputDir);
-            documentRepository.save(document);
+            document = documentRepository.save(document);
             
-            log.info("Completed bulk Excel generation for city: {}", city);
+            log.info("Completed bulk Excel generation for city: {}. Generated {} out of {} files. Document ID: {}", 
+                    city, successCount, cityUsers.size(), document.getDocumentId());
         } catch (Exception e) {
             log.error("Error in bulk Excel generation for city: {}", city, e);
+            // Update document status to failed
+            if (document != null) {
+                try {
+                    document.setStatus("FAILED");
+                    document.setCompletedAt(LocalDateTime.now());
+                    documentRepository.save(document);
+                    log.info("Updated document {} status to FAILED", document.getDocumentId());
+                } catch (Exception ex) {
+                    log.error("Failed to update document status to FAILED", ex);
+                }
+            }
         }
     }
     
@@ -260,6 +283,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
             
             log.info("Starting bulk Excel generation for {} users", userIds.size());
             
+            // Create document tracking record
             GeneratedDocument document = GeneratedDocument.builder()
                     .broker(broker)
                     .financialYearId(financialYearId)
@@ -284,6 +308,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
                 }
             }
             
+            // Update document status
             document.setStatus("COMPLETED");
             document.setCompletedAt(LocalDateTime.now());
             document.setFilePath(outputDir);
@@ -292,6 +317,17 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
             log.info("Completed bulk Excel generation for selected users");
         } catch (Exception e) {
             log.error("Error in bulk Excel generation for users", e);
+            // Update document status to failed if exists
+            try {
+                List<GeneratedDocument> docs = documentRepository.findByBrokerBrokerIdAndStatusOrderByCreatedAtDesc(currentBrokerId, "GENERATING");
+                docs.stream().filter(d -> "BULK_USER_EXCEL".equals(d.getDocumentType())).findFirst().ifPresent(d -> {
+                    d.setStatus("FAILED");
+                    d.setCompletedAt(LocalDateTime.now());
+                    documentRepository.save(d);
+                });
+            } catch (Exception ex) {
+                log.error("Failed to update document status", ex);
+            }
         }
     }
     

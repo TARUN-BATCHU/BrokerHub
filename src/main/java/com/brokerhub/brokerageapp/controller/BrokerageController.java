@@ -101,23 +101,28 @@ public class BrokerageController {
     }
     
     @GetMapping("/excel/user/{userId}/{financialYearId}")
-    public ResponseEntity<byte[]> generateUserBrokerageExcel(
-            @PathVariable Long userId,
-            @PathVariable Long financialYearId,
+    public ResponseEntity<?> generateUserBrokerageExcel(
+            @PathVariable String userId,
+            @PathVariable String financialYearId,
             @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] excelData = brokerageService.generateUserBrokerageExcel(userId, null, financialYearId, customBrokerage);
+            Long userIdLong = Long.parseLong(userId);
+            Long financialYearIdLong = Long.parseLong(financialYearId);
             
-            // Get user details to create filename with firm name
-            String filename = brokerageService.generateExcelFilename(userId, financialYearId);
+            byte[] excelData = brokerageService.generateUserBrokerageExcel(userIdLong, null, financialYearIdLong, customBrokerage);
+            
+            String filename = brokerageService.generateExcelFilename(userIdLong, financialYearIdLong);
             
             return ResponseEntity.ok()
                     .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     .header("Content-Disposition", "attachment; filename=" + filename)
                     .body(excelData);
+        } catch (NumberFormatException e) {
+            log.error("Invalid number format - userId: {}, financialYearId: {}", userId, financialYearId);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid userId or financialYearId format. Must be numeric values."));
         } catch (Exception e) {
             log.error("Error generating user brokerage Excel", e);
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate Excel: " + e.getMessage()));
         }
     }
     
@@ -181,10 +186,14 @@ public class BrokerageController {
     @PostMapping("/bulk-excel/city/{city}/{financialYearId}")
     public ResponseEntity<ApiResponse<String>> generateBulkExcelForCity(
             @PathVariable String city,
-            @PathVariable Long financialYearId) {
+            @PathVariable String financialYearId) {
         try {
-            brokerageService.generateBulkExcelForCity(city, null, financialYearId);
+            Long financialYearIdLong = Long.parseLong(financialYearId);
+            brokerageService.generateBulkExcelForCity(city, null, financialYearIdLong);
             return ResponseEntity.ok(ApiResponse.success("Bulk Excel generation started for city: " + city, "Request processed successfully"));
+        } catch (NumberFormatException e) {
+            log.error("Invalid financialYearId format: {}", financialYearId);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid financialYearId format. Must be a numeric value."));
         } catch (Exception e) {
             log.error("Error generating bulk Excel for city", e);
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk Excel: " + e.getMessage()));
@@ -194,10 +203,14 @@ public class BrokerageController {
     @PostMapping("/bulk-excel/users/{financialYearId}")
     public ResponseEntity<ApiResponse<String>> generateBulkExcelForUsers(
             @RequestBody List<Long> userIds,
-            @PathVariable Long financialYearId) {
+            @PathVariable String financialYearId) {
         try {
-            brokerageService.generateBulkExcelForUsers(userIds, null, financialYearId);
+            Long financialYearIdLong = Long.parseLong(financialYearId);
+            brokerageService.generateBulkExcelForUsers(userIds, null, financialYearIdLong);
             return ResponseEntity.ok(ApiResponse.success("Bulk Excel generation started for " + userIds.size() + " users", "Request processed successfully"));
+        } catch (NumberFormatException e) {
+            log.error("Invalid financialYearId format: {}", financialYearId);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid financialYearId format. Must be a numeric value."));
         } catch (Exception e) {
             log.error("Error generating bulk Excel for users", e);
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk Excel: " + e.getMessage()));

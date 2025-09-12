@@ -2,10 +2,12 @@ package com.brokerhub.brokerageapp.controller;
 
 import com.brokerhub.brokerageapp.dto.ApiResponse;
 import com.brokerhub.brokerageapp.entity.GeneratedDocument;
-import com.brokerhub.brokerageapp.repository.GeneratedDocumentRepository;
-import com.brokerhub.brokerageapp.service.TenantContextService;
+import com.brokerhub.brokerageapp.service.DocumentService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,33 +19,43 @@ import java.util.List;
 public class DocumentController {
     
     @Autowired
-    private GeneratedDocumentRepository documentRepository;
-    
-    @Autowired
-    private TenantContextService tenantContextService;
+    private DocumentService documentService;
     
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<List<GeneratedDocument>>> getDocumentStatus() {
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-            List<GeneratedDocument> documents = documentRepository.findByBrokerBrokerIdOrderByCreatedAtDesc(currentBrokerId);
-            return ResponseEntity.ok(ApiResponse.success(documents, "Document status retrieved successfully"));
+            List<GeneratedDocument> documents = documentService.getBrokerDocuments();
+            return ResponseEntity.ok(ApiResponse.success(documents, "Documents retrieved successfully"));
         } catch (Exception e) {
-            log.error("Error getting document status", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to get document status: " + e.getMessage()));
+            log.error("Error retrieving documents", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve documents"));
         }
     }
     
-    @GetMapping("/status/{documentType}")
-    public ResponseEntity<ApiResponse<List<GeneratedDocument>>> getDocumentStatusByType(
-            @PathVariable String documentType) {
+    @GetMapping("/download/{documentId}")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long documentId) {
         try {
-            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-            List<GeneratedDocument> documents = documentRepository.findByBrokerIdAndDocumentType(currentBrokerId, documentType);
-            return ResponseEntity.ok(ApiResponse.success(documents, "Document status retrieved successfully"));
+            Resource resource = documentService.downloadDocument(documentId);
+            String filename = documentService.getDocumentFilename(documentId);
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .body(resource);
         } catch (Exception e) {
-            log.error("Error getting document status by type", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to get document status: " + e.getMessage()));
+            log.error("Error downloading document", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
+    @PostMapping("/test-create")
+    public ResponseEntity<ApiResponse<String>> testCreateDocument() {
+        try {
+            String result = documentService.createTestDocument();
+            return ResponseEntity.ok(ApiResponse.success(result, "Test document created"));
+        } catch (Exception e) {
+            log.error("Error creating test document", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create test document: " + e.getMessage()));
         }
     }
 }
