@@ -12,6 +12,7 @@ import com.brokerhub.brokerageapp.utils.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -517,7 +518,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserSummaryDTO> getUserSummaryByFinancialYear(Long financialYearId, Pageable pageable) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-        Page<User> users = userRepository.findUsersByBrokerIdAndFinancialYear(currentBrokerId, financialYearId, pageable);
+        // Create unsorted pageable to avoid conflicts with native query ORDER BY
+        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<User> users = userRepository.findUsersByBrokerIdAndFinancialYearSorted(currentBrokerId, financialYearId, unsortedPageable);
         
         // Get actual bag counts and brokerage for the specific financial year
         List<Object[]> bagCountsAndBrokerage = userRepository.findUserBagCountsAndBrokerageByFinancialYear(currentBrokerId, financialYearId);

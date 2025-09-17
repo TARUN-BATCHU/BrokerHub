@@ -14,6 +14,9 @@ public interface GeneratedDocumentRepository extends JpaRepository<GeneratedDocu
     @Query("SELECT gd FROM GeneratedDocument gd JOIN FETCH gd.broker WHERE gd.broker.brokerId = :brokerId ORDER BY gd.createdAt DESC")
     List<GeneratedDocument> findByBrokerBrokerIdOrderByCreatedAtDesc(@Param("brokerId") Long brokerId);
     
+    @Query("SELECT gd FROM GeneratedDocument gd JOIN FETCH gd.broker WHERE gd.broker.brokerId = :brokerId AND gd.status != :excludeStatus ORDER BY gd.createdAt DESC")
+    List<GeneratedDocument> findByBrokerBrokerIdAndStatusNotOrderByCreatedAtDesc(@Param("brokerId") Long brokerId, @Param("excludeStatus") String excludeStatus);
+    
     @Query("SELECT gd FROM GeneratedDocument gd WHERE gd.broker.brokerId = :brokerId AND gd.documentType = :documentType ORDER BY gd.createdAt DESC")
     List<GeneratedDocument> findByBrokerIdAndDocumentType(@Param("brokerId") Long brokerId, @Param("documentType") String documentType);
 }

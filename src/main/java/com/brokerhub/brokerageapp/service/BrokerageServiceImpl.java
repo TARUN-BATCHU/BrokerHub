@@ -2,11 +2,14 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.BrokerageSummaryDTO;
 import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
+import com.brokerhub.brokerageapp.entity.GeneratedDocument;
 import com.brokerhub.brokerageapp.entity.User;
 import com.brokerhub.brokerageapp.repository.BrokerageRepository;
 import com.brokerhub.brokerageapp.repository.BrokerRepository;
+import com.brokerhub.brokerageapp.repository.GeneratedDocumentRepository;
 import com.brokerhub.brokerageapp.repository.UserBrokerageRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,6 +53,9 @@ public class BrokerageServiceImpl implements BrokerageService {
     
     @Autowired
     private ExcelGenerationService excelGenerationService;
+    
+    @Autowired
+    private GeneratedDocumentRepository documentRepository;
     
     @Override
     @Cacheable(value = "totalBrokerage", key = "#brokerId + '_' + #financialYearId")
@@ -245,6 +252,22 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
+    public byte[] generateUserBrokerageBillPdf(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailInFinancialYear(userId, brokerId, financialYearId);
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return pdfGenerationService.generateUserBrokerageBillPdf(userDetail, brokerOpt.get(), financialYearId, customBrokerage);
+    }
+    
+    @Override
     public byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId) {
         return generateUserBrokerageExcel(userId, brokerId, financialYearId, null);
     }
@@ -308,40 +331,36 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    public void generateBulkBillsForCity(String city, Long brokerId, Long financialYearId) {
+    public byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
         }
-        bulkBillGenerationService.generateBulkBillsForCity(city, currentBrokerId, financialYearId);
+        
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found: " + currentBrokerId);
+        }
+        
+        return bulkBillGenerationService.generateBulkBillsHtmlSync(userIds, brokerOpt.get(), financialYearId);
     }
     
     @Override
-    public void generateBulkBillsForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
+    public byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
         }
-        bulkBillGenerationService.generateBulkBillsForUsers(userIds, currentBrokerId, financialYearId);
+        
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found: " + currentBrokerId);
+        }
+        
+        return bulkBillGenerationService.generateBulkBillsExcelSync(userIds, brokerOpt.get(), financialYearId);
     }
     
-    @Override
-    public void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId) {
-        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-        if (financialYearId == null) {
-            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
-        }
-        bulkBillGenerationService.generateBulkExcelForCity(city, currentBrokerId, financialYearId);
-    }
-    
-    @Override
-    public void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId) {
-        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-        if (financialYearId == null) {
-            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
-        }
-        bulkBillGenerationService.generateBulkExcelForUsers(userIds, currentBrokerId, financialYearId);
-    }
+
     
     @Override
     public String generateExcelFilename(Long userId, Long financialYearId) {
@@ -365,4 +384,6 @@ public class BrokerageServiceImpl implements BrokerageService {
         
         return cleanFirmName + "-brokerage-bill-FY" + financialYearId + ".xlsx";
     }
+    
+
 }

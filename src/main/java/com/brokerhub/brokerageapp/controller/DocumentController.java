@@ -58,4 +58,15 @@ public class DocumentController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create test document: " + e.getMessage()));
         }
     }
+    
+    @GetMapping("/debug/all")
+    public ResponseEntity<ApiResponse<List<GeneratedDocument>>> getAllDocumentsDebug() {
+        try {
+            List<GeneratedDocument> documents = documentService.getAllDocumentsForDebug();
+            return ResponseEntity.ok(ApiResponse.success(documents, "All documents retrieved"));
+        } catch (Exception e) {
+            log.error("Error retrieving all documents", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve documents"));
+        }
+    }
 }

@@ -40,14 +40,15 @@ public class DocumentServiceImpl implements DocumentService {
     public List<GeneratedDocument> getBrokerDocuments() {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         log.info("Fetching documents for broker ID: {}", currentBrokerId);
-        List<GeneratedDocument> documents = documentRepository.findByBrokerBrokerIdOrderByCreatedAtDesc(currentBrokerId);
-        log.info("Found {} documents for broker ID: {}", documents.size(), currentBrokerId);
+        List<GeneratedDocument> documents = documentRepository.findByBrokerBrokerIdAndStatusNotOrderByCreatedAtDesc(currentBrokerId, "DOWNLOADED");
+        log.info("Found {} active documents for broker ID: {}", documents.size(), currentBrokerId);
         // Initialize the broker proxy to avoid lazy loading issues
         documents.forEach(doc -> doc.getBroker().getBrokerId());
         return documents;
     }
     
     @Override
+    @Transactional
     public Resource downloadDocument(Long documentId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         Optional<GeneratedDocument> docOpt = documentRepository.findById(documentId);
@@ -63,6 +64,12 @@ public class DocumentServiceImpl implements DocumentService {
         
         try {
             String zipPath = createZipFile(document);
+            
+            // Mark document as downloaded
+            document.setStatus("DOWNLOADED");
+            documentRepository.save(document);
+            log.info("Document {} marked as downloaded", documentId);
+            
             return new FileSystemResource(zipPath);
         } catch (IOException e) {
             throw new RuntimeException("Failed to create download", e);
@@ -139,5 +146,17 @@ public class DocumentServiceImpl implements DocumentService {
         log.info("Test document created with ID: {}", saved.getDocumentId());
         
         return "Test document created with ID: " + saved.getDocumentId();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<GeneratedDocument> getAllDocumentsForDebug() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        log.info("Fetching ALL documents for broker ID: {}", currentBrokerId);
+        List<GeneratedDocument> documents = documentRepository.findByBrokerBrokerIdOrderByCreatedAtDesc(currentBrokerId);
+        log.info("Found {} total documents for broker ID: {}", documents.size(), currentBrokerId);
+        // Initialize the broker proxy to avoid lazy loading issues
+        documents.forEach(doc -> doc.getBroker().getBrokerId());
+        return documents;
     }
 }

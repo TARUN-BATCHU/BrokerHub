@@ -22,6 +22,8 @@ public interface BrokerageService {
     
     byte[] generateUserBrokerageBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
+    byte[] generateUserBrokerageBillPdf(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
+    
     byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId);
     
     byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
@@ -30,13 +32,11 @@ public interface BrokerageService {
     
     byte[] generateCityBrokerageExcel(String city, Long brokerId, Long financialYearId);
     
-    void generateBulkBillsForCity(String city, Long brokerId, Long financialYearId);
+
     
-    void generateBulkBillsForUsers(List<Long> userIds, Long brokerId, Long financialYearId);
+    byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId);
     
-    void generateBulkExcelForCity(String city, Long brokerId, Long financialYearId);
-    
-    void generateBulkExcelForUsers(List<Long> userIds, Long brokerId, Long financialYearId);
+    byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId);
     
     String generateExcelFilename(Long userId, Long financialYearId);
 }

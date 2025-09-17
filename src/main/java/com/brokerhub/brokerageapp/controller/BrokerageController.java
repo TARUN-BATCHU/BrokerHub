@@ -157,63 +157,43 @@ public class BrokerageController {
         }
     }
     
-    @PostMapping("/bulk-bills/city/{city}/{financialYearId}")
-    public ResponseEntity<ApiResponse<String>> generateBulkBillsForCity(
-            @PathVariable String city,
-            @PathVariable Long financialYearId) {
-        try {
-            brokerageService.generateBulkBillsForCity(city, null, financialYearId);
-            return ResponseEntity.ok(ApiResponse.success("Bulk bill generation started for city: " + city, "Request processed successfully"));
-        } catch (Exception e) {
-            log.error("Error generating bulk bills for city", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk bills: " + e.getMessage()));
-        }
-    }
+
     
-    @PostMapping("/bulk-bills/users/{financialYearId}")
-    public ResponseEntity<ApiResponse<String>> generateBulkBillsForUsers(
+    @PostMapping("/bulk-bills/html/{financialYearId}")
+    public ResponseEntity<byte[]> downloadBulkBillsHtml(
             @RequestBody List<Long> userIds,
             @PathVariable Long financialYearId) {
         try {
-            brokerageService.generateBulkBillsForUsers(userIds, null, financialYearId);
-            return ResponseEntity.ok(ApiResponse.success("Bulk bill generation started for " + userIds.size() + " users", "Request processed successfully"));
+            byte[] zipData = brokerageService.generateBulkBillsHtml(userIds, null, financialYearId);
+            String filename = "bulk-bills-html-FY" + financialYearId + ".zip";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
+                    .body(zipData);
         } catch (Exception e) {
-            log.error("Error generating bulk bills for users", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk bills: " + e.getMessage()));
+            log.error("Error generating bulk HTML bills", e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
-    @PostMapping("/bulk-excel/city/{city}/{financialYearId}")
-    public ResponseEntity<ApiResponse<String>> generateBulkExcelForCity(
-            @PathVariable String city,
-            @PathVariable String financialYearId) {
-        try {
-            Long financialYearIdLong = Long.parseLong(financialYearId);
-            brokerageService.generateBulkExcelForCity(city, null, financialYearIdLong);
-            return ResponseEntity.ok(ApiResponse.success("Bulk Excel generation started for city: " + city, "Request processed successfully"));
-        } catch (NumberFormatException e) {
-            log.error("Invalid financialYearId format: {}", financialYearId);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid financialYearId format. Must be a numeric value."));
-        } catch (Exception e) {
-            log.error("Error generating bulk Excel for city", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk Excel: " + e.getMessage()));
-        }
-    }
-    
-    @PostMapping("/bulk-excel/users/{financialYearId}")
-    public ResponseEntity<ApiResponse<String>> generateBulkExcelForUsers(
+    @PostMapping("/bulk-bills/excel/{financialYearId}")
+    public ResponseEntity<byte[]> downloadBulkBillsExcel(
             @RequestBody List<Long> userIds,
-            @PathVariable String financialYearId) {
+            @PathVariable Long financialYearId) {
         try {
-            Long financialYearIdLong = Long.parseLong(financialYearId);
-            brokerageService.generateBulkExcelForUsers(userIds, null, financialYearIdLong);
-            return ResponseEntity.ok(ApiResponse.success("Bulk Excel generation started for " + userIds.size() + " users", "Request processed successfully"));
-        } catch (NumberFormatException e) {
-            log.error("Invalid financialYearId format: {}", financialYearId);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid financialYearId format. Must be a numeric value."));
+            byte[] zipData = brokerageService.generateBulkBillsExcel(userIds, null, financialYearId);
+            String filename = "bulk-bills-excel-FY" + financialYearId + ".zip";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
+                    .body(zipData);
         } catch (Exception e) {
-            log.error("Error generating bulk Excel for users", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to generate bulk Excel: " + e.getMessage()));
+            log.error("Error generating bulk Excel bills", e);
+            return ResponseEntity.badRequest().build();
         }
     }
+    
+
 }

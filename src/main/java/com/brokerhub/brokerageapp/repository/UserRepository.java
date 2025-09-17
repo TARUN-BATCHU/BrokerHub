@@ -60,9 +60,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "JOIN Daily_ledger dl ON ld.daily_ledger_daily_ledger_Id = dl.daily_ledger_id " +
            "WHERE lr.to_buyer_user_id = u.user_id AND ld.broker_id = :brokerId AND dl.financial_year_year_id = :financialYearId))", 
            nativeQuery = true)
-    Page<User> findUsersByBrokerIdAndFinancialYear(@Param("brokerId") Long brokerId, 
-                                                   @Param("financialYearId") Long financialYearId, 
-                                                   Pageable pageable);
+    Page<User> findUsersByBrokerIdAndFinancialYearSorted(@Param("brokerId") Long brokerId, 
+                                                        @Param("financialYearId") Long financialYearId, 
+                                                        Pageable pageable);
 
     @Query(value = "SELECT u.user_id, " +
            "COALESCE(sold.bags_sold, 0) as bags_sold, " +

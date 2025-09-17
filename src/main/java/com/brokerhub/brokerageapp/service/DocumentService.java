@@ -10,4 +10,5 @@ public interface DocumentService {
     Resource downloadDocument(Long documentId);
     String getDocumentFilename(Long documentId);
     String createTestDocument();
+    List<GeneratedDocument> getAllDocumentsForDebug();
 }
