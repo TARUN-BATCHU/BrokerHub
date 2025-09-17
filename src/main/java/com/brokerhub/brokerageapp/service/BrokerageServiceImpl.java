@@ -268,6 +268,22 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
+    public byte[] generatePrintOptimizedBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailInFinancialYear(userId, brokerId, financialYearId);
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found");
+        }
+        
+        return pdfGenerationService.generatePrintOptimizedBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage, paperSize, orientation);
+    }
+    
+    @Override
     public byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId) {
         return generateUserBrokerageExcel(userId, brokerId, financialYearId, null);
     }

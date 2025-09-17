@@ -13,4 +13,6 @@ public interface PdfGenerationService {
     
     byte[] generateUserBrokerageBillPdf(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage);
     
+    byte[] generatePrintOptimizedBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation);
+    
 }

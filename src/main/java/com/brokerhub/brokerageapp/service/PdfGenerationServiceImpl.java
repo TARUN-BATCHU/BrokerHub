@@ -143,7 +143,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     
     private String getProfessionalCSS() {
         return "* { margin: 0; padding: 0; box-sizing: border-box; }" +
-               "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }" +
+               "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; min-height: 100vh; padding: 20px; }" +
                ".bill-container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }" +
                ".header-section { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }" +
                ".company-info { display: flex; align-items: center; gap: 15px; }" +
@@ -224,5 +224,136 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         return userDetail.getTransactionDetails().stream()
             .map(transaction -> customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    
+    public byte[] generateUserBrokerageBillPdf(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
+        return generateUserBrokerageBill(userDetail, broker, financialYearId, customBrokerage);
+    }
+    
+    @Override
+    public byte[] generatePrintOptimizedBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation) {
+        try {
+            return generatePrintBill(userDetail, broker, financialYearId, customBrokerage, paperSize, orientation);
+        } catch (Exception e) {
+            log.error("Error generating print bill", e);
+            throw new RuntimeException("Failed to generate print bill", e);
+        }
+    }
+    
+    private byte[] generatePrintBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation) throws IOException {
+        StringBuilder html = new StringBuilder();
+        
+        html.append("<!DOCTYPE html><html><head>")
+            .append("<meta charset='UTF-8'>")
+            .append("<title>Print Bill</title>")
+            .append("<style>")
+            .append(getPrintCSS(paperSize, orientation))
+            .append("</style>")
+            .append("<script>")
+            .append("function printBill() { window.print(); }")
+            .append("</script>")
+            .append("</head><body>");
+        
+        // Print Button
+        html.append("<div class='no-print'>")
+            .append("<button onclick='printBill()' class='print-btn'>🖨️ Print Bill</button>")
+            .append("</div>");
+        
+        // Header
+        html.append("<div class='print-header'>")
+            .append("<h1>").append(broker.getBrokerageFirmName()).append("</h1>")
+            .append("<h2>BROKERAGE STATEMENT</h2>")
+            .append("<div class='header-info'>")
+            .append("<span>FY ").append(financialYearId).append("</span>")
+            .append("<span>Generated: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).append("</span>")
+            .append("</div></div>");
+        
+        // Client Info
+        html.append("<div class='client-info'>")
+            .append("<h3>Bill To:</h3>")
+            .append("<p><strong>").append(userDetail.getUserBasicInfo().getFirmName()).append("</strong></p>")
+            .append("<p>").append(userDetail.getUserBasicInfo().getOwnerName()).append("</p>")
+            .append("<p>").append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</p>")
+            .append("</div>");
+        
+        // Summary Table
+        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage);
+        html.append("<table class='summary-table'>")
+            .append("<tr><td>Bags Sold:</td><td>").append(userDetail.getBrokerageSummary().getTotalBagsSold()).append("</td></tr>")
+            .append("<tr><td>Bags Bought:</td><td>").append(userDetail.getBrokerageSummary().getTotalBagsBought()).append("</td></tr>")
+            .append("<tr><td>Amount Earned:</td><td>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountEarned()))).append("</td></tr>")
+            .append("<tr><td>Amount Paid:</td><td>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountPaid()))).append("</td></tr>")
+            .append("<tr class='total-row'><td><strong>Total Brokerage:</strong></td><td><strong>₹").append(formatCurrency(totalBrokerage)).append("</strong></td></tr>")
+            .append("</table>");
+        
+        // Transactions Table
+        html.append("<h3>Transaction Details:</h3>")
+            .append("<table class='transactions-table'>")
+            .append("<thead><tr><th>ID</th><th>Date</th><th>Party</th><th>Product</th><th>Qty</th><th>Rate</th><th>Brokerage</th></tr></thead><tbody>");
+        
+        for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
+            BigDecimal transactionBrokerage = customBrokerage != null ? 
+                customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
+                transaction.getBrokerage();
+            
+            html.append("<tr>")
+                .append("<td>").append(transaction.getTransactionNumber()).append("</td>")
+                .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yy"))).append("</td>")
+                .append("<td>").append(transaction.getCounterPartyFirmName()).append("</td>")
+                .append("<td>").append(transaction.getProductName()).append("</td>")
+                .append("<td>").append(transaction.getQuantity()).append("</td>")
+                .append("<td>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
+                .append("<td>₹").append(formatCurrency(transactionBrokerage)).append("</td>")
+                .append("</tr>");
+        }
+        
+        html.append("</tbody></table>");
+        
+        // Payment Info
+        if (broker.getBankDetails() != null) {
+            html.append("<div class='payment-info'>")
+                .append("<h3>Payment Details:</h3>")
+                .append("<p><strong>Bank:</strong> ").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</p>")
+                .append("<p><strong>Account:</strong> ").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</p>")
+                .append("<p><strong>IFSC:</strong> ").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</p>")
+                .append("</div>");
+        }
+        
+        html.append("</body></html>");
+        return html.toString().getBytes();
+    }
+    
+    private String getPrintCSS(String paperSize, String orientation) {
+        String pageSize = getPageSize(paperSize, orientation);
+        
+        return "@media print { .no-print { display: none !important; } }" +
+               "@page { size: " + pageSize + "; margin: 0.5in; }" +
+               "body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #000; margin: 0; padding: 20px; }" +
+               ".no-print { margin-bottom: 20px; }" +
+               ".print-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; }" +
+               ".print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }" +
+               ".print-header h1 { font-size: 24px; margin-bottom: 5px; }" +
+               ".print-header h2 { font-size: 18px; margin-bottom: 10px; }" +
+               ".header-info { display: flex; justify-content: space-between; font-size: 12px; }" +
+               ".client-info { margin-bottom: 20px; }" +
+               ".client-info h3 { margin-bottom: 10px; }" +
+               ".summary-table, .transactions-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }" +
+               ".summary-table td, .transactions-table th, .transactions-table td { border: 1px solid #000; padding: 8px; text-align: left; }" +
+               ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
+               ".total-row { background-color: #f0f0f0; }" +
+               ".payment-info { margin-top: 20px; }" +
+               "h3 { margin: 15px 0 10px 0; }";
+    }
+    
+    private String getPageSize(String paperSize, String orientation) {
+        String size;
+        switch (paperSize.toLowerCase()) {
+            case "a4": size = "A4"; break;
+            case "a5": size = "A5"; break;
+            case "legal": size = "legal"; break;
+            case "letter": size = "letter"; break;
+            default: size = "A4";
+        }
+        return size + " " + ("landscape".equals(orientation) ? "landscape" : "portrait");
     }
 }

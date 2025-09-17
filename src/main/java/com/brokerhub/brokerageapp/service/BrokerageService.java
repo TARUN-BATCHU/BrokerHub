@@ -24,6 +24,8 @@ public interface BrokerageService {
     
     byte[] generateUserBrokerageBillPdf(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
+    byte[] generatePrintOptimizedBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation);
+    
     byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId);
     
     byte[] generateUserBrokerageExcel(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage);

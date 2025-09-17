@@ -100,6 +100,28 @@ public class BrokerageController {
         }
     }
     
+    @GetMapping("/print-bill/{userId}/{financialYearId}")
+    public ResponseEntity<byte[]> generatePrintOptimizedBill(
+            @PathVariable Long userId,
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage,
+            @RequestParam(defaultValue = "a4") String paperSize,
+            @RequestParam(defaultValue = "portrait") String orientation) {
+        try {
+            byte[] printBill = brokerageService.generatePrintOptimizedBill(userId, null, financialYearId, customBrokerage, paperSize, orientation);
+            
+            String filename = "print-bill-" + userId + ".html";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
+                    .body(printBill);
+        } catch (Exception e) {
+            log.error("Error generating print bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
     @GetMapping("/excel/user/{userId}/{financialYearId}")
     public ResponseEntity<?> generateUserBrokerageExcel(
             @PathVariable String userId,
