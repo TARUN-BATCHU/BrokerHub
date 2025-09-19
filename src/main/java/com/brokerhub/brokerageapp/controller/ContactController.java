@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/contacts")
+@RequestMapping("/BrokerHub/api/contacts")
 @RequiredArgsConstructor
 @Slf4j
 public class ContactController {
