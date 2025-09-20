@@ -2,7 +2,9 @@ package com.brokerhub.brokerageapp.service;
 
 import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
+import com.brokerhub.brokerageapp.entity.FinancialYear;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -10,10 +12,14 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 @Service
 @Slf4j
 public class PdfGenerationServiceImpl implements PdfGenerationService {
+
+    @Autowired
+    FinancialYearService financialYearService;
     
     @Override
     public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
@@ -239,110 +245,160 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             throw new RuntimeException("Failed to generate print bill", e);
         }
     }
-    
-    private byte[] generatePrintBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation) throws IOException {
+
+    private byte[] generatePrintBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId,
+                                     BigDecimal customBrokerage, String paperSize, String orientation) throws IOException {
         StringBuilder html = new StringBuilder();
-        
+        BigDecimal totalBrokerage = BigDecimal.valueOf(0);
         html.append("<!DOCTYPE html><html><head>")
-            .append("<meta charset='UTF-8'>")
-            .append("<title>Print Bill</title>")
-            .append("<style>")
-            .append(getPrintCSS(paperSize, orientation))
-            .append("</style>")
-            .append("<script>")
-            .append("function printBill() { window.print(); }")
-            .append("</script>")
-            .append("</head><body>");
-        
+                .append("<meta charset='UTF-8'>")
+                .append("<title>Print Bill</title>")
+                .append("<style>")
+                .append(getPrintCSS(paperSize, orientation))
+                .append("</style>")
+                .append("<script>")
+                .append("function printBill() { window.print(); }")
+                .append("</script>")
+                .append("</head><body>");
+
         // Print Button
         html.append("<div class='no-print'>")
-            .append("<button onclick='printBill()' class='print-btn'>🖨️ Print Bill</button>")
-            .append("</div>");
-        
-        // Header
-        html.append("<div class='print-header'>")
-            .append("<h1>").append(broker.getBrokerageFirmName()).append("</h1>")
-            .append("<h2>BROKERAGE STATEMENT</h2>")
-            .append("<div class='header-info'>")
-            .append("<span>FY ").append(financialYearId).append("</span>")
-            .append("<span>Generated: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).append("</span>")
-            .append("</div></div>");
-        
-        // Client Info
-        html.append("<div class='client-info'>")
-            .append("<h3>Bill To:</h3>")
-            .append("<p><strong>").append(userDetail.getUserBasicInfo().getFirmName()).append("</strong></p>")
-            .append("<p>").append(userDetail.getUserBasicInfo().getOwnerName()).append("</p>")
-            .append("<p>").append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</p>")
-            .append("</div>");
-        
-        // Summary Table
-        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage);
-        html.append("<table class='summary-table'>")
-            .append("<tr><td>Bags Sold:</td><td>").append(userDetail.getBrokerageSummary().getTotalBagsSold()).append("</td></tr>")
-            .append("<tr><td>Bags Bought:</td><td>").append(userDetail.getBrokerageSummary().getTotalBagsBought()).append("</td></tr>")
-            .append("<tr><td>Amount Earned:</td><td>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountEarned()))).append("</td></tr>")
-            .append("<tr><td>Amount Paid:</td><td>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountPaid()))).append("</td></tr>")
-            .append("<tr class='total-row'><td><strong>Total Brokerage:</strong></td><td><strong>₹").append(formatCurrency(totalBrokerage)).append("</strong></td></tr>")
-            .append("</table>");
-        
-        // Transactions Table
-        html.append("<h3>Transaction Details:</h3>")
-            .append("<table class='transactions-table'>")
-            .append("<thead><tr><th>ID</th><th>Date</th><th>Party</th><th>Product</th><th>Qty</th><th>Rate</th><th>Brokerage</th></tr></thead><tbody>");
-        
-        for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
-            BigDecimal transactionBrokerage = customBrokerage != null ? 
-                customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
-                transaction.getBrokerage();
-            
-            html.append("<tr>")
-                .append("<td>").append(transaction.getTransactionNumber()).append("</td>")
-                .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yy"))).append("</td>")
-                .append("<td>").append(transaction.getCounterPartyFirmName()).append("</td>")
-                .append("<td>").append(transaction.getProductName()).append("</td>")
-                .append("<td>").append(transaction.getQuantity()).append("</td>")
-                .append("<td>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
-                .append("<td>₹").append(formatCurrency(transactionBrokerage)).append("</td>")
-                .append("</tr>");
-        }
-        
-        html.append("</tbody></table>");
-        
-        // Payment Info
-        if (broker.getBankDetails() != null) {
-            html.append("<div class='payment-info'>")
-                .append("<h3>Payment Details:</h3>")
-                .append("<p><strong>Bank:</strong> ").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</p>")
-                .append("<p><strong>Account:</strong> ").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</p>")
-                .append("<p><strong>IFSC:</strong> ").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</p>")
+                .append("<button onclick='printBill()' class='print-btn'>🖨️ Print Bill</button>")
                 .append("</div>");
+
+        Optional<FinancialYear> financialYear = financialYearService.getFinancialYear(financialYearId);
+        StringBuilder duration = new StringBuilder();
+        if(null!=financialYear){
+            LocalDate start = financialYear.get().getStart();
+            LocalDate end = financialYear.get().getEnd();
+            duration.append(start.getMonth().toString()).append(" ").append(start.getYear()).append(" TO ").append(end.getMonth().toString()).append(" ").append(end.getYear());
         }
-        
+        // === HEADER ===
+        html.append("<div class='broker-firm-name'>")
+                .append("<h1>").append(broker.getBrokerageFirmName()).append("</h1>")
+                .append("</div>");
+        html.append("<div class='broker-info'>")
+                .append("<table>")
+                .append("<tr class='broker-row'><td><strong>Broker:</strong></td><td><strong>")
+                .append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A")
+                .append("</strong></td></tr>")
+                .append("<td><strong>FY:</strong></td><td>").append(duration).append("</td></tr>")
+                .append("<tr><td><strong>Date:</strong></td><td>").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).append("</td>")
+                .append("<td><strong>Phone:</strong></td><td>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</td></tr>");
+
+
+        if (broker.getBankDetails() != null) {
+            html.append("<tr><td><strong>Bank:</strong></td><td>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</td>")
+                    .append("<td><strong>A/C No:</strong></td><td>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</td></tr>")
+                    .append("<tr><td><strong>IFSC:</strong></td><td>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</td>")
+                    .append("<td><strong>UPI / Wallet:</strong></td><td>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</td></tr>");
+        }
+        html.append("</table></div>");
+        html.append("</div></div>");
+
+        // === MERCHANT INFO (Compact & Highlighted) ===
+        html.append("<div class='client-info'>")
+                .append("<h3>")
+                .append("Merchant Name: <strong>").append(userDetail.getUserBasicInfo().getFirmName()).append("</strong>")
+                .append(" &nbsp; | &nbsp; City: <strong>")
+                .append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</strong>")
+                .append("</h3>")
+                .append("</div>");
+
+        // === TRANSACTIONS TABLE ===
+        html.append("<h3>Transaction Details</h3>")
+                .append("<table class='transactions-table'>")
+                .append("<thead><tr><th>S.No</th><th>Date</th><th>Merchant Firm Name</th><th>Product</th><th>Qty</th><th>Rate</th><th>Brokerage</th></tr></thead><tbody>");
+
+        int counter = 1;
+        for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
+            BigDecimal transactionBrokerage = customBrokerage != null ?
+                    customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) :
+                    transaction.getBrokerage();
+            if(customBrokerage==null){
+                totalBrokerage = totalBrokerage.add(transaction.getBrokerage());
+            }
+
+            html.append("<tr>")
+                    .append("<td>").append(counter++).append("</td>") // Auto sequence number
+                    .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yy"))).append("</td>")
+                    .append("<td>").append(transaction.getCounterPartyFirmName()).append("</td>")
+                    .append("<td>").append(transaction.getProductName()).append("</td>")
+                    .append("<td>").append(transaction.getQuantity()).append("</td>")
+                    .append("<td>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
+                    .append("<td>₹").append(formatCurrency(transactionBrokerage)).append("</td>")
+                    .append("</tr>");
+        }
+        html.append("</tbody></table>");
+
+        // === SUMMARY (Compact & Highlighted) ===
+        long totalBagsSold = userDetail.getBrokerageSummary().getTotalBagsSold();
+        long totalBagsBought = userDetail.getBrokerageSummary().getTotalBagsBought();
+        long totalBags = totalBagsSold + totalBagsBought;
+
+        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : null;
+        BigDecimal totalPayableBrokerage;
+
+        if (brokeragePerBag != null) {
+            totalPayableBrokerage = brokeragePerBag.multiply(BigDecimal.valueOf(totalBags));
+        } else {
+            totalPayableBrokerage = totalBrokerage;
+        }
+
+        html.append("<table class='summary-table'>")
+                .append("<tr><td><strong>Bags Sold</strong></td><td>").append(totalBagsSold).append("</td></tr>")
+                .append("<tr><td><strong>Bags Bought</strong></td><td>").append(totalBagsBought).append("</td></tr>")
+                .append("<tr><td><strong>Total Bags</strong></td><td>").append(totalBags).append("</td></tr>")
+                .append("<tr class='total-row'><td><strong>Total Brokerage</strong></td><td><strong>");
+
+        if (brokeragePerBag != null) {
+            html.append(totalBags).append(" × ₹").append(formatCurrency(brokeragePerBag))
+                    .append(" = ₹").append(formatCurrency(totalPayableBrokerage));
+        } else {
+            html.append("₹").append(formatCurrency(totalPayableBrokerage));
+        }
+
+        html.append("</strong></td></tr>")
+                .append("</table>");
+
+        // === FOOTER ===
+        html.append("<div class='footer'>")
+                .append("<p><em>Thank you for your business!</em></p>")
+                .append("<p><strong>Contact:</strong> ")
+                .append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A")
+                .append("</div>");
+
+
         html.append("</body></html>");
         return html.toString().getBytes();
     }
-    
+
     private String getPrintCSS(String paperSize, String orientation) {
         String pageSize = getPageSize(paperSize, orientation);
-        
+
         return "@media print { .no-print { display: none !important; } }" +
-               "@page { size: " + pageSize + "; margin: 0.5in; }" +
-               "body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #000; margin: 0; padding: 20px; }" +
-               ".no-print { margin-bottom: 20px; }" +
-               ".print-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; }" +
-               ".print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }" +
-               ".print-header h1 { font-size: 24px; margin-bottom: 5px; }" +
-               ".print-header h2 { font-size: 18px; margin-bottom: 10px; }" +
-               ".header-info { display: flex; justify-content: space-between; font-size: 12px; }" +
-               ".client-info { margin-bottom: 20px; }" +
-               ".client-info h3 { margin-bottom: 10px; }" +
-               ".summary-table, .transactions-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }" +
-               ".summary-table td, .transactions-table th, .transactions-table td { border: 1px solid #000; padding: 8px; text-align: left; }" +
-               ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
-               ".total-row { background-color: #f0f0f0; }" +
-               ".payment-info { margin-top: 20px; }" +
-               "h3 { margin: 15px 0 10px 0; }";
+                "@page { size: " + pageSize + "; margin: 0.4in; }" + // reduced margins
+                "body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.3; color: #000; margin: 0; padding: 10px; }" +
+                ".no-print { margin-bottom: 10px; }" +
+                ".broker-firm-name { text-align: center; margin-bottom: 10px; padding: 8px; background-color: #52a2f2; color: black; border-radius: 4px; }" +
+                ".broker-firm-name h1 { font-size: 20px; margin: 0; font-weight: bold; letter-spacing: 1px; }"+
+                ".broker-row td { font-size: 14px; font-weight: bold; }"+
+                ".broker-info { margin: 10px 0; border: 1px solid #000; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
+                ".broker-info table { width: 100%; border-collapse: collapse; font-size: 12px; }" +
+                ".broker-info td { padding: 4px 6px; vertical-align: top; }" +
+                ".broker-info td:first-child, .broker-info td:nth-child(3) { font-weight: bold; width: 18%; }" +
+                ".broker-info tr:nth-child(even) { background-color: #fdfdfd; }"+
+                ".print-btn { background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }" +
+                ".print-header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px; }" +
+                ".print-header h1 { font-size: 18px; margin: 0; font-weight: bold; }" +
+                ".header-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 11px; margin-top: 5px; }" +
+                ".client-info { margin: 8px 0; font-size: 12px; }" +
+                ".summary-table, .transactions-table { width: 100%; border-collapse: collapse; margin: 10px 0; }" +
+                ".summary-table td, .transactions-table th, .transactions-table td { border: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; }" +
+                ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
+                ".total-row { background-color: #6ef59d; }" +
+                ".footer { text-align: center; margin-top: 20px; font-size: 12px; font-weight: bold; border-top: 1px solid #000; padding-top: 8px; }" +
+                ".footer em { font-style: italic; font-weight: normal; display: block; margin-bottom: 5px; }";
     }
     
     private String getPageSize(String paperSize, String orientation) {
