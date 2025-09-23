@@ -47,24 +47,29 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - no authentication required
+                        // Public backend APIs
                         .requestMatchers("/BrokerHub/Broker/createBroker").permitAll()
                         .requestMatchers("/BrokerHub/Broker/login").permitAll()
                         .requestMatchers("/BrokerHub/Broker/createPassword").permitAll()
                         .requestMatchers("/BrokerHub/Broker/verify-account").permitAll()
                         .requestMatchers("/BrokerHub/Broker/forgotPassword").permitAll()
-                        .requestMatchers("/login").permitAll()
                         .requestMatchers("/BrokerHub/Broker/BrokerFirmNameExists/**").permitAll()
                         .requestMatchers("/BrokerHub/Broker/UserNameExists/**").permitAll()
                         .requestMatchers("/BrokerHub/user/createUser").permitAll()
-                        .requestMatchers("/").permitAll()
-                        // Network test endpoints
                         .requestMatchers("/api/network-test/**").permitAll()
-                        // Static resources
-                        .requestMatchers("/error/**").permitAll()
-                        .requestMatchers("/templates/**").permitAll()
-                        .requestMatchers("/favicon.ico").permitAll()
-                        // All other endpoints require authentication
+                        // React frontend routes (permit all)
+                        .requestMatchers(
+                                "/login",
+                                "/dashboard",
+                                "/profile",
+                                "/settings/**",
+                                "/",                  // root
+                                "/index.html",
+                                "/static/**",
+                                "/favicon.ico",
+                                "/manifest.json"
+                        ).permitAll()
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

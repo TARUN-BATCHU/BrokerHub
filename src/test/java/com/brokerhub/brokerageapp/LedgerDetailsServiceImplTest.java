@@ -53,7 +53,7 @@ class LedgerDetailsServiceImplTest {
 
         when(dailyLedgerService.getDailyLedger(any())).thenReturn(null);
 
-        ResponseEntity<String> response = ledgerDetailsServiceImpl.createLedgerDetails(ledgerDetailsDTO);
+        ResponseEntity<Long> response = ledgerDetailsServiceImpl.createLedgerDetails(ledgerDetailsDTO);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
