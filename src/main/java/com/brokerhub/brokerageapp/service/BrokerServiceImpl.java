@@ -77,7 +77,7 @@ public class BrokerServiceImpl implements BrokerService{
         if(!brokerRepository.existsByBrokerageFirmName(brokerFirmName) && !brokerRepository.findByEmail(brokerEmail).isPresent() && !brokerRepository.findByPhoneNumber(brokerPhoneNumber).isPresent()) {
             Broker broker = brokerDTOMapper.convertBrokerDTOtoBroker(brokerDTO);
             broker.setTotalBrokerage(BigDecimal.valueOf(0));
-            BrokersAddress address = addressService.findBrokersAddressByPincode(brokerDTO.getPincode());
+            Address address = findOrCreateAddressForBroker(brokerDTO.getPincode(), broker);
             if(null != address){
                 broker.setAddress(address);
             }
