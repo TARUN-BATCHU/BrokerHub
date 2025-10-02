@@ -13,5 +13,7 @@ public interface FinancialYearService {
 
    public List<FinancialYear> getAllFinancialYears();
 
+   public List<FinancialYear> getAllFinancialYearsByBrokerId(Long brokerId);
+
    public Optional<FinancialYear> getFinancialYear(Long financialYearId);
 }

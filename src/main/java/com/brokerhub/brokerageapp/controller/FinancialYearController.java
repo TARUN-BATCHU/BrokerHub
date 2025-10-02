@@ -42,8 +42,14 @@ public class FinancialYearController {
     }
 
     @GetMapping("/getAllFinancialYears")
-    public List<FinancialYear> getFinancialYearById(){
-        return financialYearService.getAllFinancialYears();
+    public List<FinancialYear> getAllFinancialYears(HttpServletRequest request){
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            Long brokerId = jwtUtil.getBrokerIdFromToken(token);
+            return financialYearService.getAllFinancialYearsByBrokerId(brokerId);
+        }
+        return null;
     }
 
     @PostMapping("/setCurrentFinancialYear")

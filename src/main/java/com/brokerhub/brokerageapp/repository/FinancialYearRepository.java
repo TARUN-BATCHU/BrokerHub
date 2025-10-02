@@ -13,4 +13,6 @@ public interface FinancialYearRepository extends JpaRepository<FinancialYear, Lo
 
     @Query("SELECT fy FROM FinancialYear fy WHERE :start <= fy.end AND :end >= fy.start")
     List<FinancialYear> findOverlappingYears(LocalDate start, LocalDate end);
+
+    List<FinancialYear> findByBrokerBrokerId(Long brokerId);
 }

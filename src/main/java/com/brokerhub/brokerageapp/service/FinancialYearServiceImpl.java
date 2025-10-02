@@ -101,6 +101,15 @@ public class FinancialYearServiceImpl implements FinancialYearService{
         return null;
     }
 
+    @Transactional(readOnly = true)
+    public List<FinancialYear> getAllFinancialYearsByBrokerId(Long brokerId){
+        List<FinancialYear> financialYears = financialYearRepository.findByBrokerBrokerId(brokerId);
+        if(!financialYears.isEmpty()){
+            return financialYears;
+        }
+        return null;
+    }
+
     public Optional<FinancialYear> getFinancialYear(Long financialYearId){
         Optional<FinancialYear> financialYear = financialYearRepository.findById(financialYearId);
         return financialYear;
