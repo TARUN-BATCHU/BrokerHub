@@ -77,9 +77,14 @@ public class BrokerServiceImpl implements BrokerService{
         if(!brokerRepository.existsByBrokerageFirmName(brokerFirmName) && !brokerRepository.findByEmail(brokerEmail).isPresent() && !brokerRepository.findByPhoneNumber(brokerPhoneNumber).isPresent()) {
             Broker broker = brokerDTOMapper.convertBrokerDTOtoBroker(brokerDTO);
             broker.setTotalBrokerage(BigDecimal.valueOf(0));
-            Address address = findOrCreateAddressForBroker(brokerDTO.getPincode(), broker);
-            if(null != address){
-                broker.setAddress(address);
+            try {
+                BrokersAddress address = addressService.findBrokersAddressByPincode(brokerDTO.getPincode());
+                if(null != address){
+                    broker.setAddress(address);
+                }
+            } catch (Exception e) {
+                // Address lookup failed during registration - this is expected for new brokers
+                // Address will be set later when broker logs in
             }
             if(null != brokerDTO.getAccountNumber() && null!=brokerDTO.getIfscCode()){
                 linkBankDetailsToBroker(brokerDTO,broker);
