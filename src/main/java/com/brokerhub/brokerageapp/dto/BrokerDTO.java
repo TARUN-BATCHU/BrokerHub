@@ -32,8 +32,8 @@ public class BrokerDTO {
 
     private String phoneNumber;
 
-    private String AccountNumber;
+    private String accountNumber;
 
-    private String IfscCode;
+    private String ifscCode;
 
 }
