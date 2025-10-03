@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -331,6 +332,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public BulkUploadResponseDTO bulkUploadUsers(MultipartFile file) {
         List<String> errorMessages = new ArrayList<>();
         int totalRecords = 0;
@@ -369,6 +371,16 @@ public class UserServiceImpl implements UserService {
                 int rowNumber = i + 2; // +2 because Excel rows start from 1 and we skip header
 
                 try {
+                    // Get current broker with proper session handling
+                    Broker currentBroker = null;
+                    try {
+                        currentBroker = tenantContextService.getCurrentBroker();
+                    } catch (Exception e) {
+                        errorMessages.add("Row " + rowNumber + ": Error getting broker context - " + e.getMessage());
+                        failedRecords++;
+                        continue;
+                    }
+                    
                     // Validate mandatory fields with detailed logging
                     List<String> missingFields = new ArrayList<>();
                     if (userDTO.getUserType() == null || userDTO.getUserType().trim().isEmpty()) {
@@ -383,9 +395,7 @@ public class UserServiceImpl implements UserService {
                     if (userDTO.getCity() == null || userDTO.getCity().trim().isEmpty()) {
                         missingFields.add("city (value: '" + userDTO.getCity() + "')");
                     }
-                    if (userDTO.getPhoneNumbers() == null || userDTO.getPhoneNumbers().isEmpty()) {
-                        missingFields.add("phoneNumbers (value: " + userDTO.getPhoneNumbers() + ")");
-                    }
+                    // Phone numbers are now optional - removed from mandatory validation
                     if (userDTO.getBrokerageRate() == null) {
                         missingFields.add("brokerageRate (value: " + userDTO.getBrokerageRate() + ")");
                     }
