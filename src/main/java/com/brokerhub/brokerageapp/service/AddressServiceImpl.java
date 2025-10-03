@@ -113,7 +113,18 @@ public class AddressServiceImpl implements AddressService{
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         List<Address> addresses = addressRepository.findByBrokerBrokerId(currentBrokerId);
         if(addresses.size()>0){
-            return addresses;
+            // Return distinct addresses based on city, area, and pincode combination
+            return addresses.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                        addr -> (addr.getCity() != null ? addr.getCity() : "null") + "|" + 
+                               (addr.getArea() != null ? addr.getArea() : "null") + "|" + 
+                               (addr.getPincode() != null ? addr.getPincode() : "null"),
+                        addr -> addr,
+                        (existing, replacement) -> existing
+                    ))
+                    .values()
+                    .stream()
+                    .collect(java.util.stream.Collectors.toList());
         }
         return null;
     }
