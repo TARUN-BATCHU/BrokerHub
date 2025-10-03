@@ -16,6 +16,8 @@ public interface DailyLedgerService {
 
     public DailyLedger getDailyLedger(LocalDate date);
 
+    public DailyLedger getDailyLedgerByFinancialYear(LocalDate date, Long financialYearId);
+
     public DailyLedger getDailyLedgerWithPagination(LocalDate date, Pageable pageable);
 
     public OptimizedDailyLedgerDTO getDailyLedgerOptimizedWithPagination(LocalDate date, Pageable pageable);

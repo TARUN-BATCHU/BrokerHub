@@ -70,7 +70,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
         
         LocalDate date = ledgerDetailsDTO.getDate();
-        DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(date);
+        DailyLedger dailyLedger = dailyLedgerService.getDailyLedgerByFinancialYear(date, financialYearId);
         Long sellerId = ledgerDetailsDTO.getFromSeller();
         User seller = null;
         Long sellerBrokerage = ledgerDetailsDTO.getBrokerage();
@@ -677,13 +677,13 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
         User seller = sellerOptional.get();
         
-        // Parse date
+        // Parse date - expecting d/M/yyyy format (day/month/year)
         LocalDate date;
         try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M/d/yyyy");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/yyyy");
             date = LocalDate.parse(newRequest.getOrder_date(), formatter);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid date format. Expected M/d/yyyy, got: " + newRequest.getOrder_date());
+            throw new IllegalArgumentException("Invalid date format. Expected d/M/yyyy (day/month/year), got: " + newRequest.getOrder_date());
         }
         
         // Create seller products list

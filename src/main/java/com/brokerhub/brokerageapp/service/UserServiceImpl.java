@@ -271,6 +271,7 @@ public class UserServiceImpl implements UserService {
                     userInfo.put("id", (Long) row[0]);
                     userInfo.put("firmName", (String) row[1]);
                     userInfo.put("city", (String) row[2]);
+                    userInfo.put("brokerageRate", (Integer) row[3]);
                     return userInfo;
                 })
                 .collect(Collectors.toList());

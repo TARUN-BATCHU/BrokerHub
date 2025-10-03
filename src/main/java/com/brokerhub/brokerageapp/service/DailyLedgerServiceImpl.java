@@ -125,6 +125,48 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         }
     }
 
+    public DailyLedger getDailyLedgerByFinancialYear(LocalDate date, Long financialYearId) {
+        log.info("Fetching daily ledger for date: {} with financial year: {}", date, financialYearId);
+
+        if (date == null) {
+            log.error("Date parameter cannot be null");
+            throw new IllegalArgumentException("Date parameter cannot be null");
+        }
+        
+        if (financialYearId == null) {
+            log.error("Financial year ID cannot be null");
+            throw new IllegalArgumentException("Financial year ID cannot be null");
+        }
+
+        try {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<DailyLedger> dailyLedgerOpt = dailyLedgerRepository.findByBrokerIdAndDateWithLedgerDetails(currentBrokerId, date);
+
+            if (dailyLedgerOpt.isPresent()) {
+                DailyLedger dailyLedger = dailyLedgerOpt.get();
+                log.debug("Found existing daily ledger with ID: {} for date: {}",
+                         dailyLedger.getDailyLedgerId(), date);
+
+                // Initialize the records collection for each ledger detail to avoid lazy loading
+                if (dailyLedger.getLedgerDetails() != null) {
+                    for (LedgerDetails ledgerDetail : dailyLedger.getLedgerDetails()) {
+                        if (ledgerDetail.getRecords() != null) {
+                            ledgerDetail.getRecords().size();
+                        }
+                    }
+                }
+                return dailyLedger;
+            } else {
+                // Create daily ledger with specific financial year
+                log.info("Daily ledger not found for date: {}. Creating new daily ledger with financial year: {}", date, financialYearId);
+                return createDailyLedgerForSpecificFinancialYear(date, financialYearId);
+            }
+        } catch (Exception e) {
+            log.error("Error fetching daily ledger for date: {} with financial year: {}", date, financialYearId, e);
+            throw new RuntimeException("Failed to fetch daily ledger for date: " + date + " with financial year: " + financialYearId, e);
+        }
+    }
+
     /**
      * Helper method to create a daily ledger for a given date
      * Automatically finds the appropriate financial year for the date
@@ -157,6 +199,46 @@ public class DailyLedgerServiceImpl implements DailyLedgerService{
         } catch (Exception e) {
             log.error("Error creating daily ledger for date: {}", date, e);
             throw new RuntimeException("Failed to create daily ledger for date: " + date, e);
+        }
+    }
+
+    /**
+     * Helper method to create a daily ledger for a specific financial year
+     */
+    private DailyLedger createDailyLedgerForSpecificFinancialYear(LocalDate date, Long financialYearId) {
+        log.info("Creating new daily ledger for date: {} with financial year: {}", date, financialYearId);
+
+        try {
+            Optional<FinancialYear> financialYearOpt = financialYearRepository.findById(financialYearId);
+            if (!financialYearOpt.isPresent()) {
+                log.error("Financial year not found with ID: {}", financialYearId);
+                throw new RuntimeException("Financial year not found with ID: " + financialYearId);
+            }
+
+            FinancialYear financialYear = financialYearOpt.get();
+            
+            // Validate that the date falls within the financial year
+            if (!isDateInFinancialYear(date, financialYear)) {
+                log.error("Date {} does not fall within financial year: {}", date, financialYear.getFinancialYearName());
+                throw new RuntimeException("Date " + date + " does not fall within financial year: " + financialYear.getFinancialYearName());
+            }
+
+            // Create new daily ledger with broker for multi-tenant isolation
+            Broker currentBroker = tenantContextService.getCurrentBroker();
+            DailyLedger dailyLedger = DailyLedger.builder()
+                    .date(date)
+                    .financialYear(financialYear)
+                    .broker(currentBroker)
+                    .build();
+
+            DailyLedger savedLedger = dailyLedgerRepository.save(dailyLedger);
+            log.info("Successfully created daily ledger with ID: {} for date: {} with financial year: {}",
+                    savedLedger.getDailyLedgerId(), date, financialYearId);
+
+            return savedLedger;
+        } catch (Exception e) {
+            log.error("Error creating daily ledger for date: {} with financial year: {}", date, financialYearId, e);
+            throw new RuntimeException("Failed to create daily ledger for date: " + date + " with financial year: " + financialYearId, e);
         }
     }
 
