@@ -403,7 +403,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         String qrBase64 = getQRCodeBase64();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
-            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='80' height='80' style='border: 1px solid #ccc;'/>")
+            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='100' height='100' style='border: 1px solid #ccc;'/>")
                     .append("<div class='qr-amount'>₹").append(formatCurrency(totalPayableBrokerage)).append("</div>");
         } else {
             html.append("<div class='qr-placeholder'>")
@@ -474,15 +474,16 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".qr-section { flex: 0 0 80px; text-align: center; }" +
                 ".qr-placeholder { width: 80px; height: 80px; border: 2px solid #000; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
                 ".qr-text { font-size: 8px; font-weight: bold; }" +
-                ".qr-amount { font-size: 7px; margin-top: 2px; }" +
+                ".qr-amount { font-size: 20px; margin-top: 2px; }" +
                 ".footer { text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }" +
                 ".footer em { font-style: italic; font-weight: normal; display: block; margin-bottom: 3px; }" +
-                ".city-distribution-section { margin: 15px 0; padding: 10px; border: 2px solid #007bff; border-radius: 8px; background-color: #f8f9fa; }" +
-                ".city-distribution-section h3 { margin: 0 0 10px 0; color: #007bff; font-size: 14px; text-align: center; }" +
-                ".city-boxes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }" +
-                ".city-box { background: #007bff; color: white; padding: 8px 12px; border-radius: 6px; text-align: center; min-width: 80px; }" +
-                ".city-name { font-weight: bold; font-size: 11px; margin-bottom: 2px; }" +
-                ".city-bags { font-size: 10px; opacity: 0.9; }";
+                ".city-distribution-table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 8px; }" +
+                ".city-distribution-table th, .city-distribution-table td { border: 1px solid #000; padding: 3px 4px; font-size: 10px; line-height: 1.2; }" +
+                ".city-distribution-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }" +
+                ".city-distribution-table td { text-align: center; }" +
+                ".city-distribution-table th:nth-child(1), .city-distribution-table td:nth-child(1) { width: 15%; }" +
+                ".city-distribution-table th:nth-child(2), .city-distribution-table td:nth-child(2) { width: 60%; text-align: left; padding-left: 6px; }" +
+                ".city-distribution-table th:nth-child(3), .city-distribution-table td:nth-child(3) { width: 25%; }";
     }
     
     private String getPageSize(String paperSize, String orientation) {
@@ -568,18 +569,20 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("</h3>")
                 .append("</div>");
 
-        // === CITY-WISE BAG DISTRIBUTION BOX ===
-        html.append("<div class='city-distribution-section'>")
-                .append("<h3>📍 City-wise Bag Distribution</h3>")
-                .append("<div class='city-boxes'>");
+        // === CITY-WISE BAG DISTRIBUTION TABLE ===
+        html.append("<h4 style='margin: 6px 0 4px 0; font-size: 12px;'>📍 City-wise Bag Distribution</h4>")
+                .append("<table class='city-distribution-table'>")
+                .append("<thead><tr><th>S.No</th><th>City Name</th><th>Bags</th></tr></thead><tbody>");
         
+        int cityCounter = 1;
         for (CityWiseBagDistributionDTO city : cityDistribution) {
-            html.append("<div class='city-box'>")
-                    .append("<div class='city-name'>").append(city.getCityName()).append("</div>")
-                    .append("<div class='city-bags'>").append(city.getTotalBags()).append(" bags</div>")
-                    .append("</div>");
+            html.append("<tr>")
+                    .append("<td>").append(cityCounter++).append("</td>")
+                    .append("<td>").append(city.getCityName()).append("</td>")
+                    .append("<td>").append(city.getTotalBags()).append("</td>")
+                    .append("</tr>");
         }
-        html.append("</div></div>");
+        html.append("</tbody></table>");
 
         // === SUMMARY ===
         long totalBagsSold = userDetail.getBrokerageSummary().getTotalBagsSold();
@@ -617,6 +620,41 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         }
 
         html.append("</tr></tbody></table>");
+
+        // === PAYMENT DETAILS SECTION ===
+        html.append("<div class='payment-details-section'>")
+                .append("<h4 style='margin: 8px 0 6px 0; font-size: 12px; text-align: center;'>💳 Payment Details</h4>")
+                .append("<div class='payment-container'>");
+        
+        // Bank Details
+        if (broker.getBankDetails() != null) {
+            html.append("<div class='bank-details'>")
+                    .append("<div class='payment-row'><span>Bank:</span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>A/C No:</span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>IFSC:</span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
+                    .append("</div>");
+        }
+        
+        // UPI Details
+        html.append("<div class='upi-details'>")
+                .append("<div class='payment-row'><span>Phone/UPI:</span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
+                .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
+                .append("</div>");
+        
+        // QR Code
+        String qrBase64 = getQRCodeBase64();
+        html.append("<div class='qr-section'>");
+        if (qrBase64 != null) {
+            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='100' height='100' style='border: 1px solid #ccc;'/>")
+                    .append("<div class='qr-amount'>₹").append(formatCurrency(totalPayableBrokerage)).append("</div>");
+        } else {
+            html.append("<div class='qr-placeholder'>")
+                    .append("<div class='qr-text'>QR Code</div>")
+                    .append("<div class='qr-amount'>₹").append(formatCurrency(totalPayableBrokerage)).append("</div>")
+                    .append("</div>");
+        }
+        html.append("</div>")
+                .append("</div></div>");
 
         // === FOOTER ===
         html.append("<div class='footer'>")

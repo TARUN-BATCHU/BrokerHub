@@ -7,6 +7,8 @@ import com.brokerhub.brokerageapp.entity.*;
 import com.brokerhub.brokerageapp.mapper.UserDTOMapper;
 import com.brokerhub.brokerageapp.repository.AddressRepository;
 import com.brokerhub.brokerageapp.repository.UserRepository;
+import com.brokerhub.brokerageapp.repository.UserBrokerageRepository;
+import com.brokerhub.brokerageapp.repository.BrokerageRepository;
 import com.brokerhub.brokerageapp.constants.Constants;
 import com.brokerhub.brokerageapp.utils.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.Objects;
+import java.util.Comparator;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.Map;
 
@@ -48,6 +53,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     TenantContextService tenantContextService;
+    
+    @Autowired
+    UserBrokerageRepository userBrokerageRepository;
+    
+    @Autowired
+    BrokerageRepository brokerageRepository;
 
     public ResponseEntity createUser(UserDTO userDTO) {
         String firmName = userDTO.getFirmName();
@@ -517,33 +528,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserSummaryDTO> getUserSummaryByFinancialYear(Long financialYearId, Pageable pageable) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
-        // Create unsorted pageable to avoid conflicts with native query ORDER BY
         Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         Page<User> users = userRepository.findUsersByBrokerIdAndFinancialYearSorted(currentBrokerId, financialYearId, unsortedPageable);
         
-        // Get actual bag counts and brokerage for the specific financial year
-        List<Object[]> bagCountsAndBrokerage = userRepository.findUserBagCountsAndBrokerageByFinancialYear(currentBrokerId, financialYearId);
-        
-        // Create a map for quick lookup of financial year specific data
-        Map<Long, Object[]> userDataMap = bagCountsAndBrokerage.stream()
-                .collect(Collectors.toMap(
-                    row -> (Long) row[0], // userId
-                    row -> row
-                ));
-        
         List<UserSummaryDTO> userSummaries = users.getContent().stream()
                 .map(user -> {
-                    Object[] userData = userDataMap.get(user.getUserId());
-                    
-                    Long bagsSold = 0L;
-                    Long bagsBought = 0L;
-                    BigDecimal actualBrokerage = BigDecimal.ZERO;
-                    
-                    if (userData != null) {
-                        bagsSold = userData[1] != null ? ((Number) userData[1]).longValue() : 0L;
-                        bagsBought = userData[2] != null ? ((Number) userData[2]).longValue() : 0L;
-                        actualBrokerage = userData[3] != null ? new BigDecimal(userData[3].toString()) : BigDecimal.ZERO;
-                    }
+                    // Use the same logic as BrokerageService.getUserBrokerageDetailInFinancialYear
+                    Long bagsSold = userBrokerageRepository.getUserTotalBagsSold(currentBrokerId, financialYearId, user.getUserId());
+                    Long bagsBought = userBrokerageRepository.getUserTotalBagsBought(currentBrokerId, financialYearId, user.getUserId());
+                    Number totalBrokerageAmount = brokerageRepository.getUserTotalBrokerage(currentBrokerId, financialYearId, user.getUserId());
+                    BigDecimal actualBrokerage = BigDecimal.valueOf(totalBrokerageAmount != null ? totalBrokerageAmount.longValue() : 0L);
                     
                     BigDecimal brokerageRate = user.getBrokerageRate() != null ? BigDecimal.valueOf(user.getBrokerageRate()) : BigDecimal.ZERO;
                     
@@ -551,8 +545,8 @@ public class UserServiceImpl implements UserService {
                             .userId(user.getUserId())
                             .firmName(user.getFirmName())
                             .city(user.getAddress() != null ? user.getAddress().getCity() : null)
-                            .totalBagsSold(bagsSold)
-                            .totalBagsBought(bagsBought)
+                            .totalBagsSold(bagsSold != null ? bagsSold : 0L)
+                            .totalBagsBought(bagsBought != null ? bagsBought : 0L)
                             .brokeragePerBag(brokerageRate)
                             .totalPayableBrokerage(actualBrokerage)
                             .build();

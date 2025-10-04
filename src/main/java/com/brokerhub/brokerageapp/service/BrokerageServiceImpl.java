@@ -378,7 +378,6 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
 
-    
     @Override
     public String generateExcelFilename(Long userId, Long financialYearId) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
@@ -415,43 +414,16 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found");
         }
         
-        // Get city-wise bag distribution
-        List<CityWiseBagDistributionDTO> cityDistribution = getCityWiseBagDistribution(userId, currentBrokerId, financialYearId);
+        // Get city-wise bag distribution for the user
+        List<Object[]> cityBagData = userBrokerageRepository.getUserCityWiseBagDistribution(currentBrokerId, financialYearId, userId);
+        List<CityWiseBagDistributionDTO> cityDistribution = cityBagData.stream()
+                .map(row -> new CityWiseBagDistributionDTO(
+                        (String) row[0], // city name
+                        ((Number) row[1]).longValue() // total bags
+                ))
+                .collect(Collectors.toList());
         
         return pdfGenerationService.generateCityWisePrintBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage, paperSize, orientation, cityDistribution);
-    }
-    
-    private List<CityWiseBagDistributionDTO> getCityWiseBagDistribution(Long userId, Long brokerId, Long financialYearId) {
-        // Get cities sold to
-        List<Object[]> citiesSoldToData = userBrokerageRepository.getUserCitiesSoldTo(brokerId, financialYearId, userId);
-        List<CityWiseBagDistributionDTO> soldToDistribution = citiesSoldToData.stream()
-                .map(row -> new CityWiseBagDistributionDTO((String) row[0], ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-        
-        // Get cities bought from
-        List<Object[]> citiesBoughtFromData = userBrokerageRepository.getUserCitiesBoughtFrom(brokerId, financialYearId, userId);
-        List<CityWiseBagDistributionDTO> boughtFromDistribution = citiesBoughtFromData.stream()
-                .map(row -> new CityWiseBagDistributionDTO((String) row[0], ((Number) row[1]).longValue()))
-                .collect(Collectors.toList());
-        
-        // Combine both lists and merge cities with same name
-        List<CityWiseBagDistributionDTO> combinedDistribution = soldToDistribution;
-        
-        for (CityWiseBagDistributionDTO boughtFrom : boughtFromDistribution) {
-            boolean found = false;
-            for (CityWiseBagDistributionDTO existing : combinedDistribution) {
-                if (existing.getCityName().equals(boughtFrom.getCityName())) {
-                    existing.setTotalBags(existing.getTotalBags() + boughtFrom.getTotalBags());
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                combinedDistribution.add(boughtFrom);
-            }
-        }
-        
-        return combinedDistribution;
     }
 
 }
