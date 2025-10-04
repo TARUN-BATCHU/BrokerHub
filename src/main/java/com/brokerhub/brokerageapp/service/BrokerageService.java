@@ -40,5 +40,7 @@ public interface BrokerageService {
     
     byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId);
     
+    byte[] generateCityWisePrintBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation);
+    
     String generateExcelFilename(Long userId, Long financialYearId);
 }

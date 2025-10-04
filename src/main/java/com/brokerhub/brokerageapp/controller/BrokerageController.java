@@ -217,5 +217,26 @@ public class BrokerageController {
         }
     }
     
+    @GetMapping("/city-wise-print-bill/{userId}/{financialYearId}")
+    public ResponseEntity<byte[]> generateCityWisePrintBill(
+            @PathVariable Long userId,
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage,
+            @RequestParam(defaultValue = "a4") String paperSize,
+            @RequestParam(defaultValue = "portrait") String orientation) {
+        try {
+            byte[] cityWiseBill = brokerageService.generateCityWisePrintBill(userId, null, financialYearId, customBrokerage, paperSize, orientation);
+            
+            String filename = "city-wise-print-bill-" + userId + ".html";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
+                    .body(cityWiseBill);
+        } catch (Exception e) {
+            log.error("Error generating city-wise print bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
 
 }
