@@ -295,29 +295,42 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("<div class='broker-firm-name'>")
                 .append("<h1>").append(broker.getBrokerageFirmName()).append("</h1>")
                 .append("</div>");
+
         html.append("<div class='broker-info'>")
                 .append("<table>")
-                .append("<tr class='broker-row'><td><strong>Broker:</strong></td><td><strong>")
+                // 1st row: Broker + Phone Number
+                .append("<tr class='broker-row'>")
+                .append("<td><strong>Broker : </strong></td><td>")
                 .append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A")
-                .append("</strong></td></tr>")
-                .append("<td><strong>FY:</strong></td><td>").append(duration).append("</td></tr>")
-                .append("<tr><td><strong>Date:</strong></td><td>").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))).append("</td>")
-                .append("<td><strong>Phone:</strong></td><td>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</td></tr>");
+                .append("</td>")
+                .append("<td><strong>Phone : </strong></td><td>")
+                .append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A")
+                .append("</td>")
+                .append("</tr>")
+                // 2nd row: FY + Bill Print Date
+                .append("<tr>")
+                .append("<td><strong>Financial Year : </strong></td><td>")
+                .append(duration)
+                .append("</td>")
+                .append("<td><strong>Bill Print Date : </strong></td><td>")
+                .append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")))
+                .append("</td>")
+                .append("</tr>")
+                .append("</table>")
+                .append("</div>");
 
-
-        html.append("</table></div>");
 
         // === MERCHANT INFO (Compact & Highlighted) ===
         html.append("<div class='client-info'>")
-                .append("<h3>")
+                .append("<h2>")
                 .append("Merchant Name: <strong>").append(userDetail.getUserBasicInfo().getFirmName()).append("</strong>")
                 .append(" &nbsp; | &nbsp; City: <strong>")
                 .append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</strong>")
-                .append("</h3>")
+                .append("</h2>")
                 .append("</div>");
 
         // === TRANSACTIONS TABLE ===
-        html.append("<h4 style='margin: 6px 0 4px 0; font-size: 12px;'>Transaction Details</h4>")
+        html.append("<h4 style='margin: 6px 0 4px 0; font-size: 14px;'>Transaction Details</h4>")
                 .append("<table class='transactions-table'>")
                 .append("<thead><tr><th>S.No</th><th>DATE</th><th>MERCHANT FIRM NAME</th><th>PRODUCT</th><th>Qty</th><th>RATE</th><th>BROKERAGE</th></tr></thead><tbody>");
 
@@ -380,26 +393,27 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("</tr></tbody></table>");
 
         // === PAYMENT DETAILS SECTION ===
-        html.append("<div class='payment-details-section'>")
-                .append("<h4 style='margin: 8px 0 6px 0; font-size: 12px; text-align: center;'>💳 Payment Details</h4>")
-                .append("<div class='payment-container'>");
+        html.append("<div class='payment-wrapper'>")
+                .append("<div class='payment-details-section'>")
+                .append("<h4 style='margin: 8px 0 6px 0; font-size: 12px;'>💳 Payment Details</h4>");
         
         // Bank Details
         if (broker.getBankDetails() != null) {
             html.append("<div class='bank-details'>")
-                    .append("<div class='payment-row'><span>Bank:</span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
-                    .append("<div class='payment-row'><span>A/C No:</span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
-                    .append("<div class='payment-row'><span>IFSC:</span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>Bank : </span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>A/C No : </span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>IFSC : </span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
                     .append("</div>");
         }
         
         // UPI Details
         html.append("<div class='upi-details'>")
-                .append("<div class='payment-row'><span>Phone/UPI:</span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
+                .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
+                .append("</div>")
                 .append("</div>");
         
-        // QR Code
+        // QR Code (outside border)
         String qrBase64 = getQRCodeBase64();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
@@ -412,13 +426,14 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                     .append("</div>");
         }
         html.append("</div>")
-                .append("</div></div>");
+                .append("</div>");
 
         // === FOOTER ===
         html.append("<div class='footer'>")
                 .append("<p><em>Thank you for your business!</em></p>")
                 .append("<p><strong>Contact:</strong> ")
                 .append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A")
+                .append("<p><em>For Software Contact : 📞 8332827443  📩 tarunbatchu2000@gmail.com </em></p>")
                 .append("</div>");
 
         html.append("</body></html>");
@@ -440,34 +455,35 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".broker-info td { padding: 2px 4px; vertical-align: top; }" +
                 ".broker-info td:first-child, .broker-info td:nth-child(3) { font-weight: bold; width: 18%; }" +
                 ".broker-info tr:nth-child(even) { background-color: #fdfdfd; }"+
+                ".client-info { margin: 6px 0; border: 1px solid #000; padding: 4px; border-radius: 3px; background-color: #f9f9f9; }" +
                 ".transactions-table { width: 100%; border-collapse: collapse; margin-top: 6px; }" +
                 ".transactions-table th, .transactions-table td { border: 1px solid #000; padding: 2px 3px; font-size: 9px; line-height: 1.1; }"+
-                ".transactions-table th { font-size: 10px; font-weight: bold; }"+
+                ".transactions-table th { font-size: 12px; font-weight: bold; }"+
                 ".transactions-table tbody tr { height: 18px; }"+
                 ".transactions-table thead tr { height: 20px; }"+
-                ".transactions-table th:nth-child(1), .transactions-table td:nth-child(1) { width: 4%; text-align: center; font-size: 8px; }" +  /* S.No */
-                ".transactions-table th:nth-child(2), .transactions-table td:nth-child(2) { width: 8%; text-align: center; font-size: 8px; }"+  /* Date */
-                ".transactions-table th:nth-child(3), .transactions-table td:nth-child(3) { width: 35%; text-align: left; font-size: 8px; padding-left: 2px; } "+                     /* Merchant Firm Name */
-                ".transactions-table th:nth-child(4), .transactions-table td:nth-child(4) { width: 15%; text-align: left; font-size: 8px; padding-left: 2px; }  "+                    /* Product */
-                ".transactions-table th:nth-child(5), .transactions-table td:nth-child(5) { width: 6%; text-align: center; font-size: 8px; } "+   /* Qty */
-                ".transactions-table th:nth-child(6), .transactions-table td:nth-child(6) { width: 14%; text-align: right; font-size: 8px; padding-right: 2px; }"+   /* Rate */
-                ".transactions-table th:nth-child(7), .transactions-table td:nth-child(7) { width: 14%; text-align: right; font-size: 8px; padding-right: 2px; }  "+ /* Brokerage */
+                ".transactions-table th:nth-child(1), .transactions-table td:nth-child(1) { width: 4%; text-align: center; font-size: 10px; }" +  /* S.No */
+                ".transactions-table th:nth-child(2), .transactions-table td:nth-child(2) { width: 8%; text-align: center; font-size: 10px; }"+  /* Date */
+                ".transactions-table th:nth-child(3), .transactions-table td:nth-child(3) { width: 35%; text-align: left; font-size: 10px; padding-left: 2px; } "+                     /* Merchant Firm Name */
+                ".transactions-table th:nth-child(4), .transactions-table td:nth-child(4) { width: 15%; text-align: left; font-size: 10px; padding-left: 2px; }  "+                    /* Product */
+                ".transactions-table th:nth-child(5), .transactions-table td:nth-child(5) { width: 6%; text-align: center; font-size: 10px; } "+   /* Qty */
+                ".transactions-table th:nth-child(6), .transactions-table td:nth-child(6) { width: 14%; text-align: right; font-size: 10px; padding-right: 2px; }"+   /* Rate */
+                ".transactions-table th:nth-child(7), .transactions-table td:nth-child(7) { width: 14%; text-align: right; font-size: 10px; padding-right: 2px; }  "+ /* Brokerage */
                 ".print-btn { background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }" +
                 ".print-header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px; }" +
                 ".print-header h1 { font-size: 18px; margin: 0; font-weight: bold; }" +
                 ".header-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 11px; margin-top: 5px; }" +
                 ".client-info { margin: 4px 0; font-size: 10px; }" +
+                ".summary-table { margin: 6px auto; width: 50%; border-collapse: collapse; }" +
                 ".summary-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }"+
                 ".summary-table td { text-align: center; }"+
                 ".summary-table th, .summary-table td { padding: 3px 4px; font-size: 10px; border: 1px solid #000; line-height: 1.2; }"+
-                ".summary-table { margin-top: 6px; width: 100%; border-collapse: collapse; }"+
                 ".summary-table tbody tr { height: 22px; }"+
                 ".summary-table thead tr { height: 24px; }"+
                 ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
                 ".total-row { background-color: #6ef59d; }" +
-                ".payment-details-section { margin: 8px 0; border: 1px solid #000; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
-                ".payment-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }" +
-                ".bank-details, .upi-details { flex: 1; }" +
+                ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin: 8px 0; }" +
+                ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #000; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
+                ".bank-details, .upi-details { margin-bottom: 4px; }" +
                 ".payment-row { font-size: 9px; margin-bottom: 2px; }" +
                 ".payment-row span { display: inline-block; width: 50px; }" +
                 ".upi-apps { font-size: 8px; color: #666; margin-top: 2px; }" +
@@ -622,26 +638,27 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("</tr></tbody></table>");
 
         // === PAYMENT DETAILS SECTION ===
-        html.append("<div class='payment-details-section'>")
-                .append("<h4 style='margin: 8px 0 6px 0; font-size: 12px; text-align: center;'>💳 Payment Details</h4>")
-                .append("<div class='payment-container'>");
+        html.append("<div class='payment-wrapper'>")
+                .append("<div class='payment-details-section'>")
+                .append("<h4 style='margin: 8px 0 6px 0; font-size: 12px;'>💳 Payment Details</h4>");
         
         // Bank Details
         if (broker.getBankDetails() != null) {
             html.append("<div class='bank-details'>")
-                    .append("<div class='payment-row'><span>Bank:</span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
-                    .append("<div class='payment-row'><span>A/C No:</span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
-                    .append("<div class='payment-row'><span>IFSC:</span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>Bank : </span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>A/C No : </span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
+                    .append("<div class='payment-row'><span>IFSC : </span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
                     .append("</div>");
         }
         
         // UPI Details
         html.append("<div class='upi-details'>")
-                .append("<div class='payment-row'><span>Phone/UPI:</span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
+                .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
+                .append("</div>")
                 .append("</div>");
         
-        // QR Code
+        // QR Code (outside border)
         String qrBase64 = getQRCodeBase64();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
@@ -654,7 +671,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                     .append("</div>");
         }
         html.append("</div>")
-                .append("</div></div>");
+                .append("</div>");
 
         // === FOOTER ===
         html.append("<div class='footer'>")
