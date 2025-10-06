@@ -409,6 +409,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // UPI Details
         html.append("<div class='upi-details'>")
                 .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
+                .append("<div class='payment-row'><span>UPI ID : </span> <strong>9848543443@ptaxis</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
                 .append("</div>")
                 .append("</div>");
@@ -654,6 +655,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // UPI Details
         html.append("<div class='upi-details'>")
                 .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
+                .append("<div class='payment-row'><span>UPI ID : </span> <strong>9848543443@ptaxis</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
                 .append("</div>")
                 .append("</div>");
