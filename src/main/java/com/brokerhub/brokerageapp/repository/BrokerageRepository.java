@@ -42,7 +42,7 @@ public interface BrokerageRepository extends JpaRepository<LedgerRecord, Long> {
     
     @Query("SELECT COALESCE(SUM(CAST(lr.totalBrokerage AS long)), 0) FROM LedgerRecord lr " +
            "WHERE lr.broker.brokerId = :brokerId AND lr.ledgerDetails.financialYearId = :financialYearId " +
-           "AND lr.toBuyer.userId = :userId")
+           "AND (lr.toBuyer.userId = :userId OR lr.ledgerDetails.fromSeller.userId = :userId)")
     Number getUserTotalBrokerage(@Param("brokerId") Long brokerId, @Param("financialYearId") Long financialYearId, @Param("userId") Long userId);
     
     @Query("SELECT COALESCE(SUM(CAST(lr.totalBrokerage AS long)), 0) FROM LedgerRecord lr " +

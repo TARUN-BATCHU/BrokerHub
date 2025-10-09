@@ -168,6 +168,27 @@ public class LedgerDetailsController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update ledger details");
         }
     }
+
+    @DeleteMapping("/deleteLedgerDetailByTransactionNumber")
+    public ResponseEntity<String> deleteLedgerDetailByTransactionNumber(
+            @RequestParam Long transactionNumber,
+            @RequestParam Long brokerId,
+            @RequestParam(required = false) String financialYearId) {
+        
+        Long financialYearIdLong = (financialYearId != null && !"null".equals(financialYearId)) ? Long.valueOf(financialYearId) : null;
+        
+        log.info("Deleting ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearIdLong);
+        
+        try {
+            return ledgerDetailsService.deleteLedgerDetailByTransactionNumber(transactionNumber, brokerId, financialYearIdLong);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parameters for deleteLedgerDetailByTransactionNumber: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error deleting ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete ledger details");
+        }
+    }
 //
 //    @GetMapping("/getAllLedgerDetailsOfAllUsersFromCity")
 //    public List<LedgerDetailsDTO> getAllLedgerDetailsOfAllUsersFromCity(@RequestParam String city,@RequestParam Long brokerId,){

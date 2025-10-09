@@ -748,4 +748,54 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                 .build();
     }
 
+    @Override
+    public ResponseEntity<String> deleteLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId) {
+        log.info("Deleting ledger details by transaction number: {} for broker: {} in financial year: {}", transactionNumber, brokerId, financialYearId);
+
+        if (transactionNumber == null) {
+            throw new IllegalArgumentException("Transaction number cannot be null");
+        }
+        
+        // Use current financial year if not provided
+        if (financialYearId == null) {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+            if (financialYearId == null) {
+                log.error("No financial year specified and no current financial year set for broker {}", currentBrokerId);
+                throw new IllegalArgumentException("Financial year ID is required. Please set current financial year first.");
+            }
+            log.info("Using current financial year {} for broker {}", financialYearId, currentBrokerId);
+        }
+
+        try {
+            Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+            Optional<LedgerDetails> existingLedgerOptional = ledgerDetailsRepository.findByBrokerIdAndTransactionNumberAndFinancialYearIdWithAllRelations(currentBrokerId, transactionNumber, financialYearId);
+
+            if (!existingLedgerOptional.isPresent()) {
+                log.warn("No ledger details found with transaction number: {}", transactionNumber);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Ledger details not found with transaction number: " + transactionNumber);
+            }
+
+            LedgerDetails existingLedger = existingLedgerOptional.get();
+            
+            // Delete associated ledger records first
+            if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
+                ledgerRecordRepository.deleteAll(existingLedger.getRecords());
+            }
+
+            // Delete the ledger details
+            ledgerDetailsRepository.delete(existingLedger);
+            
+            // Clear brokerage cache after transaction deletion
+            brokerageCacheService.evictBrokerageCache(financialYearId);
+            
+            log.info("Successfully deleted ledger details with transaction number: {}", transactionNumber);
+            return ResponseEntity.ok("Ledger details deleted successfully");
+
+        } catch (Exception e) {
+            log.error("Error deleting ledger details for transaction number: {}", transactionNumber, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete ledger details: " + e.getMessage());
+        }
+    }
+
 }

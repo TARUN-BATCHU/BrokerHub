@@ -32,4 +32,6 @@ public interface LedgerDetailsService {
     List<LedgerDetailsDTO> getAllLedgerDetailsBySeller(Long sellerId, Long brokerId);
 
     ResponseEntity<String> updateLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId, LedgerDetailsDTO ledgerDetailsDTO);
+
+    ResponseEntity<String> deleteLedgerDetailByTransactionNumber(Long transactionNumber, Long brokerId, Long financialYearId);
 }
