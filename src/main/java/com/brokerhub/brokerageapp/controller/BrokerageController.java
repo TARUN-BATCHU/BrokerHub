@@ -89,13 +89,33 @@ public class BrokerageController {
             @PathVariable Long financialYearId,
             @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] billPdf = brokerageService.generateUserBrokerageBill(userId, null, financialYearId, customBrokerage);
+            byte[] billHtml = brokerageService.generateUserBrokerageBill(userId, null, financialYearId, customBrokerage);
             return ResponseEntity.ok()
-                    .header("Content-Type", "text/html")
+                    .header("Content-Type", "text/html; charset=UTF-8")
                     .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + ".html")
-                    .body(billPdf);
+                    .body(billHtml);
         } catch (Exception e) {
             log.error("Error generating user brokerage bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/bill/pdf/{userId}/{financialYearId}")
+    public ResponseEntity<byte[]> generateUserBrokerageBillPdf(
+            @PathVariable Long userId,
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] billPdf = brokerageService.generateUserBrokerageBillPdf(userId, null, financialYearId, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + ".pdf")
+                    .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    .header("Pragma", "no-cache")
+                    .header("Expires", "0")
+                    .body(billPdf);
+        } catch (Exception e) {
+            log.error("Error generating user brokerage PDF bill", e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -113,7 +133,7 @@ public class BrokerageController {
             String filename = "print-bill-" + userId + ".html";
             
             return ResponseEntity.ok()
-                    .header("Content-Type", "text/html")
+                    .header("Content-Type", "text/html; charset=UTF-8")
                     .header("Content-Disposition", "attachment; filename=" + filename)
                     .body(printBill);
         } catch (Exception e) {
@@ -230,7 +250,7 @@ public class BrokerageController {
             String filename = "city-wise-print-bill-" + userId + ".html";
             
             return ResponseEntity.ok()
-                    .header("Content-Type", "text/html")
+                    .header("Content-Type", "text/html; charset=UTF-8")
                     .header("Content-Disposition", "attachment; filename=" + filename)
                     .body(cityWiseBill);
         } catch (Exception e) {

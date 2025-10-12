@@ -4,6 +4,10 @@ import com.brokerhub.brokerageapp.dto.CityWiseBagDistributionDTO;
 import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
+import com.itextpdf.html2pdf.HtmlConverter;
+import com.itextpdf.html2pdf.ConverterProperties;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.PdfDocument;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -251,7 +255,34 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     }
     
     public byte[] generateUserBrokerageBillPdf(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
-        return generateUserBrokerageBill(userDetail, broker, financialYearId, customBrokerage);
+        try {
+            // Generate HTML content first
+            byte[] htmlContent = generateSimpleBill(userDetail, broker, financialYearId, customBrokerage);
+            String htmlString = new String(htmlContent);
+            
+            // Convert HTML to PDF using iText
+            ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
+            
+            // Create PDF writer and document
+            PdfWriter pdfWriter = new PdfWriter(pdfOutputStream);
+            PdfDocument pdfDocument = new PdfDocument(pdfWriter);
+            
+            // Set converter properties for better PDF rendering
+            ConverterProperties converterProperties = new ConverterProperties();
+            converterProperties.setCharset("UTF-8");
+            
+            // Convert HTML to PDF
+            HtmlConverter.convertToPdf(htmlString, pdfDocument, converterProperties);
+            
+            // Close the document
+            pdfDocument.close();
+            
+            return pdfOutputStream.toByteArray();
+            
+        } catch (Exception e) {
+            log.error("Error generating PDF bill", e);
+            throw new RuntimeException("Failed to generate PDF bill: " + e.getMessage(), e);
+        }
     }
     
     @Override
@@ -481,6 +512,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".summary-table tbody tr { height: 22px; }"+
                 ".summary-table thead tr { height: 24px; }"+
                 ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
+               "@media print { body { -webkit-print-color-adjust: exact; color-adjust: exact; } }" +
                 ".total-row { background-color: #6ef59d; }" +
                 ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin: 8px 0; }" +
                 ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #000; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
