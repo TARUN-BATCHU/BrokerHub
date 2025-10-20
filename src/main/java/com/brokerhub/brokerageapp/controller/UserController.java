@@ -142,6 +142,16 @@ public class UserController {
         return userService.getUserSummary(pageable);
     }
 
+    @GetMapping("/cities")
+    public List<String> getAllCities(){
+        return userService.getAllCities();
+    }
+
+    @GetMapping("/merchants")
+    public List<User> getMerchantsByCity(@RequestParam String city){
+        return userService.getMerchantsByCity(city);
+    }
+
 //    @PutMapping("/updateBrokerage")
 //    public void updateUserBrokerage(Long UserId, int brokerage){
 //        return userService.updateBrokerage();

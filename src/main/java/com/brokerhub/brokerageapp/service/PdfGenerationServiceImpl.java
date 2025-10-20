@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -61,175 +62,641 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     private byte[] generateSimpleBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) throws IOException {
         StringBuilder html = new StringBuilder();
         
+        // Get financial year details
+        Optional<FinancialYear> financialYear = financialYearService.getFinancialYear(financialYearId);
+        String fyDisplay = "FY " + financialYearId;
+        if (financialYear.isPresent()) {
+            LocalDate start = financialYear.get().getStart();
+            LocalDate end = financialYear.get().getEnd();
+            fyDisplay = start.getYear() + "-" + end.getYear();
+        }
+        
+        String billId = "BH-" + System.currentTimeMillis() % 100000;
+        
         html.append("<!DOCTYPE html><html><head>")
             .append("<meta charset='UTF-8'>")
             .append("<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
             .append("<title>Brokerage Bill</title>")
             .append("<style>")
-            .append(getProfessionalCSS())
+            .append(getCompactCSS())
             .append("</style></head><body>");
         
-        // Header Section
-        html.append("<div class='bill-container'>")
-            .append("<div class='header-section'>")
-            .append("<div class='company-info'>")
-            .append("<div class='company-logo'>🏢</div>")
-            .append("<h1 class='company-name'>").append(broker.getBrokerageFirmName()).append("</h1>")
-            .append("<p class='company-tagline'>Professional Brokerage Services</p>")
+        html.append("<div class='bill-container'>");
+        
+        // 1. BROKER INFO SECTION
+        html.append("<div class='header-section'>")
+            .append("<div class='broker-info'>")
+            .append("<div class='broker-logo'>🏢</div>")
+            .append("<div class='broker-details'>")
+            .append("<h1 class='firm-name'>").append(broker.getBrokerageFirmName()).append("</h1>")
+            .append("<div class='broker-name'>Broker: ").append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A").append("</div>")
+            .append("<div class='fy-info'>Financial Year: ").append(fyDisplay).append("</div>")
             .append("</div>")
-            .append("<div class='bill-info'>")
-            .append("<h2 class='bill-title'>BROKERAGE STATEMENT</h2>")
             .append("<div class='bill-meta'>")
-            .append("<div class='meta-item'><span class='meta-label'>📅 Financial Year:</span> <span class='meta-value'>FY ").append(financialYearId).append("</span></div>")
-            .append("<div class='meta-item'><span class='meta-label'>📄 Generated:</span> <span class='meta-value'>").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</span></div>")
-            .append("<div class='meta-item'><span class='meta-label'>🆔 Bill ID:</span> <span class='meta-value'>BH-").append(System.currentTimeMillis() % 100000).append("</span></div>")
-            .append("</div></div></div>");
-        
-        // Client Information
-        html.append("<div class='client-section'>")
-            .append("<div class='section-header'><h3>📋 Bill To</h3></div>")
-            .append("<div class='client-info'>")
-            .append("<div class='client-detail'><span class='label'>🏪 Firm Name:</span> <span class='value'>").append(userDetail.getUserBasicInfo().getFirmName()).append("</span></div>")
-            .append("<div class='client-detail'><span class='label'>👤 Owner Name:</span> <span class='value'>").append(userDetail.getUserBasicInfo().getOwnerName()).append("</span></div>")
-            .append("<div class='client-detail'><span class='label'>📍 City:</span> <span class='value'>").append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</span></div>")
-            .append("</div></div>");
-        
-        // Visual Summary Cards
-        html.append("<div class='summary-cards'>")
-            .append("<div class='card card-sold'><div class='card-icon'>📦</div><div class='card-content'><div class='card-value'>").append(userDetail.getBrokerageSummary().getTotalBagsSold()).append("</div><div class='card-label'>Bags Sold</div></div></div>")
-            .append("<div class='card card-bought'><div class='card-icon'>🛒</div><div class='card-content'><div class='card-value'>").append(userDetail.getBrokerageSummary().getTotalBagsBought()).append("</div><div class='card-label'>Bags Bought</div></div></div>")
-            .append("<div class='card card-earned'><div class='card-icon'>💰</div><div class='card-content'><div class='card-value'>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountEarned()))).append("</div><div class='card-label'>Amount Earned</div></div></div>")
-            .append("<div class='card card-paid'><div class='card-icon'>💳</div><div class='card-content'><div class='card-value'>₹").append(formatCurrency(convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountPaid()))).append("</div><div class='card-label'>Amount Paid</div></div></div>")
+            .append("<div class='bill-date'>📅 ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</div>")
+            .append("<div class='bill-id'>🆔 ").append(billId).append("</div>")
+            .append("</div>")
             .append("</div>");
         
-        // Total Brokerage Highlight
-        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage);
-        html.append("<div class='total-section'>")
-            .append("<div class='total-card'>")
-            .append("<div class='total-icon'>🎯</div>")
-            .append("<div class='total-content'>")
-            .append("<div class='total-label'>Total Brokerage Payable</div>")
-            .append("<div class='total-amount'>₹").append(formatCurrency(totalBrokerage)).append("</div>")
-            .append(customBrokerage != null ? "<div class='custom-rate'>@ ₹" + customBrokerage + " per bag</div>" : "")
-            .append("</div></div></div>");
+        // 2. MERCHANT INFO SECTION
+        html.append("<div class='merchant-section'>")
+            .append("<h2 class='section-title'>📋 Merchant Information</h2>")
+            .append("<div class='merchant-info'>")
+            .append("<div class='info-item'><span class='label'>🏪 Firm Name:</span> <span class='value'>").append(userDetail.getUserBasicInfo().getFirmName()).append("</span></div>")
+            .append("<div class='info-item'><span class='label'>📍 City:</span> <span class='value'>").append(userDetail.getUserBasicInfo().getCity() != null ? userDetail.getUserBasicInfo().getCity() : "N/A").append("</span></div>")
+            .append("</div>")
+            .append("</div>");
         
-        // Transaction Details Table
+        // 3. SUMMARY SECTION
+        long totalBagsSold = userDetail.getBrokerageSummary().getTotalBagsSold();
+        long totalBagsBought = userDetail.getBrokerageSummary().getTotalBagsBought();
+        long totalBags = totalBagsSold + totalBagsBought;
+        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : 
+            (totalBags > 0 ? calculateTotalBrokerage(userDetail, null).divide(BigDecimal.valueOf(totalBags), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage);
+        
+        html.append("<div class='summary-section'>")
+            .append("<h2 class='section-title'>📊 Summary</h2>")
+            .append("<div class='summary-grid'>")
+            .append("<div class='summary-card sold'><div class='card-icon'>📤</div><div class='card-content'><div class='card-number'>").append(totalBagsSold).append("</div><div class='card-label'>Total Bags Sold</div></div></div>")
+            .append("<div class='summary-card bought'><div class='card-icon'>📥</div><div class='card-content'><div class='card-number'>").append(totalBagsBought).append("</div><div class='card-label'>Total Bags Bought</div></div></div>")
+            .append("<div class='summary-card total'><div class='card-icon'>📦</div><div class='card-content'><div class='card-number'>").append(totalBags).append("</div><div class='card-label'>Total Bags</div></div></div>")
+            .append("<div class='summary-card rate'><div class='card-icon'>💰</div><div class='card-content'><div class='card-number'>₹").append(formatCurrency(brokeragePerBag)).append("</div><div class='card-label'>Brokerage per Bag</div></div></div>")
+            .append("<div class='summary-card brokerage'><div class='card-icon'>🎯</div><div class='card-content'><div class='card-number'>₹").append(formatCurrency(totalBrokerage)).append("</div><div class='card-label'>Total Brokerage</div></div></div>")
+            .append("</div>")
+            .append("</div>");
+        
+        // 4. TRANSACTION DETAILS SECTION
         html.append("<div class='transactions-section'>")
-            .append("<div class='section-header'><h3>📊 Transaction Details</h3></div>")
-            .append("<div class='table-container'>")
+            .append("<h2 class='section-title'>📋 Transaction Details</h2>")
+            .append("<div class='table-wrapper'>")
             .append("<table class='transactions-table'>")
             .append("<thead><tr>")
-            .append("<th>🔢 Transaction #</th>")
-            .append("<th>📅 Date</th>")
-            .append("<th>🤝 Counter Party</th>")
-            .append("<th>🌾 Product</th>")
-            .append("<th>📦 Quantity</th>")
-            .append("<th>💵 Rate</th>")
-            .append("<th>💰 Brokerage</th>")
+            .append("<th>S.No</th>")
+            .append("<th>Date</th>")
+            .append("<th>Merchant Firm</th>")
+            .append("<th>Product</th>")
+            .append("<th>Quantity</th>")
+            .append("<th>Amount</th>")
+            .append("<th>Brokerage</th>")
+            .append("<th>Type</th>")
             .append("</tr></thead><tbody>");
         
+        int sno = 1;
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
             BigDecimal transactionBrokerage = customBrokerage != null ? 
                 customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
                 transaction.getBrokerage();
             
+            // Determine transaction type (assuming sold if amount earned > 0, bought otherwise)
+            boolean isSold = convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountEarned()).compareTo(BigDecimal.ZERO) > 0;
+            String typeIcon = isSold ? "<span class='type-sold'>↗️ Sold</span>" : "<span class='type-bought'>↙️ Bought</span>";
+            
             html.append("<tr>")
-                .append("<td class='transaction-id'>").append(transaction.getTransactionNumber()).append("</td>")
-                .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</td>")
-                .append("<td class='party-name'>").append(transaction.getCounterPartyFirmName()).append("</td>")
-                .append("<td class='product-name'>").append(transaction.getProductName()).append("</td>")
-                .append("<td class='quantity'>").append(transaction.getQuantity()).append(" bags</td>")
-                .append("<td class='rate'>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
+                .append("<td class='sno'>").append(sno++).append("</td>")
+                .append("<td class='date'>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</td>")
+                .append("<td class='merchant'>").append(transaction.getCounterPartyFirmName()).append("</td>")
+                .append("<td class='product'>").append(transaction.getProductName()).append("</td>")
+                .append("<td class='quantity'>").append(transaction.getQuantity()).append("</td>")
+                .append("<td class='amount'>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
                 .append("<td class='brokerage'>₹").append(formatCurrency(transactionBrokerage)).append("</td>")
+                .append("<td class='type'>").append(typeIcon).append("</td>")
                 .append("</tr>");
         }
         
         html.append("</tbody></table></div></div>");
+
+        // 3.5 CHART SECTION - PRODUCT DISTRIBUTION
+        html.append("<div class='graph-section'>")
+                .append("<h2 class='section-title'>📊 Product Distribution</h2>")
+                .append("<h4>Types of Items Bought/Sold</h4>")
+                .append("<div class='graph-placeholder'>Loading chart...</div>")
+                .append("<canvas id='productChart' width='300' height='200'></canvas>")
+                .append("</div>");
+
+
+        // 5. PAYMENT DETAILS SECTION
+        html.append("<div class='payment-section'>")
+            .append("<h2 class='section-title'>💳 Payment Details</h2>")
+            .append("<div class='payment-content'>")
+            .append("<div class='payment-info'>")
+            .append("<div class='brokerage-amount'>")
+            .append("<div class='amount-label'>Total Brokerage Amount</div>")
+            .append("<div class='amount-value'>₹").append(formatCurrency(totalBrokerage)).append("</div>")
+            .append("</div>");
         
-        // Payment Information
         if (broker.getBankDetails() != null) {
-            html.append("<div class='payment-section'>")
-                .append("<div class='section-header'><h3>🏦 Payment Information</h3></div>")
-                .append("<div class='payment-info'>")
-                .append("<div class='payment-detail'><span class='label'>🏛️ Bank Name:</span> <span class='value'>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</span></div>")
-                .append("<div class='payment-detail'><span class='label'>🔢 Account Number:</span> <span class='value account-number'>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</span></div>")
-                .append("<div class='payment-detail'><span class='label'>🏷️ IFSC Code:</span> <span class='value ifsc-code'>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</span></div>")
-                .append("</div></div>");
+            html.append("<div class='bank-details'>")
+                .append("<h3>🏦 Bank Details</h3>")
+                .append("<div class='bank-info'>")
+                .append("<div class='bank-item'><span class='bank-label'>Bank Name:</span> <span class='bank-value'>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</span></div>")
+                .append("<div class='bank-item'><span class='bank-label'>Account No:</span> <span class='bank-value'>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</span></div>")
+                .append("<div class='bank-item'><span class='bank-label'>IFSC Code:</span> <span class='bank-value'>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</span></div>")
+                .append("</div>")
+                .append("</div>");
         }
         
-        // Footer
+        html.append("</div>");
+        
+        // QR Code section
+        String qrBase64 = getQRCodeBase64();
+        html.append("<div class='qr-section'>")
+            .append("<h3>📱 Scan to Pay</h3>");
+        if (qrBase64 != null) {
+            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' class='qr-code' alt='QR Code'/>")
+                .append("<div class='qr-amount'>₹").append(formatCurrency(totalBrokerage)).append("</div>");
+        } else {
+            html.append("<div class='qr-placeholder'>")
+                .append("<div class='qr-text'>QR Code</div>")
+                .append("<div class='qr-amount'>₹").append(formatCurrency(totalBrokerage)).append("</div>")
+                .append("</div>");
+        }
+        html.append("</div>");
+        
+        html.append("</div>"); // Close payment-section
+        
+        // 6. ABOUT BROKER HUB & THANKS SECTION
         html.append("<div class='footer-section'>")
-            .append("<div class='footer-content'>")
-            .append("<p class='footer-text'>📞 For any queries, please contact us at your earliest convenience.</p>")
-            .append("<p class='footer-text'>✅ This is a computer-generated document and does not require a signature.</p>")
-            .append("<div class='footer-branding'>Powered by BrokerHub 🚀</div>")
-            .append("</div></div>")
-            .append("</div></body></html>");
+            .append("<div class='about-section'>")
+            .append("<h3>🚀 About BrokerHub</h3>")
+            .append("<p>BrokerHub is a comprehensive multi-user brokerage management platform designed to streamline agricultural commodity trading operations. Our platform provides efficient transaction management, automated billing, and detailed reporting capabilities.</p>")
+            .append("</div>")
+            .append("<div class='thanks-section'>")
+            .append("<h3>🙏 Thank You</h3>")
+            .append("<p>Thank you for choosing our brokerage services. We appreciate your trust and look forward to continued business partnership.</p>")
+            .append("</div>")
+            .append("<div class='developer-section'>")
+            .append("<h3>👨‍💻 Developer Information</h3>")
+            .append("<div class='developer-info'>")
+            .append("<div class='dev-item'><span class='dev-label'>📞 Contact:</span> <span class='dev-value'>8332827443</span></div>")
+            .append("<div class='dev-item'><span class='dev-label'>📧 Email:</span> <span class='dev-value'>tarunbatchu2000@gmail.com</span></div>")
+            .append("<div class='dev-item'><span class='dev-label'>🌐 Platform:</span> <span class='dev-value'>BrokerHub Multi-User System</span></div>")
+            .append("</div>")
+            .append("</div>")
+            .append("<div class='footer-note'>")
+            .append("<p>📄 This is a computer-generated document. No signature required.</p>")
+            .append("<p>⚡ Powered by BrokerHub - Making Brokerage Management Simple & Efficient</p>")
+            .append("</div>")
+            .append("</div>");
+
+        html.append("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>")
+                .append("<script>")
+                .append("document.addEventListener('DOMContentLoaded', function(){")
+                .append("const ctx = document.getElementById('productChart').getContext('2d');")
+
+                // Dynamically compute quantities per product
+                .append("const productData = {};")
+                .append("document.querySelectorAll('.transactions-table tbody tr').forEach(row => {")
+                .append(" const product = row.children[3].innerText.trim();")
+                .append(" const qty = parseFloat(row.children[4].innerText.trim()) || 0;")
+                .append(" productData[product] = (productData[product] || 0) + qty;")
+                .append("});")
+
+                // Convert to chart dataset
+                .append("const labels = Object.keys(productData);")
+                .append("const values = Object.values(productData);")
+
+                // Build chart
+                .append("new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ ")
+                .append(" label: 'Quantity', data: values, backgroundColor: ['#0078D7','#00BFA5','#FF9800','#8E24AA','#43A047','#E53935','#3949AB'], borderWidth: 1 }]}, ")
+                .append(" options: { plugins: { legend: { position: 'bottom' }, title: { display: false } } } });")
+
+                .append("});")
+                .append("</script>");
+
+        html.append("</div></body></html>");
         
         return html.toString().getBytes();
     }
-    
-    private String getProfessionalCSS() {
-        return "* { margin: 0; padding: 0; box-sizing: border-box; }" +
-               "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; min-height: 100vh; padding: 20px; }" +
-               ".bill-container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }" +
-               ".header-section { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }" +
-               ".company-info { display: flex; align-items: center; gap: 15px; }" +
-               ".company-logo { font-size: 48px; }" +
-               ".company-name { font-size: 28px; font-weight: 700; margin-bottom: 5px; }" +
-               ".company-tagline { font-size: 14px; opacity: 0.8; }" +
-               ".bill-info { text-align: right; }" +
-               ".bill-title { font-size: 24px; font-weight: 600; margin-bottom: 15px; color: #ecf0f1; }" +
-               ".bill-meta { display: flex; flex-direction: column; gap: 8px; }" +
-               ".meta-item { display: flex; align-items: center; gap: 10px; }" +
-               ".meta-label { font-size: 12px; opacity: 0.8; }" +
-               ".meta-value { font-weight: 600; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; }" +
-               ".client-section { padding: 25px 30px; border-bottom: 2px solid #ecf0f1; }" +
-               ".section-header h3 { color: #2c3e50; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }" +
-               ".client-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }" +
-               ".client-detail { display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; }" +
-               ".label { font-weight: 600; color: #495057; min-width: 120px; }" +
-               ".value { color: #2c3e50; font-weight: 500; }" +
-               ".summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 25px 30px; background: #f8f9fa; }" +
-               ".card { background: white; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }" +
-               ".card:hover { transform: translateY(-2px); }" +
-               ".card-icon { font-size: 32px; }" +
-               ".card-content { flex: 1; }" +
-               ".card-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }" +
-               ".card-label { font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }" +
-               ".card-sold { border-left: 4px solid #28a745; } .card-sold .card-value { color: #28a745; }" +
-               ".card-bought { border-left: 4px solid #007bff; } .card-bought .card-value { color: #007bff; }" +
-               ".card-earned { border-left: 4px solid #ffc107; } .card-earned .card-value { color: #e67e22; }" +
-               ".card-paid { border-left: 4px solid #dc3545; } .card-paid .card-value { color: #dc3545; }" +
-               ".total-section { padding: 25px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }" +
-               ".total-card { background: white; border-radius: 15px; padding: 25px; display: flex; align-items: center; gap: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }" +
-               ".total-icon { font-size: 48px; }" +
-               ".total-content { flex: 1; text-align: center; }" +
-               ".total-label { font-size: 16px; color: #6c757d; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }" +
-               ".total-amount { font-size: 36px; font-weight: 800; color: #2c3e50; margin-bottom: 5px; }" +
-               ".custom-rate { font-size: 14px; color: #e67e22; font-weight: 600; }" +
-               ".transactions-section { padding: 25px 30px; }" +
-               ".table-container { overflow-x: auto; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }" +
-               ".transactions-table { width: 100%; border-collapse: collapse; background: white; }" +
-               ".transactions-table thead { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; }" +
-               ".transactions-table th { padding: 15px 12px; text-align: left; font-weight: 600; font-size: 14px; }" +
-               ".transactions-table td { padding: 12px; border-bottom: 1px solid #dee2e6; }" +
-               ".transactions-table tbody tr:hover { background: #f8f9fa; }" +
-               ".transaction-id { font-weight: 600; color: #495057; }" +
-               ".party-name { color: #2c3e50; font-weight: 500; }" +
-               ".product-name { color: #28a745; font-weight: 500; }" +
-               ".quantity { text-align: center; font-weight: 600; }" +
-               ".rate, .brokerage { text-align: right; font-weight: 600; color: #e67e22; }" +
-               ".payment-section { padding: 25px 30px; background: #f8f9fa; }" +
-               ".payment-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }" +
-               ".payment-detail { display: flex; align-items: center; gap: 10px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }" +
-               ".account-number, .ifsc-code { font-family: 'Courier New', monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px; }" +
-               ".footer-section { background: #2c3e50; color: white; padding: 20px 30px; text-align: center; }" +
-               ".footer-text { margin-bottom: 8px; font-size: 14px; opacity: 0.9; }" +
-               ".footer-branding { margin-top: 15px; font-weight: 600; color: #3498db; }" +
-               "@media (max-width: 768px) { .header-section { flex-direction: column; gap: 20px; text-align: center; } .bill-info { text-align: center; } .summary-cards { grid-template-columns: 1fr; } .client-info, .payment-info { grid-template-columns: 1fr; } }";
+
+    private String getCompactCSS() {
+        return """
+    @page {
+        size: A4 portrait;
+        margin: 15mm;
     }
     
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #fff;
+        padding: 0;
+        color: #333;
+        font-size: 12px;
+        line-height: 1.3;
+    }
+
+    .bill-container {
+        background: #fff;
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .bill-container > * {
+        position: relative;
+        z-index: 2;
+        display: block;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    /* ---------- WATERMARKS ---------- */
+    .bill-container::before {
+        content: "BROKERHUB";
+        position: absolute;
+        top: 12%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 80px;
+        font-weight: 700;
+        color: rgba(0, 120, 215, 0.05);
+        z-index: 0;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .bill-container::after {
+        content: "SIRI BROKERS";
+        position: absolute;
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 70px;
+        font-weight: 700;
+        color: rgba(255, 140, 0, 0.06);
+        z-index: 0;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    /* ---------- HEADER ---------- */
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #0078D7;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+    }
+
+    .firm-name {
+        font-size: 26px;
+        color: #0078D7;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+
+    .broker-name {
+        font-size: 14px;
+        color: #444;
+        margin-top: 4px;
+    }
+
+    .fy-info {
+        font-size: 13px;
+        color: #666;
+    }
+
+    .bill-meta {
+        text-align: right;
+        font-size: 13px;
+        color: #333;
+    }
+
+    .bill-meta div {
+        margin-bottom: 4px;
+    }
+
+    /* ---------- SECTION HEADINGS ---------- */
+    .section-title {
+        background: linear-gradient(to right, #0078D7, #00a6ed);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 15px;
+        margin: 15px 0 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* ---------- MERCHANT SECTION ---------- */
+    .merchant-section {
+        margin-bottom: 15px;
+    }
+
+    .merchant-info {
+        padding: 8px;
+        background: #f8fbff;
+        border: 1px solid #dde8ff;
+        border-radius: 4px;
+    }
+
+    .info-item {
+        display: inline-block;
+        margin-right: 20px;
+        font-size: 11px;
+    }
+
+    .info-item .label {
+        font-weight: bold;
+        color: #666;
+    }
+
+    .info-item .value {
+        color: #333;
+        font-weight: 500;
+    }
+
+    /* ---------- SUMMARY SECTION ---------- */
+    .summary-section {
+        margin-bottom: 20px;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    .summary-card {
+        background: #f7faff;
+        border: 1px solid #dde8ff;
+        border-radius: 6px;
+        text-align: center;
+        padding: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        min-height: 50px;
+    }
+
+    .card-icon {
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+
+    .card-number {
+        font-size: 14px;
+        color: #0078D7;
+        font-weight: bold;
+        line-height: 1.1;
+    }
+
+    .card-label {
+        font-size: 9px;
+        color: #555;
+        margin-top: 2px;
+        line-height: 1.1;
+    }
+
+    /* ---------- TRANSACTION TABLE ---------- */
+    .transactions-section {
+        margin-bottom: 20px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        margin-bottom: 15px;
+    }
+
+    .transactions-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #ccc;
+        font-size: 10px;
+    }
+
+    .transactions-table th, .transactions-table td {
+        border: 1px solid #ddd;
+        padding: 4px 6px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .transactions-table th {
+        background: #0078D7;
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .transactions-table tr:nth-child(even) {
+        background: #f8fbff;
+    }
+
+    .transactions-table .sno { width: 6%; }
+    .transactions-table .date { width: 12%; }
+    .transactions-table .merchant { width: 25%; text-align: left; }
+    .transactions-table .product { width: 15%; text-align: left; }
+    .transactions-table .quantity { width: 8%; }
+    .transactions-table .amount { width: 12%; text-align: right; }
+    .transactions-table .brokerage { width: 12%; text-align: right; }
+    .transactions-table .type { width: 10%; }
+
+    .type-sold {
+        background: #28a745;
+        color: white;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8px;
+    }
+
+    .type-bought {
+        background: #6c757d;
+        color: white;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8px;
+    }
+
+    /* ---------- GRAPH SECTION ---------- */
+    .graph-section {
+        margin: 15px 0;
+        text-align: center;
+        page-break-inside: avoid;
+    }
+
+    .graph-section h4 {
+        color: #0078D7;
+        margin-bottom: 8px;
+        font-size: 11px;
+    }
+
+    .graph-placeholder {
+        width: 200px;
+        height: 120px;
+        border: 1px dashed #aad0ff;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0078D7;
+        font-size: 10px;
+        border-radius: 4px;
+        background: #f9fcff;
+    }
+
+    #productChart {
+        max-width: 200px;
+        max-height: 120px;
+        margin: 0 auto;
+        display: block;
+    }
+
+    /* ---------- PAYMENT SECTION ---------- */
+    .payment-section {
+        margin-top: 20px;
+        page-break-inside: avoid;
+    }
+
+    .payment-content {
+        width: 100%;
+    }
+
+    .payment-info {
+        margin-bottom: 15px;
+    }
+
+    .brokerage-amount {
+        font-size: 16px;
+        font-weight: bold;
+        color: #0078D7;
+        margin-bottom: 8px;
+    }
+
+    .amount-label {
+        font-size: 12px;
+        color: #666;
+    }
+
+    .amount-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #0078D7;
+    }
+
+    .bank-details {
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+
+    .bank-details h3 {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #333;
+    }
+
+    .bank-info {
+        font-size: 10px;
+    }
+
+    .bank-item {
+        margin-bottom: 3px;
+    }
+
+    .bank-label {
+        font-weight: bold;
+        color: #666;
+    }
+
+    .bank-value {
+        color: #333;
+    }
+
+    .qr-section {
+        text-align: center;
+        margin-top: 15px;
+    }
+
+    .qr-section h3 {
+        font-size: 11px;
+        margin-bottom: 5px;
+    }
+
+    .qr-code, .qr-placeholder {
+        width: 80px;
+        height: 80px;
+        border: 1px solid #0078D7;
+        border-radius: 4px;
+        display: block;
+        margin: 5px auto;
+    }
+
+    .qr-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .qr-amount {
+        font-size: 10px;
+        font-weight: bold;
+        color: #0078D7;
+        margin-top: 3px;
+    }
+
+    /* ---------- FOOTER SECTION ---------- */
+    .footer-section {
+        border-top: 1px dashed #ccc;
+        padding-top: 10px;
+        margin-top: 15px;
+        font-size: 9px;
+        color: #555;
+        text-align: center;
+        page-break-inside: avoid;
+    }
+
+    .about-section, .thanks-section, .developer-section {
+        margin-bottom: 8px;
+    }
+
+    .about-section h3, .thanks-section h3, .developer-section h3 {
+        color: #0078D7;
+        margin-bottom: 3px;
+        font-size: 10px;
+    }
+
+    .about-section p, .thanks-section p {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+
+    .developer-info {
+        font-size: 8px;
+    }
+
+    .dev-item {
+        margin-bottom: 2px;
+    }
+
+    .dev-label {
+        font-weight: bold;
+        color: #666;
+    }
+
+    .dev-value {
+        color: #333;
+    }
+
+    .footer-note {
+        margin-top: 8px;
+        color: #777;
+        font-size: 8px;
+    }
+    """;
+    }
+
+
     private String formatCurrency(BigDecimal amount) {
         if (amount == null) return "0.00";
         return String.format("%,.2f", amount);

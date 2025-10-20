@@ -555,4 +555,16 @@ public class UserServiceImpl implements UserService {
         
         return new PageImpl<>(userSummaries, pageable, users.getTotalElements());
     }
+    
+    @Override
+    public List<String> getAllCities() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        return userRepository.findDistinctCitiesByBrokerId(currentBrokerId);
+    }
+    
+    @Override
+    public List<User> getMerchantsByCity(String city) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        return userRepository.findByBrokerBrokerIdAndAddressCity(currentBrokerId, city);
+    }
 }

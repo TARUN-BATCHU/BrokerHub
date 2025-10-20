@@ -557,72 +557,164 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             }
 
             LedgerDetails existingLedger = existingLedgerOptional.get();
+            Broker currentBroker = existingLedger.getBroker();
+            User oldSeller = existingLedger.getFromSeller();
             
-            // Update seller if provided
+            // STEP 1: Reverse old transaction balances
+            Long oldTotalBags = 0L;
+            BigDecimal oldTotalSellerBrokerage = BigDecimal.ZERO;
+            BigDecimal oldTotalBrokerBrokerage = BigDecimal.ZERO;
+            
+            if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
+                for (LedgerRecord record : existingLedger.getRecords()) {
+                    User buyer = record.getToBuyer();
+                    Long quantity = record.getQuantity();
+                    Long productCost = record.getProductCost();
+                    Long brokerage = record.getBrokerage();
+                    
+                    if (buyer != null && quantity != null && productCost != null && brokerage != null) {
+                        // Reverse old buyer updates
+                        buyer.setTotalBagsBought(buyer.getTotalBagsBought() - quantity);
+                        buyer.setPayableAmount(buyer.getPayableAmount() - (quantity * productCost));
+                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
+                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().subtract(recordBrokerage));
+                        
+                        // Reverse old seller receivable amount
+                        if (oldSeller != null) {
+                            oldSeller.setReceivableAmount(oldSeller.getReceivableAmount() - (quantity * productCost));
+                        }
+                        
+                        oldTotalBags += quantity;
+                        oldTotalBrokerBrokerage = oldTotalBrokerBrokerage.add(recordBrokerage);
+                        
+                        // Store buyer for later saving
+                        
+                        userRepository.save(buyer);
+                    }
+                }
+            }
+            
+            // Reverse old seller totals
+            if (oldSeller != null && oldTotalBags > 0) {
+                oldSeller.setTotalBagsSold(oldSeller.getTotalBagsSold() - oldTotalBags);
+                if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
+                    Long sellerBrokerageRate = existingLedger.getRecords().get(0).getBrokerage();
+                    oldTotalSellerBrokerage = BigDecimal.valueOf(oldTotalBags * sellerBrokerageRate);
+                }
+                oldSeller.setTotalPayableBrokerage(oldSeller.getTotalPayableBrokerage().subtract(oldTotalSellerBrokerage));
+            }
+            
+            // Reverse old broker total brokerage
+            if (currentBroker != null) {
+                BigDecimal oldTotalBrokerageToReverse = oldTotalBrokerBrokerage.add(oldTotalSellerBrokerage);
+                currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().subtract(oldTotalBrokerageToReverse));
+            }
+            
+            // Delete old records and clear the collection
+            if (existingLedger.getRecords() != null) {
+                ledgerRecordRepository.deleteAll(existingLedger.getRecords());
+                existingLedger.getRecords().clear(); // Clear the collection to avoid stale references
+            }
+            
+            // STEP 2: Update ledger details
+            User newSeller = oldSeller;
             if (ledgerDetailsDTO.getFromSeller() != null) {
                 Optional<User> sellerOptional = userRepository.findById(ledgerDetailsDTO.getFromSeller());
                 if (sellerOptional.isPresent()) {
-                    existingLedger.setFromSeller(sellerOptional.get());
+                    newSeller = sellerOptional.get();
+                    existingLedger.setFromSeller(newSeller);
                 }
             }
 
-            // Update daily ledger if date is provided
             if (ledgerDetailsDTO.getDate() != null) {
-                DailyLedger dailyLedger = dailyLedgerService.getDailyLedger(ledgerDetailsDTO.getDate());
+                DailyLedger dailyLedger = dailyLedgerService.getDailyLedgerByFinancialYear(ledgerDetailsDTO.getDate(), financialYearId);
                 if (dailyLedger != null) {
                     existingLedger.setDailyLedger(dailyLedger);
                 }
             }
-
-            // Update ledger records if provided
+            
+            // STEP 3: Apply new transaction balances
+            Long newTotalBags = 0L;
+            Long newSellerBrokerage = ledgerDetailsDTO.getBrokerage();
+            
             if (ledgerDetailsDTO.getLedgerRecordDTOList() != null && !ledgerDetailsDTO.getLedgerRecordDTOList().isEmpty()) {
-                // Delete existing records
-                if (existingLedger.getRecords() != null) {
-                    ledgerRecordRepository.deleteAll(existingLedger.getRecords());
-                }
-
-                // Create new records
                 for (LedgerRecordDTO recordDTO : ledgerDetailsDTO.getLedgerRecordDTOList()) {
                     LedgerRecord newRecord = new LedgerRecord();
                     newRecord.setLedgerDetails(existingLedger);
-                    newRecord.setBroker(existingLedger.getBroker());
+                    newRecord.setBroker(currentBroker);
+                    newRecord.setBrokerage(recordDTO.getBrokerage());
+                    newRecord.setQuantity(recordDTO.getQuantity());
+                    newRecord.setProductCost(recordDTO.getProductCost());
+                    newRecord.setTotalBrokerage(recordDTO.getBrokerage() * recordDTO.getQuantity());
+                    newRecord.setTotalProductsCost(recordDTO.getProductCost() * recordDTO.getQuantity());
                     
-                    if (recordDTO.getBrokerage() != null) {
-                        newRecord.setBrokerage(recordDTO.getBrokerage());
-                    }
-                    if (recordDTO.getQuantity() != null) {
-                        newRecord.setQuantity(recordDTO.getQuantity());
-                    }
-                    if (recordDTO.getProductCost() != null) {
-                        newRecord.setProductCost(recordDTO.getProductCost());
-                    }
                     if (recordDTO.getProductId() != null) {
                         Optional<Product> productOptional = productRepository.findById(recordDTO.getProductId());
                         productOptional.ifPresent(newRecord::setProduct);
                     }
+                    
+                    User buyer = null;
                     if (recordDTO.getBuyerName() != null) {
                         Optional<User> buyerOptional = userRepository.findByFirmName(recordDTO.getBuyerName());
-                        buyerOptional.ifPresent(newRecord::setToBuyer);
+                        if (buyerOptional.isPresent()) {
+                            buyer = buyerOptional.get();
+                            newRecord.setToBuyer(buyer);
+                        }
                     }
                     
-                    // Calculate totals
-                    if (newRecord.getQuantity() != null && newRecord.getBrokerage() != null) {
-                        newRecord.setTotalBrokerage(newRecord.getQuantity() * newRecord.getBrokerage());
-                    }
-                    if (newRecord.getQuantity() != null && newRecord.getProductCost() != null) {
-                        newRecord.setTotalProductsCost(newRecord.getQuantity() * newRecord.getProductCost());
+                    // Apply new buyer updates
+                    if (buyer != null) {
+                        Long quantity = recordDTO.getQuantity();
+                        Long productCost = recordDTO.getProductCost();
+                        Long brokerage = recordDTO.getBrokerage();
+                        
+                        buyer.setTotalBagsBought(buyer.getTotalBagsBought() + quantity);
+                        buyer.setPayableAmount(buyer.getPayableAmount() + (quantity * productCost));
+                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
+                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().add(recordBrokerage));
+                        
+                        // Apply new seller receivable amount
+                        if (newSeller != null) {
+                            newSeller.setReceivableAmount(newSeller.getReceivableAmount() + (quantity * productCost));
+                        }
+                        
+                        currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(recordBrokerage));
+                        newTotalBags += quantity;
                     }
                     
                     ledgerRecordRepository.save(newRecord);
                 }
             }
+            
+            // Apply new seller totals
+            if (newSeller != null && newTotalBags > 0) {
+                newSeller.setTotalBagsSold(newSeller.getTotalBagsSold() + newTotalBags);
+                newSeller.setTotalPayableBrokerage(newSeller.getTotalPayableBrokerage().add(BigDecimal.valueOf(newTotalBags * newSellerBrokerage)));
+            }
+            
+            // Apply new broker total brokerage
+            if (currentBroker != null) {
+                currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(BigDecimal.valueOf(newTotalBags * newSellerBrokerage)));
+                brokerRepository.save(currentBroker);
+            }
 
+            // Flush and clear session to avoid stale references
+            ledgerDetailsRepository.flush();
+            
+            // Save all affected users at the end
+            if (oldSeller != null) {
+                userRepository.save(oldSeller);
+            }
+            if (newSeller != null && !newSeller.equals(oldSeller)) {
+                userRepository.save(newSeller);
+            }
+            
             ledgerDetailsRepository.save(existingLedger);
             
             // Clear brokerage cache after transaction update
             brokerageCacheService.evictBrokerageCache(financialYearId);
             
-            log.info("Successfully updated ledger details with transaction number: {}", transactionNumber);
+            log.info("Successfully updated ledger details with transaction number: {} and balanced all accounts", transactionNumber);
             return ResponseEntity.ok("Ledger details updated successfully");
 
         } catch (Exception e) {
@@ -777,8 +869,63 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             }
 
             LedgerDetails existingLedger = existingLedgerOptional.get();
+            Broker currentBroker = existingLedger.getBroker();
+            User seller = existingLedger.getFromSeller();
             
-            // Delete associated ledger records first
+            // Calculate totals to reverse BEFORE deletion
+            Long totalBags = 0L;
+            BigDecimal totalSellerBrokerage = BigDecimal.ZERO;
+            BigDecimal totalBrokerBrokerage = BigDecimal.ZERO;
+            
+            // Reverse all buyer and seller updates from each record
+            if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
+                for (LedgerRecord record : existingLedger.getRecords()) {
+                    User buyer = record.getToBuyer();
+                    Long quantity = record.getQuantity();
+                    Long productCost = record.getProductCost();
+                    Long brokerage = record.getBrokerage();
+                    
+                    if (buyer != null && quantity != null && productCost != null && brokerage != null) {
+                        // Reverse buyer updates
+                        buyer.setTotalBagsBought(buyer.getTotalBagsBought() - quantity);
+                        buyer.setPayableAmount(buyer.getPayableAmount() - (quantity * productCost));
+                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
+                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().subtract(recordBrokerage));
+                        
+                        // Reverse seller receivable amount
+                        if (seller != null) {
+                            seller.setReceivableAmount(seller.getReceivableAmount() - (quantity * productCost));
+                        }
+                        
+                        totalBags += quantity;
+                        totalBrokerBrokerage = totalBrokerBrokerage.add(recordBrokerage);
+                        
+                        userRepository.save(buyer);
+                    }
+                }
+            }
+            
+            // Reverse seller totals
+            if (seller != null && totalBags > 0) {
+                seller.setTotalBagsSold(seller.getTotalBagsSold() - totalBags);
+                // Calculate seller brokerage from ledger details brokerage field
+                if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
+                    // Get seller brokerage from first record or calculate from total
+                    Long sellerBrokerageRate = existingLedger.getRecords().get(0).getBrokerage(); // Assuming same rate
+                    totalSellerBrokerage = BigDecimal.valueOf(totalBags * sellerBrokerageRate);
+                }
+                seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().subtract(totalSellerBrokerage));
+                userRepository.save(seller);
+            }
+            
+            // Reverse broker total brokerage
+            if (currentBroker != null) {
+                BigDecimal totalBrokerageToReverse = totalBrokerBrokerage.add(totalSellerBrokerage);
+                currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().subtract(totalBrokerageToReverse));
+                brokerRepository.save(currentBroker);
+            }
+            
+            // Delete associated ledger records
             if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
                 ledgerRecordRepository.deleteAll(existingLedger.getRecords());
             }
@@ -789,7 +936,7 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             // Clear brokerage cache after transaction deletion
             brokerageCacheService.evictBrokerageCache(financialYearId);
             
-            log.info("Successfully deleted ledger details with transaction number: {}", transactionNumber);
+            log.info("Successfully deleted ledger details with transaction number: {} and reversed all balances", transactionNumber);
             return ResponseEntity.ok("Ledger details deleted successfully");
 
         } catch (Exception e) {

@@ -120,4 +120,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Deprecated
     @Query("SELECT u.userId, u.firmName, u.userType, u.gstNumber, u.ownerName FROM User u")
     List<Object[]> findBasicUserInfo();
+    
+    @Query("SELECT DISTINCT a.city FROM Address a WHERE a.broker.brokerId = :brokerId")
+    List<String> findDistinctCitiesByBrokerId(@Param("brokerId") Long brokerId);
 }

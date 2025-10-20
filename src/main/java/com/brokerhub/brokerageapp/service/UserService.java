@@ -46,4 +46,8 @@ public interface UserService {
     Page<UserSummaryDTO> getUserSummary(Pageable pageable);
     
     Page<UserSummaryDTO> getUserSummaryByFinancialYear(Long financialYearId, Pageable pageable);
+    
+    List<String> getAllCities();
+    
+    List<User> getMerchantsByCity(String city);
 }
