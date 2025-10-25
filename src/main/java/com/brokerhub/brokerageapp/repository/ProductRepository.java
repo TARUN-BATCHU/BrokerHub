@@ -11,6 +11,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Multi-tenant aware queries - all include broker filtering
     List<Product> findByBrokerBrokerIdAndProductName(Long brokerId, String productName);
+    
+    List<Product> findByBrokerBrokerIdAndProductNameIgnoreCase(Long brokerId, String productName);
 
     List<Product> findByBrokerBrokerIdAndProductNameAndQualityAndQuantity(Long brokerId, String productName, String productQuality, Integer quantity);
 

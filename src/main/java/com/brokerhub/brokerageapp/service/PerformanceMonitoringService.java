@@ -33,7 +33,7 @@ public class PerformanceMonitoringService {
     /**
      * Monitor database performance metrics
      */
-    @Scheduled(fixedRate = 300000) // Every 5 minutes
+    // @Scheduled(fixedRate = 300000) // Every 5 minutes - DISABLED
     public void monitorDatabasePerformance() {
         try {
             Map<String, Object> metrics = collectDatabaseMetrics();
@@ -53,7 +53,7 @@ public class PerformanceMonitoringService {
     /**
      * Monitor cache performance and hit rates
      */
-    @Scheduled(fixedRate = 180000) // Every 3 minutes
+    // @Scheduled(fixedRate = 180000) // Every 3 minutes - DISABLED
     public void monitorCachePerformance() {
         try {
             Map<String, Object> cacheMetrics = collectCacheMetrics();
@@ -70,7 +70,7 @@ public class PerformanceMonitoringService {
     /**
      * Monitor system resource usage
      */
-    @Scheduled(fixedRate = 600000) // Every 10 minutes
+    // @Scheduled(fixedRate = 600000) // Every 10 minutes - DISABLED
     public void monitorSystemResources() {
         try {
             Map<String, Object> systemMetrics = collectSystemMetrics();

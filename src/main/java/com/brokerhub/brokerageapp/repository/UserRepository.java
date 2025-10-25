@@ -14,6 +14,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Multi-tenant aware queries - all include broker filtering
     Optional<User> findByBrokerBrokerIdAndFirmName(Long brokerId, String firmName);
+    
+    Optional<User> findByBrokerBrokerIdAndFirmNameIgnoreCase(Long brokerId, String firmName);
 
     Optional<User> findByBrokerBrokerIdAndGstNumber(Long brokerId, String gstNumber);
 

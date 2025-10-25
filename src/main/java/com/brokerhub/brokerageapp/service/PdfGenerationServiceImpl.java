@@ -342,12 +342,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
     /* ---------- HEADER ---------- */
     .header-section {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        border-bottom: 2px solid #0078D7;
-        padding-bottom: 12px;
-        margin-bottom: 15px;
+                     display: block; /* stack items vertically */
+                     border-bottom: 2px solid #0078D7;
+                     padding-bottom: 12px;
+                     margin-bottom: 15px;
     }
 
     .firm-name {

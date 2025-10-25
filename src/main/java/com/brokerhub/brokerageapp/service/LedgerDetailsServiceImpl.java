@@ -307,7 +307,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                 .collect(Collectors.toList());
 
         for(DateLedgerRecordDTO dateLedgerRecord : ledgerRecordsOnDate){
-            DisplayLedgerDetailDTO existingLedgerDetail = checkSellerExists(ledgerDetailsDTOList,userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());
+            String sellerName = userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName();
+            DisplayLedgerDetailDTO existingLedgerDetail = checkTransactionExists(ledgerDetailsDTOList, sellerName, dateLedgerRecord.getTransactionNumber());
             if(null==existingLedgerDetail){
                 DisplayLedgerDetailDTO ledgerDetailsDTO = new DisplayLedgerDetailDTO();
 
@@ -359,8 +360,10 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
 //        List<LedgerDetailsDTO> LedgerDetailsBySeller = ledgerDetailsRepository.findByFromSeller(sellerId);
 //    }
 
-    private DisplayLedgerDetailDTO checkSellerExists(List<DisplayLedgerDetailDTO> ledgerDetailsDTOList,String sellerName) {
-        return ledgerDetailsDTOList.stream().filter(ld -> ld.getSellerName().equalsIgnoreCase(sellerName)).findFirst().orElse(null);
+    private DisplayLedgerDetailDTO checkTransactionExists(List<DisplayLedgerDetailDTO> ledgerDetailsDTOList, String sellerName, Long transactionNumber) {
+        return ledgerDetailsDTOList.stream()
+                .filter(ld -> ld.getSellerName().equalsIgnoreCase(sellerName) && ld.getTransactionNumber().equals(transactionNumber))
+                .findFirst().orElse(null);
     }
 
     /**
@@ -762,10 +765,15 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
     private LedgerDetailsDTO convertNewRequestToLedgerDetailsDTO(NewLedgerRequestDTO newRequest) {
         Broker currentBroker = tenantContextService.getCurrentBroker();
         
-        // Validate seller name and get seller ID
-        Optional<User> sellerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), newRequest.getSeller_name());
+        // Validate seller name and get seller ID (case-insensitive)
+        Optional<User> sellerOptional = userRepository.findByBrokerBrokerIdAndFirmNameIgnoreCase(currentBroker.getBrokerId(), newRequest.getSeller_name());
         if (!sellerOptional.isPresent()) {
-            throw new IllegalArgumentException("Seller name not found: " + newRequest.getSeller_name());
+            // Try exact match as fallback
+            sellerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), newRequest.getSeller_name());
+            if (!sellerOptional.isPresent()) {
+                log.error("Seller validation failed. Seller name '{}' not found for broker {}", newRequest.getSeller_name(), currentBroker.getBrokerId());
+                throw new IllegalArgumentException("Seller name not found: " + newRequest.getSeller_name() + ". Please ensure the seller is registered in the system.");
+            }
         }
         User seller = sellerOptional.get();
         
@@ -781,10 +789,15 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         // Create seller products list
         List<SellerProductDTO> sellerProducts = new ArrayList<>();
         for (NewLedgerRequestDTO.ProductListDTO productDto : newRequest.getProduct_list()) {
-            // Find product by name
-            List<Product> products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), productDto.getProduct_name());
+            // Find product by name (case-insensitive)
+            List<Product> products = productRepository.findByBrokerBrokerIdAndProductNameIgnoreCase(currentBroker.getBrokerId(), productDto.getProduct_name());
             if (products.isEmpty()) {
-                throw new IllegalArgumentException("Product not found: " + productDto.getProduct_name());
+                // Try exact match as fallback
+                products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), productDto.getProduct_name());
+                if (products.isEmpty()) {
+                    log.error("Product validation failed. Product name '{}' not found for broker {}", productDto.getProduct_name(), currentBroker.getBrokerId());
+                    throw new IllegalArgumentException("Product not found: " + productDto.getProduct_name() + ". Please ensure the product is registered in the system.");
+                }
             }
             Product product = products.get(0); // Take first match
             
@@ -798,17 +811,27 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         // Create ledger records list
         List<LedgerRecordDTO> ledgerRecords = new ArrayList<>();
         for (NewLedgerRequestDTO.BuyerDTO buyerDto : newRequest.getBuyers()) {
-            // Validate buyer name
-            Optional<User> buyerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), buyerDto.getBuyer_name());
+            // Validate buyer name (case-insensitive)
+            Optional<User> buyerOptional = userRepository.findByBrokerBrokerIdAndFirmNameIgnoreCase(currentBroker.getBrokerId(), buyerDto.getBuyer_name());
             if (!buyerOptional.isPresent()) {
-                throw new IllegalArgumentException("Buyer name not found: " + buyerDto.getBuyer_name());
+                // Try exact match as fallback
+                buyerOptional = userRepository.findByBrokerBrokerIdAndFirmName(currentBroker.getBrokerId(), buyerDto.getBuyer_name());
+                if (!buyerOptional.isPresent()) {
+                    log.error("Buyer validation failed. Buyer name '{}' not found for broker {}", buyerDto.getBuyer_name(), currentBroker.getBrokerId());
+                    throw new IllegalArgumentException("Buyer name not found: " + buyerDto.getBuyer_name() + ". Please ensure the buyer is registered in the system.");
+                }
             }
             
             for (NewLedgerRequestDTO.BuyerProductDTO buyerProduct : buyerDto.getProducts()) {
-                // Find product by name
-                List<Product> products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), buyerProduct.getProduct_name());
+                // Find product by name (case-insensitive)
+                List<Product> products = productRepository.findByBrokerBrokerIdAndProductNameIgnoreCase(currentBroker.getBrokerId(), buyerProduct.getProduct_name());
                 if (products.isEmpty()) {
-                    throw new IllegalArgumentException("Product not found: " + buyerProduct.getProduct_name());
+                    // Try exact match as fallback
+                    products = productRepository.findByBrokerBrokerIdAndProductName(currentBroker.getBrokerId(), buyerProduct.getProduct_name());
+                    if (products.isEmpty()) {
+                        log.error("Product validation failed. Product name '{}' not found for broker {}", buyerProduct.getProduct_name(), currentBroker.getBrokerId());
+                        throw new IllegalArgumentException("Product not found: " + buyerProduct.getProduct_name() + ". Please ensure the product is registered in the system.");
+                    }
                 }
                 Product product = products.get(0); // Take first match
                 

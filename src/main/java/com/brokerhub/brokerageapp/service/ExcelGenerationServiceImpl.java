@@ -137,14 +137,14 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
                 customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
                 transaction.getBrokerage();
             
-            createCell(row, 0, String.valueOf(serialNo++), dataStyle);
+            createNumericCell(row, 0, serialNo++, dataStyle);
             createCell(row, 1, transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), dataStyle);
             createCell(row, 2, transaction.getCounterPartyFirmName(), dataStyle);
             createCell(row, 3, transaction.getProductName(), dataStyle);
-            createCell(row, 4, transaction.getQuantity().toString(), dataStyle);
-            createCell(row, 5, "₹" + transaction.getProductCost().toString(), currencyStyle);
-            createCell(row, 6, "₹" + transactionBrokerage.toString(), currencyStyle);
-            createCell(row, 7, transaction.getTransactionNumber().toString(), dataStyle);
+            createNumericCell(row, 4, transaction.getQuantity(), dataStyle);
+            createNumericCell(row, 5, transaction.getProductCost().doubleValue(), currencyStyle);
+            createNumericCell(row, 6, transactionBrokerage.doubleValue(), currencyStyle);
+            createNumericCell(row, 7, transaction.getTransactionNumber(), dataStyle);
             
             totalQuantity += transaction.getQuantity();
             totalBrokerage = totalBrokerage.add(transactionBrokerage);
@@ -156,9 +156,9 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         createCell(totalRow, 1, "", totalStyle);
         createCell(totalRow, 2, "", totalStyle);
         createCell(totalRow, 3, "TOTAL:", totalStyle);
-        createCell(totalRow, 4, totalQuantity.toString(), totalStyle);
+        createNumericCell(totalRow, 4, totalQuantity, totalStyle);
         createCell(totalRow, 5, "", totalStyle);
-        createCell(totalRow, 6, "₹" + totalBrokerage.toString(), totalStyle);
+        createNumericCell(totalRow, 6, totalBrokerage.doubleValue(), totalStyle);
         createCell(totalRow, 7, "", totalStyle);
         
         rowNum++; // Empty row
@@ -373,6 +373,16 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         }
     }
     
+    private void createNumericCell(Row row, int column, Number value, CellStyle style) {
+        Cell cell = row.createCell(column);
+        if (value != null) {
+            cell.setCellValue(value.doubleValue());
+        }
+        if (style != null) {
+            cell.setCellStyle(style);
+        }
+    }
+    
     private void createBrokerDetailsSection(Sheet sheet, Broker broker, Long financialYearId, int startRow, CellStyle boldStyle, CellStyle dataStyle) {
         int rowNum = startRow;
         
@@ -435,13 +445,13 @@ public class ExcelGenerationServiceImpl implements ExcelGenerationService {
         int rowNum = startRow;
         
         createCell(sheet.createRow(rowNum++), 0, "Total Bags Sold:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsSold().toString(), dataStyle);
+        createNumericCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsSold(), dataStyle);
         
         createCell(sheet.createRow(rowNum++), 0, "Total Bags Bought:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsBought().toString(), dataStyle);
+        createNumericCell(sheet.getRow(rowNum-1), 1, userDetail.getBrokerageSummary().getTotalBagsBought(), dataStyle);
         
         createCell(sheet.createRow(rowNum++), 0, "Total Brokerage Payable:", boldStyle);
-        createCell(sheet.getRow(rowNum-1), 1, "₹" + totalBrokerage.toString(), currencyStyle);
+        createNumericCell(sheet.getRow(rowNum-1), 1, totalBrokerage.doubleValue(), currencyStyle);
         
         if (customBrokerage != null) {
             createCell(sheet.createRow(rowNum++), 0, "Custom Brokerage Rate:", boldStyle);
