@@ -170,7 +170,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("<div class='graph-section'>")
                 .append("<h2 class='section-title'>📊 Product Distribution</h2>")
                 .append("<h4>Types of Items Bought/Sold</h4>")
-                .append("<div class='graph-placeholder'>Loading chart...</div>")
+                .append("<div class='graph-placeholder' id='chartPlaceholder' style='display: none;'>Loading chart...</div>")
                 .append("<canvas id='productChart' width='300' height='200'></canvas>")
                 .append("</div>");
 
@@ -242,6 +242,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>")
                 .append("<script>")
                 .append("document.addEventListener('DOMContentLoaded', function(){")
+                .append("try {")
                 .append("const ctx = document.getElementById('productChart').getContext('2d');")
 
                 // Dynamically compute quantities per product
@@ -256,11 +257,24 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("const labels = Object.keys(productData);")
                 .append("const values = Object.values(productData);")
 
+                // Only create chart if we have data
+                .append("if (labels.length > 0) {")
                 // Build chart
                 .append("new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ ")
                 .append(" label: 'Quantity', data: values, backgroundColor: ['#0078D7','#00BFA5','#FF9800','#8E24AA','#43A047','#E53935','#3949AB'], borderWidth: 1 }]}, ")
                 .append(" options: { plugins: { legend: { position: 'bottom' }, title: { display: false } } } });")
-
+                .append("} else {")
+                // Show placeholder if no data
+                .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
+                .append("document.getElementById('chartPlaceholder').innerText = 'No product data available';")
+                .append("document.getElementById('productChart').style.display = 'none';")
+                .append("}")
+                .append("} catch(error) {")
+                // Show error message if chart fails to load
+                .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
+                .append("document.getElementById('chartPlaceholder').innerText = 'Chart loading failed';")
+                .append("document.getElementById('productChart').style.display = 'none';")
+                .append("}")
                 .append("});")
                 .append("</script>");
 
@@ -534,7 +548,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         height: 120px;
         border: 1px dashed #aad0ff;
         margin: 0 auto;
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
         color: #0078D7;
