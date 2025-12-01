@@ -148,9 +148,17 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
                 transaction.getBrokerage();
             
-            // Determine transaction type (assuming sold if amount earned > 0, bought otherwise)
-            boolean isSold = convertToBigDecimal(userDetail.getBrokerageSummary().getTotalAmountEarned()).compareTo(BigDecimal.ZERO) > 0;
-            String typeIcon = isSold ? "<span class='type-sold'>↗️ Sold</span>" : "<span class='type-bought'>↙️ Bought</span>";
+            // Use the transaction type from the DTO
+            String transactionType = transaction.getTransactionType();
+            String typeIcon;
+            if ("SOLD".equals(transactionType)) {
+                typeIcon = "<span class='type-sold'>↗️  Sold </span>";
+            } else if ("BOUGHT".equals(transactionType)) {
+                typeIcon = "<span class='type-bought'>↙️ Bought</span>";
+            } else {
+                // Fallback in case transactionType is null or unexpected
+                typeIcon = "<span class='type-unknown'>❓ Unknown</span>";
+            }
             
             html.append("<tr>")
                 .append("<td class='sno'>").append(sno++).append("</td>")
@@ -515,24 +523,35 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     .transactions-table .type { width: 10%; }
 
     .type-sold {
-        background: #28a745;
-        color: white;
+        background: #32cd32;
+        color: black;
         padding: 1px 4px;
         border-radius: 3px;
         font-size: 8px;
+        font-weight: bold;
     }
 
     .type-bought {
-        background: #6c757d;
-        color: white;
+        background: #ffc107;
+        color: black;
         padding: 1px 4px;
         border-radius: 3px;
         font-size: 8px;
+        font-weight: bold;
+    }
+
+    .type-unknown {
+        background: #ffc107;
+        color: black;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8px;
+        font-weight: bold;
     }
 
     /* ---------- GRAPH SECTION ---------- */
     .graph-section {
-        margin: 15px 0;
+        margin: 15px 0 60px 0;
         text-align: center;
         page-break-inside: avoid;
     }
@@ -560,7 +579,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     #productChart {
         max-width: 200px;
         max-height: 120px;
-        margin: 0 auto;
+        margin: 0 auto 40px auto;
         display: block;
     }
 

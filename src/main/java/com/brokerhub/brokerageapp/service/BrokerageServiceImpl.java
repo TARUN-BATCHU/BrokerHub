@@ -218,6 +218,7 @@ public class BrokerageServiceImpl implements BrokerageService {
                         .productCost(((Number) row[4]).longValue())
                         .quantity(((Number) row[5]).longValue())
                         .brokerage(BigDecimal.valueOf(((Number) row[6]).longValue()))
+                        .transactionType((String) row[7])
                         .build())
                 .collect(Collectors.toList());
         

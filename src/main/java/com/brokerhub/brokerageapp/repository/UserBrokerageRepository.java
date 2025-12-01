@@ -61,7 +61,8 @@ public interface UserBrokerageRepository extends JpaRepository<LedgerRecord, Lon
     
     @Query("SELECT ld.brokerTransactionNumber, dl.date, " +
            "CASE WHEN lr.toBuyer.userId = :userId THEN fs.firmName ELSE tb.firmName END, " +
-           "p.productName, lr.productCost, lr.quantity, lr.totalBrokerage " +
+           "p.productName, lr.productCost, lr.quantity, lr.totalBrokerage, " +
+           "CASE WHEN lr.toBuyer.userId = :userId THEN 'BOUGHT' ELSE 'SOLD' END " +
            "FROM LedgerRecord lr " +
            "JOIN lr.ledgerDetails ld " +
            "JOIN ld.dailyLedger dl " +

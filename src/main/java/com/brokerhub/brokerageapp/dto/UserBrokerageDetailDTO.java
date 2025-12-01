@@ -75,5 +75,6 @@ public class UserBrokerageDetailDTO {
         private Long productCost;
         private Long quantity;
         private BigDecimal brokerage;
+        private String transactionType; // "SOLD" or "BOUGHT"
     }
 }
