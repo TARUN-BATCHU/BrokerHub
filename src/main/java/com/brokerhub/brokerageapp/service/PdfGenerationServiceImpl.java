@@ -177,9 +177,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // 3.5 CHART SECTION - PRODUCT DISTRIBUTION
         html.append("<div class='graph-section'>")
                 .append("<h2 class='section-title'>📊 Product Distribution</h2>")
-                .append("<h4>Types of Items Bought/Sold</h4>")
-                .append("<div class='graph-placeholder' id='chartPlaceholder' style='display: none;'>Loading chart...</div>")
-                .append("<canvas id='productChart' width='300' height='200'></canvas>")
+                .append("<div class='chart-container'>")
+                .append("<div class='graph-placeholder' id='chartPlaceholder' style='display: none;'>No product data available</div>")
+                .append("<canvas id='productChart' width='400' height='250'></canvas>")
+                .append("</div>")
                 .append("</div>");
 
 
@@ -267,20 +268,24 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
                 // Only create chart if we have data
                 .append("if (labels.length > 0) {")
-                // Build chart
+                // Build enhanced chart
                 .append("new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ ")
-                .append(" label: 'Quantity', data: values, backgroundColor: ['#0078D7','#00BFA5','#FF9800','#8E24AA','#43A047','#E53935','#3949AB'], borderWidth: 1 }]}, ")
-                .append(" options: { plugins: { legend: { position: 'bottom' }, title: { display: false } } } });")
+                .append(" label: 'Bags', data: values, ")
+                .append(" backgroundColor: ['#0078D7','#28A745','#FF6B35','#8E24AA','#17A2B8','#FFC107','#DC3545','#6F42C1'], ")
+                .append(" borderColor: '#fff', borderWidth: 2, hoverBorderWidth: 3 }]}, ")
+                .append(" options: { responsive: true, maintainAspectRatio: false, ")
+                .append(" plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true, font: { size: 11 } } }, ")
+                .append(" tooltip: { callbacks: { label: function(context) { return context.label + ': ' + context.parsed + ' bags'; } } } }, ")
+                .append(" cutout: '50%' } });")
                 .append("} else {")
                 // Show placeholder if no data
                 .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
-                .append("document.getElementById('chartPlaceholder').innerText = 'No product data available';")
                 .append("document.getElementById('productChart').style.display = 'none';")
                 .append("}")
                 .append("} catch(error) {")
                 // Show error message if chart fails to load
                 .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
-                .append("document.getElementById('chartPlaceholder').innerText = 'Chart loading failed';")
+                .append("document.getElementById('chartPlaceholder').innerText = 'Chart unavailable';")
                 .append("document.getElementById('productChart').style.display = 'none';")
                 .append("}")
                 .append("});")
@@ -562,24 +567,40 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         font-size: 11px;
     }
 
-    .graph-placeholder {
-        width: 200px;
-        height: 120px;
-        border: 1px dashed #aad0ff;
+    .chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        height: 280px;
         margin: 0 auto;
+        padding: 15px;
+        background: #f8fbff;
+        border: 1px solid #dde8ff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .graph-placeholder {
+        width: 100%;
+        height: 100%;
+        border: 2px dashed #aad0ff;
+        margin: 0;
         display: none;
         align-items: center;
         justify-content: center;
         color: #0078D7;
-        font-size: 10px;
-        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 6px;
         background: #f9fcff;
     }
 
     #productChart {
-        max-width: 200px;
-        max-height: 120px;
-        margin: 0 auto 40px auto;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none;
+        max-height: none;
+        margin: 0;
         display: block;
     }
 
