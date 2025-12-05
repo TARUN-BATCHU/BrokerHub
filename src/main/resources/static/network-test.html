@@ -14,261 +14,179 @@
         }
         .container {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        .test-section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .status {
-            padding: 10px;
+        .test-result {
             margin: 10px 0;
-            border-radius: 5px;
+            padding: 10px;
+            border-radius: 4px;
         }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         button {
             background-color: #007bff;
             color: white;
             border: none;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             margin: 5px;
         }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
+        button:hover { background-color: #0056b3; }
+        .loading { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🌐 BrokerHub Network Connectivity Test</h1>
+        <h1>BrokerHub Network Connectivity Test</h1>
         
-        <div class="info">
-            <strong>Current Access URL:</strong> <span id="currentUrl"></span><br>
-            <strong>API Base URL:</strong> <span id="apiBaseUrl"></span>
+        <div class="test-result info">
+            <strong>Current Access Info:</strong><br>
+            Hostname: <span id="hostname"></span><br>
+            Full URL: <span id="fullUrl"></span><br>
+            API URL: <span id="apiUrl"></span>
         </div>
 
-        <div class="test-section">
-            <h3>📡 Backend Connectivity Test</h3>
-            <p>This test checks if the backend API is accessible from your device.</p>
-            <button onclick="testBackendPing()">Test Backend Connection</button>
-            <div id="pingResult"></div>
-        </div>
+        <button onclick="testConnectivity()">Test API Connectivity</button>
+        <button onclick="testLogin()">Test Login Endpoint</button>
+        <button onclick="clearResults()">Clear Results</button>
 
-        <div class="test-section">
-            <h3>🔄 API Echo Test</h3>
-            <p>This test sends data to the backend and verifies the response.</p>
-            <button onclick="testApiEcho()">Test API Echo</button>
-            <div id="echoResult"></div>
-        </div>
-
-        <div class="test-section">
-            <h3>🔐 Login API Test</h3>
-            <p>This test checks if the login endpoint is accessible (without credentials).</p>
-            <button onclick="testLoginEndpoint()">Test Login Endpoint</button>
-            <div id="loginResult"></div>
-        </div>
-
-        <div class="test-section">
-            <h3>📋 Test Results Summary</h3>
-            <div id="summary"></div>
-        </div>
+        <div id="results"></div>
     </div>
 
-    <script src="/config.js"></script>
     <script>
-        // Display current URLs
-        document.getElementById('currentUrl').textContent = window.location.href;
-        document.getElementById('apiBaseUrl').textContent = window.API_BASE_URL;
-
-        let testResults = {
-            ping: null,
-            echo: null,
-            login: null
-        };
-
-        async function testBackendPing() {
-            const resultDiv = document.getElementById('pingResult');
-            resultDiv.innerHTML = '<div class="info">Testing backend connection...</div>';
-            
-            try {
-                const response = await fetch('/api/network-test/ping');
-                const data = await response.json();
-                
-                if (response.ok) {
-                    testResults.ping = true;
-                    resultDiv.innerHTML = `
-                        <div class="success">✅ Backend connection successful!</div>
-                        <div class="result">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                } else {
-                    testResults.ping = false;
-                    resultDiv.innerHTML = `
-                        <div class="error">❌ Backend connection failed (Status: ${response.status})</div>
-                        <div class="result">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                }
-            } catch (error) {
-                testResults.ping = false;
-                resultDiv.innerHTML = `
-                    <div class="error">❌ Backend connection failed</div>
-                    <div class="result">Error: ${error.message}</div>
-                `;
+        // Try to load config.js with error handling
+        function loadConfig() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = '/config.js';
+                script.onload = () => resolve(true);
+                script.onerror = () => resolve(false);
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Load config and then initialize
+        loadConfig().then(configLoaded => {
+            if (!configLoaded) {
+                console.warn('Failed to load config.js');
             }
-            updateSummary();
+            initializePage();
+        });
+        
+        function initializePage() {
+        // Display current connection info
+        document.getElementById('hostname').textContent = window.location.hostname;
+        document.getElementById('fullUrl').textContent = window.location.href;
+        
+        // Get API URL with fallback
+        function getApiUrl() {
+            if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
+                return window.APP_CONFIG.API_URL;
+            }
+            // Fallback: construct API URL manually
+            const hostname = window.location.hostname;
+            const port = '8080';
+            const contextPath = '/BrokerHub';
+            return `http://${hostname}:${port}${contextPath}`;
+        }
+        
+        document.getElementById('apiUrl').textContent = getApiUrl();
+
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
         }
 
-        async function testApiEcho() {
-            const resultDiv = document.getElementById('echoResult');
-            resultDiv.innerHTML = '<div class="info">Testing API echo...</div>';
+        async function testConnectivity() {
+            addResult('Testing basic API connectivity...', 'info');
             
-            const testPayload = {
-                message: "Hello from network test",
-                timestamp: new Date().toISOString(),
-                device: navigator.userAgent
+            try {
+                const apiUrl = getApiUrl();
+                const response = await fetch(apiUrl + '/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    addResult(`✅ API connectivity successful! Status: ${response.status}`, 'success');
+                } else {
+                    addResult(`⚠️ API responded but with status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ API connectivity failed: ${error.message}`, 'error');
+                
+                // Try alternative URLs
+                const alternatives = [
+                    'http://localhost:8080/BrokerHub/health',
+                    `http://${window.location.hostname}:8080/health`,
+                    `http://${window.location.hostname}:8080/BrokerHub/health`
+                ];
+                
+                for (const url of alternatives) {
+                    try {
+                        addResult(`Trying alternative: ${url}`, 'info');
+                        const altResponse = await fetch(url);
+                        if (altResponse.ok) {
+                            addResult(`✅ Alternative URL works: ${url}`, 'success');
+                            break;
+                        }
+                    } catch (altError) {
+                        addResult(`❌ Alternative failed: ${url}`, 'error');
+                    }
+                }
+            }
+        }
+
+        async function testLogin() {
+            addResult('Testing login endpoint...', 'info');
+            
+            const loginData = {
+                username: 'test',
+                password: 'test'
             };
-            
+
             try {
-                const response = await fetch('/api/network-test/echo', {
+                const apiUrl = getApiUrl();
+                const response = await fetch(apiUrl + '/Broker/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(testPayload)
-                });
-                const data = await response.json();
-                
-                if (response.ok) {
-                    testResults.echo = true;
-                    resultDiv.innerHTML = `
-                        <div class="success">✅ API echo successful!</div>
-                        <div class="result">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                } else {
-                    testResults.echo = false;
-                    resultDiv.innerHTML = `
-                        <div class="error">❌ API echo failed (Status: ${response.status})</div>
-                        <div class="result">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                }
-            } catch (error) {
-                testResults.echo = false;
-                resultDiv.innerHTML = `
-                    <div class="error">❌ API echo failed</div>
-                    <div class="result">Error: ${error.message}</div>
-                `;
-            }
-            updateSummary();
-        }
-
-        async function testLoginEndpoint() {
-            const resultDiv = document.getElementById('loginResult');
-            resultDiv.innerHTML = '<div class="info">Testing login endpoint accessibility...</div>';
-            
-            try {
-                const response = await fetch('/BrokerHub/Broker/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: "test",
-                        password: "test"
-                    })
+                    body: JSON.stringify(loginData)
                 });
                 
-                // We expect this to fail with 401 or 400, but the endpoint should be accessible
-                if (response.status === 401 || response.status === 400 || response.status === 403) {
-                    testResults.login = true;
-                    resultDiv.innerHTML = `
-                        <div class="success">✅ Login endpoint is accessible (Status: ${response.status})</div>
-                        <div class="result">The login endpoint is working. Status ${response.status} is expected for invalid credentials.</div>
-                    `;
-                } else if (response.ok) {
-                    testResults.login = true;
-                    resultDiv.innerHTML = `
-                        <div class="success">✅ Login endpoint is accessible (Status: ${response.status})</div>
-                        <div class="result">Unexpected success response - this might indicate an issue with authentication.</div>
-                    `;
-                } else {
-                    testResults.login = false;
-                    const text = await response.text();
-                    resultDiv.innerHTML = `
-                        <div class="error">❌ Login endpoint failed (Status: ${response.status})</div>
-                        <div class="result">${text}</div>
-                    `;
-                }
+                const responseText = await response.text();
+                addResult(`Login endpoint response: Status ${response.status}`, response.ok ? 'success' : 'error');
+                addResult(`Response body: ${responseText}`, 'info');
+                
             } catch (error) {
-                testResults.login = false;
-                resultDiv.innerHTML = `
-                    <div class="error">❌ Login endpoint failed</div>
-                    <div class="result">Error: ${error.message}</div>
-                `;
+                addResult(`❌ Login test failed: ${error.message}`, 'error');
             }
-            updateSummary();
         }
 
-        function updateSummary() {
-            const summaryDiv = document.getElementById('summary');
-            const total = Object.values(testResults).filter(r => r !== null).length;
-            const passed = Object.values(testResults).filter(r => r === true).length;
-            const failed = Object.values(testResults).filter(r => r === false).length;
-            
-            if (total === 0) {
-                summaryDiv.innerHTML = '<div class="info">No tests run yet. Click the test buttons above.</div>';
-                return;
-            }
-            
-            let summaryClass = 'info';
-            let summaryText = `Tests completed: ${total}/3 | Passed: ${passed} | Failed: ${failed}`;
-            
-            if (total === 3) {
-                if (failed === 0) {
-                    summaryClass = 'success';
-                    summaryText = '🎉 All tests passed! Your network configuration is working correctly.';
-                } else {
-                    summaryClass = 'error';
-                    summaryText = `⚠️ ${failed} test(s) failed. Please check your network configuration.`;
-                }
-            }
-            
-            summaryDiv.innerHTML = `<div class="${summaryClass}">${summaryText}</div>`;
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
         }
 
-        // Initialize summary
-        updateSummary();
+            // Auto-test on page load
+            addResult('Network test page loaded successfully', 'success');
+            if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
+                addResult(`Config loaded. Using API URL: ${window.APP_CONFIG.API_URL}`, 'success');
+            } else {
+                addResult('⚠️ Config.js not loaded, using fallback API URL', 'error');
+                addResult(`Fallback API URL: ${getApiUrl()}`, 'info');
+            }
+        }
     </script>
 </body>
 </html>
