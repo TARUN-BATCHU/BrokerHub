@@ -4,6 +4,8 @@ import com.brokerhub.brokerageapp.dto.CityWiseBagDistributionDTO;
 import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
 import com.brokerhub.brokerageapp.entity.Broker;
 import com.brokerhub.brokerageapp.entity.FinancialYear;
+import com.brokerhub.brokerageapp.entity.User;
+import com.brokerhub.brokerageapp.repository.UserRepository;
 import com.itextpdf.html2pdf.HtmlConverter;
 import com.itextpdf.html2pdf.ConverterProperties;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -29,6 +31,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     @Autowired
     FinancialYearService financialYearService;
     
+    @Autowired
+    UserRepository userRepository;
+    
     private String getQRCodeBase64() {
         try {
             InputStream inputStream = getClass().getResourceAsStream("/static/images/paytm-qr.png");
@@ -46,7 +51,21 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     
     @Override
     public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
-        return generateUserBrokerageBill(userDetail, broker, financialYearId, null);
+        return generateUserBrokerageBill(userDetail, broker, financialYearId, (BigDecimal) null);
+    }
+    
+    public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, Long userId) {
+        return generateUserBrokerageBill(userDetail, broker, financialYearId, (BigDecimal) null, userId);
+    }
+    
+    @Override
+    public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, Long userId) {
+        try {
+            return generateSimpleBill(userDetail, broker, financialYearId, customBrokerage, userId);
+        } catch (Exception e) {
+            log.error("Error generating PDF bill", e);
+            throw new RuntimeException("Failed to generate PDF bill", e);
+        }
     }
     
     @Override
@@ -60,6 +79,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     }
     
     private byte[] generateSimpleBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) throws IOException {
+        return generateSimpleBill(userDetail, broker, financialYearId, customBrokerage, null);
+    }
+    
+    private byte[] generateSimpleBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage, Long userId) throws IOException {
         StringBuilder html = new StringBuilder();
         
         // Get financial year details
@@ -70,6 +93,11 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             LocalDate end = financialYear.get().getEnd();
             fyDisplay = start.getYear() + "-" + end.getYear();
         }
+        
+        // Get merchant's current brokerage rate if no custom brokerage provided
+        BigDecimal merchantBrokerageRate = userId != null ? 
+            getMerchantBrokerageRateByUserId(userId) : 
+            getMerchantBrokerageRate(userDetail.getUserBasicInfo().getFirmName(), broker.getBrokerId());
         
         String billId = "BH-" + System.currentTimeMillis() % 100000;
         
@@ -86,15 +114,15 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // 1. BROKER INFO SECTION
         html.append("<div class='header-section'>")
             .append("<div class='broker-info'>")
-            .append("<div class='broker-logo'>🏢</div>")
+            .append("<div class='broker-logo'></div>")
             .append("<div class='broker-details'>")
-            .append("<h1 class='firm-name'>").append(broker.getBrokerageFirmName()).append("</h1>")
-            .append("<div class='broker-name'>Broker: ").append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A").append("</div>")
+            .append("<h1 class='firm-name'> 🏢 ").append(broker.getBrokerageFirmName()).append("</h1>")
+            .append("<div class='broker-name'>Proprietor: ").append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A").append("</div>")
             .append("<div class='fy-info'>Financial Year: ").append(fyDisplay).append("</div>")
             .append("</div>")
             .append("<div class='bill-meta'>")
-            .append("<div class='bill-date'>📅 ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</div>")
-            .append("<div class='bill-id'>🆔 ").append(billId).append("</div>")
+            .append("<div class='bill-date'>📅 Bill print Date : ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</div>")
+            .append("<div class='bill-id'>🆔 Bill ID : ").append(billId).append("</div>")
             .append("</div>")
             .append("</div>");
         
@@ -111,9 +139,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         long totalBagsSold = userDetail.getBrokerageSummary().getTotalBagsSold();
         long totalBagsBought = userDetail.getBrokerageSummary().getTotalBagsBought();
         long totalBags = totalBagsSold + totalBagsBought;
-        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : 
-            (totalBags > 0 ? calculateTotalBrokerage(userDetail, null).divide(BigDecimal.valueOf(totalBags), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
-        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage);
+        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : merchantBrokerageRate;
+        BigDecimal totalBrokerage = calculateTotalBrokerage(userDetail, customBrokerage != null ? customBrokerage : merchantBrokerageRate);
         
         html.append("<div class='summary-section'>")
             .append("<h2 class='section-title'>📊 Summary</h2>")
@@ -146,7 +173,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
             BigDecimal transactionBrokerage = customBrokerage != null ? 
                 customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
-                transaction.getBrokerage();
+                (merchantBrokerageRate.compareTo(BigDecimal.ZERO) > 0 ? 
+                    merchantBrokerageRate.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
+                    transaction.getBrokerage());
             
             // Use the transaction type from the DTO
             String transactionType = transaction.getTransactionType();
@@ -190,8 +219,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             .append("<div class='payment-content'>")
             .append("<div class='payment-info'>")
             .append("<div class='brokerage-amount'>")
-            .append("<div class='amount-label'>Total Brokerage Amount</div>")
-            .append("<div class='amount-value'>₹").append(formatCurrency(totalBrokerage)).append("</div>")
+            .append("<center> <div class='amount-label'>Total Brokerage Amount</div> </center>")
+            .append("<center> <div class='amount-value'>₹").append(formatCurrency(totalBrokerage)).append("</div> </center>")
             .append("</div>");
         
         if (broker.getBankDetails() != null) {
@@ -378,7 +407,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     .firm-name {
         font-size: 26px;
         color: #0078D7;
-        font-weight: bold;
+        font-weight: 1200;
         letter-spacing: 0.5px;
     }
 
@@ -763,14 +792,38 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         return BigDecimal.ZERO;
     }
     
-    private BigDecimal calculateTotalBrokerage(UserBrokerageDetailDTO userDetail, BigDecimal customBrokerage) {
-        if (customBrokerage == null) {
+    private BigDecimal calculateTotalBrokerage(UserBrokerageDetailDTO userDetail, BigDecimal brokerageRate) {
+        if (brokerageRate == null) {
             return userDetail.getBrokerageSummary().getTotalBrokeragePayable();
         }
         
         return userDetail.getTransactionDetails().stream()
-            .map(transaction -> customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())))
+            .map(transaction -> brokerageRate.multiply(BigDecimal.valueOf(transaction.getQuantity())))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    
+    private BigDecimal getMerchantBrokerageRate(String firmName, Long brokerId) {
+        try {
+            Optional<User> userOpt = userRepository.findByBrokerBrokerIdAndFirmName(brokerId, firmName);
+            if (userOpt.isPresent() && userOpt.get().getBrokerageRate() != null) {
+                return BigDecimal.valueOf(userOpt.get().getBrokerageRate());
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch merchant brokerage rate for firm: {}", firmName, e);
+        }
+        return BigDecimal.ZERO;
+    }
+    
+    private BigDecimal getMerchantBrokerageRateByUserId(Long userId) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent() && userOpt.get().getBrokerageRate() != null) {
+                return BigDecimal.valueOf(userOpt.get().getBrokerageRate());
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch merchant brokerage rate for userId: {}", userId, e);
+        }
+        return BigDecimal.ZERO;
     }
     
     public byte[] generateUserBrokerageBillPdf(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
@@ -818,6 +871,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                                      BigDecimal customBrokerage, String paperSize, String orientation) throws IOException {
         StringBuilder html = new StringBuilder();
         BigDecimal totalBrokerage = BigDecimal.valueOf(0);
+        
+        // Get merchant's current brokerage rate if no custom brokerage provided
+        BigDecimal merchantBrokerageRate = getMerchantBrokerageRate(userDetail.getUserBasicInfo().getFirmName(), broker.getBrokerId());
+        
         html.append("<!DOCTYPE html><html><head>")
                 .append("<meta charset='UTF-8'>")
                 .append("<title>Print Bill</title>")
@@ -888,9 +945,15 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
             BigDecimal transactionBrokerage = customBrokerage != null ?
                     customBrokerage.multiply(BigDecimal.valueOf(transaction.getQuantity())) :
-                    transaction.getBrokerage();
+                    (merchantBrokerageRate.compareTo(BigDecimal.ZERO) > 0 ? 
+                        merchantBrokerageRate.multiply(BigDecimal.valueOf(transaction.getQuantity())) : 
+                        transaction.getBrokerage());
             if(customBrokerage==null){
-                totalBrokerage = totalBrokerage.add(transaction.getBrokerage());
+                if(merchantBrokerageRate.compareTo(BigDecimal.ZERO) > 0) {
+                    totalBrokerage = totalBrokerage.add(merchantBrokerageRate.multiply(BigDecimal.valueOf(transaction.getQuantity())));
+                } else {
+                    totalBrokerage = totalBrokerage.add(transaction.getBrokerage());
+                }
             }
 
             html.append("<tr>")
@@ -910,11 +973,13 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         long totalBagsBought = userDetail.getBrokerageSummary().getTotalBagsBought();
         long totalBags = totalBagsSold + totalBagsBought;
 
-        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : null;
+        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : merchantBrokerageRate;
         BigDecimal totalPayableBrokerage;
 
-        if (brokeragePerBag != null) {
-            totalPayableBrokerage = brokeragePerBag.multiply(BigDecimal.valueOf(totalBags));
+        if (customBrokerage != null) {
+            totalPayableBrokerage = customBrokerage.multiply(BigDecimal.valueOf(totalBags));
+        } else if (merchantBrokerageRate.compareTo(BigDecimal.ZERO) > 0) {
+            totalPayableBrokerage = merchantBrokerageRate.multiply(BigDecimal.valueOf(totalBags));
         } else {
             totalPayableBrokerage = totalBrokerage;
         }
@@ -1083,6 +1148,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                                        List<CityWiseBagDistributionDTO> cityDistribution) throws IOException {
         StringBuilder html = new StringBuilder();
         
+        // Get merchant's current brokerage rate if no custom brokerage provided
+        BigDecimal merchantBrokerageRate = getMerchantBrokerageRate(userDetail.getUserBasicInfo().getFirmName(), broker.getBrokerId());
+        
         html.append("<!DOCTYPE html><html><head>")
                 .append("<meta charset='UTF-8'>")
                 .append("<title>City-wise Print Bill</title>")
@@ -1157,11 +1225,13 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         long totalBagsBought = userDetail.getBrokerageSummary().getTotalBagsBought();
         long totalBags = totalBagsSold + totalBagsBought;
 
-        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : null;
+        BigDecimal brokeragePerBag = customBrokerage != null ? customBrokerage : merchantBrokerageRate;
         BigDecimal totalPayableBrokerage;
 
-        if (brokeragePerBag != null) {
-            totalPayableBrokerage = brokeragePerBag.multiply(BigDecimal.valueOf(totalBags));
+        if (customBrokerage != null) {
+            totalPayableBrokerage = customBrokerage.multiply(BigDecimal.valueOf(totalBags));
+        } else if (merchantBrokerageRate.compareTo(BigDecimal.ZERO) > 0) {
+            totalPayableBrokerage = merchantBrokerageRate.multiply(BigDecimal.valueOf(totalBags));
         } else {
             totalPayableBrokerage = userDetail.getBrokerageSummary().getTotalBrokeragePayable();
         }

@@ -248,9 +248,9 @@ public class BrokerageServiceImpl implements BrokerageService {
         }
         
         if (customBrokerage != null) {
-            return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage);
+            return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage, userId);
         }
-        return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId);
+        return pdfGenerationService.generateUserBrokerageBill(userDetail, brokerOpt.get(), financialYearId, userId);
     }
     
     @Override
