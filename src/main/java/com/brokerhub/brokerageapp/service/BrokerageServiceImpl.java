@@ -214,11 +214,12 @@ public class BrokerageServiceImpl implements BrokerageService {
                         .transactionNumber(((Number) row[0]).longValue())
                         .transactionDate((LocalDate) row[1])
                         .counterPartyFirmName((String) row[2])
-                        .productName((String) row[3])
-                        .productCost(((Number) row[4]).longValue())
-                        .quantity(((Number) row[5]).longValue())
-                        .brokerage(BigDecimal.valueOf(((Number) row[6]).longValue()))
-                        .transactionType((String) row[7])
+                        .counterPartyCity((String) row[3])
+                        .productName((String) row[4])
+                        .productCost(((Number) row[5]).longValue())
+                        .quantity(((Number) row[6]).longValue())
+                        .brokerage(BigDecimal.valueOf(((Number) row[7]).longValue()))
+                        .transactionType((String) row[8])
                         .build())
                 .collect(Collectors.toList());
         

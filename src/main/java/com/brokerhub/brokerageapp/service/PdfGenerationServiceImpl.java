@@ -162,6 +162,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             .append("<th>S.No</th>")
             .append("<th>Date</th>")
             .append("<th>Merchant Firm</th>")
+            .append("<th>City</th>")
             .append("<th>Product</th>")
             .append("<th>Quantity</th>")
             .append("<th>Amount</th>")
@@ -193,6 +194,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("<td class='sno'>").append(sno++).append("</td>")
                 .append("<td class='date'>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))).append("</td>")
                 .append("<td class='merchant'>").append(transaction.getCounterPartyFirmName()).append("</td>")
+                .append("<td class='city'>").append(transaction.getCounterPartyCity() != null ? transaction.getCounterPartyCity() : "N/A").append("</td>")
                 .append("<td class='product'>").append(transaction.getProductName()).append("</td>")
                 .append("<td class='quantity'>").append(transaction.getQuantity()).append("</td>")
                 .append("<td class='amount'>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
@@ -530,7 +532,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     }
 
     .transactions-table th, .transactions-table td {
-        border: 1px solid #ddd;
+        border: 1px solid #e0e0e0;
         padding: 4px 6px;
         text-align: center;
         vertical-align: middle;
@@ -550,11 +552,12 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     .transactions-table .sno { width: 6%; }
     .transactions-table .date { width: 12%; }
     .transactions-table .merchant { width: 25%; text-align: left; }
-    .transactions-table .product { width: 15%; text-align: left; }
+    .transactions-table .city { width: 12%; text-align: left; }
+    .transactions-table .product { width: 8%; text-align: left; }
     .transactions-table .quantity { width: 8%; }
-    .transactions-table .amount { width: 12%; text-align: right; }
-    .transactions-table .brokerage { width: 12%; text-align: right; }
-    .transactions-table .type { width: 10%; }
+    .transactions-table .amount { width: 8%; text-align: right; }
+    .transactions-table .brokerage { width: 8%; text-align: right; }
+    .transactions-table .type { width: 13%; }
 
     .type-sold {
         background: #32cd32;
@@ -939,7 +942,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // === TRANSACTIONS TABLE ===
         html.append("<h4 style='margin: 6px 0 4px 0; font-size: 14px;'>Transaction Details</h4>")
                 .append("<table class='transactions-table'>")
-                .append("<thead><tr><th>S.No</th><th>DATE</th><th>MERCHANT FIRM NAME</th><th>PRODUCT</th><th>Qty</th><th>RATE</th><th>BROKERAGE</th></tr></thead><tbody>");
+                .append("<thead><tr><th>S.No</th><th>DATE</th><th>MERCHANT FIRM NAME</th><th>CITY</th><th>PRODUCT</th><th>Qty</th><th>RATE</th><th>BROKERAGE</th></tr></thead><tbody>");
 
         int counter = 1;
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
@@ -960,6 +963,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                     .append("<td>").append(counter++).append("</td>") // Auto sequence number
                     .append("<td>").append(transaction.getTransactionDate().format(DateTimeFormatter.ofPattern("dd-MM-yy"))).append("</td>")
                     .append("<td>").append(transaction.getCounterPartyFirmName()).append("</td>")
+                    .append("<td>").append(transaction.getCounterPartyCity() != null ? transaction.getCounterPartyCity() : "N/A").append("</td>")
                     .append("<td>").append(transaction.getProductName()).append("</td>")
                     .append("<td>").append(transaction.getQuantity()).append("</td>")
                     .append("<td>₹").append(formatCurrency(convertToBigDecimal(transaction.getProductCost()))).append("</td>")
@@ -1073,17 +1077,18 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".broker-info tr:nth-child(even) { background-color: #fdfdfd; }"+
                 ".client-info { margin: 6px 0; border: 1px solid #000; padding: 4px; border-radius: 3px; background-color: #f9f9f9; }" +
                 ".transactions-table { width: 100%; border-collapse: collapse; margin-top: 6px; }" +
-                ".transactions-table th, .transactions-table td { border: 1px solid #000; padding: 2px 3px; font-size: 9px; line-height: 1.1; }"+
+                ".transactions-table th, .transactions-table td { border: 1px solid #ccc; padding: 2px 3px; font-size: 9px; line-height: 1.1; }"+
                 ".transactions-table th { font-size: 12px; font-weight: bold; }"+
                 ".transactions-table tbody tr { height: 18px; }"+
                 ".transactions-table thead tr { height: 20px; }"+
                 ".transactions-table th:nth-child(1), .transactions-table td:nth-child(1) { width: 4%; text-align: center; font-size: 10px; }" +  /* S.No */
                 ".transactions-table th:nth-child(2), .transactions-table td:nth-child(2) { width: 8%; text-align: center; font-size: 10px; }"+  /* Date */
-                ".transactions-table th:nth-child(3), .transactions-table td:nth-child(3) { width: 35%; text-align: left; font-size: 10px; padding-left: 2px; } "+                     /* Merchant Firm Name */
-                ".transactions-table th:nth-child(4), .transactions-table td:nth-child(4) { width: 15%; text-align: left; font-size: 10px; padding-left: 2px; }  "+                    /* Product */
-                ".transactions-table th:nth-child(5), .transactions-table td:nth-child(5) { width: 6%; text-align: center; font-size: 10px; } "+   /* Qty */
-                ".transactions-table th:nth-child(6), .transactions-table td:nth-child(6) { width: 14%; text-align: right; font-size: 10px; padding-right: 2px; }"+   /* Rate */
-                ".transactions-table th:nth-child(7), .transactions-table td:nth-child(7) { width: 14%; text-align: right; font-size: 10px; padding-right: 2px; }  "+ /* Brokerage */
+                ".transactions-table th:nth-child(3), .transactions-table td:nth-child(3) { width: 30%; text-align: left; font-size: 10px; padding-left: 2px; } "+                     /* Merchant Firm Name */
+                ".transactions-table th:nth-child(4), .transactions-table td:nth-child(4) { width: 12%; text-align: left; font-size: 10px; padding-left: 2px; } "+                     /* City */
+                ".transactions-table th:nth-child(5), .transactions-table td:nth-child(5) { width: 8%; text-align: left; font-size: 10px; padding-left: 2px; }  "+                    /* Product - more decreased */
+                ".transactions-table th:nth-child(6), .transactions-table td:nth-child(6) { width: 6%; text-align: center; font-size: 10px; } "+   /* Qty */
+                ".transactions-table th:nth-child(7), .transactions-table td:nth-child(7) { width: 8%; text-align: right; font-size: 10px; padding-right: 2px; }"+   /* Rate - more decreased */
+                ".transactions-table th:nth-child(8), .transactions-table td:nth-child(8) { width: 8%; text-align: right; font-size: 10px; padding-right: 2px; }  "+ /* Brokerage - more decreased */
                 ".print-btn { background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }" +
                 ".print-header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px; }" +
                 ".print-header h1 { font-size: 18px; margin: 0; font-weight: bold; }" +
@@ -1092,26 +1097,26 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".summary-table { margin: 6px auto; width: 50%; border-collapse: collapse; }" +
                 ".summary-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }"+
                 ".summary-table td { text-align: center; }"+
-                ".summary-table th, .summary-table td { padding: 3px 4px; font-size: 10px; border: 1px solid #000; line-height: 1.2; }"+
+                ".summary-table th, .summary-table td { padding: 3px 4px; font-size: 10px; border: 1px solid #ccc; line-height: 1.2; }"+
                 ".summary-table tbody tr { height: 22px; }"+
                 ".summary-table thead tr { height: 24px; }"+
                 ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
                "@media print { body { -webkit-print-color-adjust: exact; color-adjust: exact; } }" +
                 ".total-row { background-color: #6ef59d; }" +
                 ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin: 8px 0; }" +
-                ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #000; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
+                ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
                 ".bank-details, .upi-details { margin-bottom: 4px; }" +
                 ".payment-row { font-size: 9px; margin-bottom: 2px; }" +
                 ".payment-row span { display: inline-block; width: 50px; }" +
                 ".upi-apps { font-size: 8px; color: #666; margin-top: 2px; }" +
                 ".qr-section { flex: 0 0 80px; text-align: center; }" +
-                ".qr-placeholder { width: 80px; height: 80px; border: 2px solid #000; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
+                ".qr-placeholder { width: 80px; height: 80px; border: 2px solid #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
                 ".qr-text { font-size: 8px; font-weight: bold; }" +
                 ".qr-amount { font-size: 20px; margin-top: 2px; }" +
-                ".footer { text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }" +
+                ".footer { text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 4px; }" +
                 ".footer em { font-style: italic; font-weight: normal; display: block; margin-bottom: 3px; }" +
                 ".city-distribution-table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 8px; }" +
-                ".city-distribution-table th, .city-distribution-table td { border: 1px solid #000; padding: 3px 4px; font-size: 10px; line-height: 1.2; }" +
+                ".city-distribution-table th, .city-distribution-table td { border: 1px solid #ccc; padding: 3px 4px; font-size: 10px; line-height: 1.2; }" +
                 ".city-distribution-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }" +
                 ".city-distribution-table td { text-align: center; }" +
                 ".city-distribution-table th:nth-child(1), .city-distribution-table td:nth-child(1) { width: 15%; }" +

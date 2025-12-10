@@ -71,6 +71,7 @@ public class UserBrokerageDetailDTO {
         private Long transactionNumber;
         private LocalDate transactionDate;
         private String counterPartyFirmName;
+        private String counterPartyCity;
         private String productName;
         private Long productCost;
         private Long quantity;

@@ -1,4 +1,5 @@
 window.APP_CONFIG = {
-  API_URL: `http://${window.location.hostname}:8080/BrokerHub`
+  API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8080/BrokerHub'
+    : 'http://192.168.0.107:8080/BrokerHub'
 };
-console.log('BrokerHub API URL:', window.APP_CONFIG.API_URL);
