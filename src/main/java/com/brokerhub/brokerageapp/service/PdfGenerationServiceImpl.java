@@ -205,12 +205,31 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         
         html.append("</tbody></table></div></div>");
 
-        // 3.5 CHART SECTION - PRODUCT DISTRIBUTION
-        html.append("<div class='graph-section'>")
-                .append("<h2 class='section-title'>📊 Product Distribution</h2>")
+        // 3.5 CHARTS SECTION
+        html.append("<div class='charts-section'>")
+                .append("<h2 class='section-title'>📊 Business Analytics</h2>")
+                .append("<div class='charts-grid'>")
+                // Product Distribution Chart
+                .append("<div class='chart-item'>")
+                .append("<h3 class='chart-title'>Product Distribution</h3>")
                 .append("<div class='chart-container'>")
-                .append("<div class='graph-placeholder' id='chartPlaceholder' style='display: none;'>No product data available</div>")
-                .append("<canvas id='productChart' width='400' height='250'></canvas>")
+                .append("<canvas id='productChart'></canvas>")
+                .append("</div>")
+                .append("</div>")
+                // City Distribution Chart
+                .append("<div class='chart-item'>")
+                .append("<h3 class='chart-title'>City Distribution</h3>")
+                .append("<div class='chart-container'>")
+                .append("<canvas id='cityChart'></canvas>")
+                .append("</div>")
+                .append("</div>")
+                // Monthly Trend Chart
+                .append("<div class='chart-item chart-full'>")
+                .append("<h3 class='chart-title'>Monthly Business Trend</h3>")
+                .append("<div class='chart-container'>")
+                .append("<canvas id='monthlyChart'></canvas>")
+                .append("</div>")
+                .append("</div>")
                 .append("</div>")
                 .append("</div>");
 
@@ -279,48 +298,89 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             .append("</div>")
             .append("</div>");
 
-        html.append("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>")
-                .append("<script>")
-                .append("document.addEventListener('DOMContentLoaded', function(){")
-                .append("try {")
-                .append("const ctx = document.getElementById('productChart').getContext('2d');")
-
-                // Dynamically compute quantities per product
-                .append("const productData = {};")
-                .append("document.querySelectorAll('.transactions-table tbody tr').forEach(row => {")
-                .append(" const product = row.children[3].innerText.trim();")
-                .append(" const qty = parseFloat(row.children[4].innerText.trim()) || 0;")
-                .append(" productData[product] = (productData[product] || 0) + qty;")
-                .append("});")
-
-                // Convert to chart dataset
-                .append("const labels = Object.keys(productData);")
-                .append("const values = Object.values(productData);")
-
-                // Only create chart if we have data
-                .append("if (labels.length > 0) {")
-                // Build enhanced chart
-                .append("new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ ")
-                .append(" label: 'Bags', data: values, ")
-                .append(" backgroundColor: ['#0078D7','#28A745','#FF6B35','#8E24AA','#17A2B8','#FFC107','#DC3545','#6F42C1'], ")
-                .append(" borderColor: '#fff', borderWidth: 2, hoverBorderWidth: 3 }]}, ")
-                .append(" options: { responsive: true, maintainAspectRatio: false, ")
-                .append(" plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true, font: { size: 11 } } }, ")
-                .append(" tooltip: { callbacks: { label: function(context) { return context.label + ': ' + context.parsed + ' bags'; } } } }, ")
-                .append(" cutout: '50%' } });")
-                .append("} else {")
-                // Show placeholder if no data
-                .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
-                .append("document.getElementById('productChart').style.display = 'none';")
-                .append("}")
-                .append("} catch(error) {")
-                // Show error message if chart fails to load
-                .append("document.getElementById('chartPlaceholder').style.display = 'flex';")
-                .append("document.getElementById('chartPlaceholder').innerText = 'Chart unavailable';")
-                .append("document.getElementById('productChart').style.display = 'none';")
-                .append("}")
-                .append("});")
-                .append("</script>");
+        // Add chart data as JavaScript variables
+        html.append("<script>")
+            .append("const chartData = {")
+            .append("products: {");
+        
+        // Product data from DTO
+        for (UserBrokerageDetailDTO.ProductSummary product : userDetail.getBrokerageSummary().getProductsBought()) {
+            html.append("'").append(product.getProductName()).append("':").append(product.getTotalBags()).append(",");
+        }
+        for (UserBrokerageDetailDTO.ProductSummary product : userDetail.getBrokerageSummary().getProductsSold()) {
+            html.append("'").append(product.getProductName()).append("':").append(product.getTotalBags()).append(",");
+        }
+        html.append("},")
+            .append("cities: {");
+        
+        // City data from DTO
+        for (UserBrokerageDetailDTO.CitySummary city : userDetail.getBrokerageSummary().getCitiesSoldTo()) {
+            html.append("'").append(city.getCity()).append("':").append(city.getTotalBags()).append(",");
+        }
+        for (UserBrokerageDetailDTO.CitySummary city : userDetail.getBrokerageSummary().getCitiesBoughtFrom()) {
+            html.append("'").append(city.getCity()).append("':").append(city.getTotalBags()).append(",");
+        }
+        html.append("},")
+            .append("monthly: {");
+        
+        // Monthly data from transactions
+        java.util.Map<String, Long> monthlyData = new java.util.HashMap<>();
+        for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
+            String monthKey = transaction.getTransactionDate().getMonth().toString().substring(0,3) + " " + transaction.getTransactionDate().getYear();
+            monthlyData.put(monthKey, monthlyData.getOrDefault(monthKey, 0L) + transaction.getQuantity());
+        }
+        for (java.util.Map.Entry<String, Long> entry : monthlyData.entrySet()) {
+            html.append("'").append(entry.getKey()).append("':").append(entry.getValue()).append(",");
+        }
+        html.append("}")
+            .append("};")
+            .append("</script>")
+            
+            .append("<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>")
+            .append("<script>")
+            .append("setTimeout(function(){")
+            .append("try {")
+            
+            // Product Distribution Chart
+            .append("const productCtx = document.getElementById('productChart');")
+            .append("if(productCtx && chartData.products) {")
+            .append("const productLabels = Object.keys(chartData.products);")
+            .append("const productValues = Object.values(chartData.products);")
+            .append("if(productLabels.length > 0) {")
+            .append("new Chart(productCtx, { type: 'doughnut', data: { labels: productLabels, datasets: [{ ")
+            .append(" data: productValues, backgroundColor: ['#0078D7','#28A745','#FF6B35','#8E24AA','#17A2B8','#FFC107','#DC3545'] }]}, ")
+            .append(" options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 8 } } } } } });")
+            .append("}")
+            .append("}")
+            
+            // City Distribution Chart
+            .append("const cityCtx = document.getElementById('cityChart');")
+            .append("if(cityCtx && chartData.cities) {")
+            .append("const cityLabels = Object.keys(chartData.cities);")
+            .append("const cityValues = Object.values(chartData.cities);")
+            .append("if(cityLabels.length > 0) {")
+            .append("new Chart(cityCtx, { type: 'doughnut', data: { labels: cityLabels, datasets: [{ ")
+            .append(" data: cityValues, backgroundColor: ['#FF6B35','#8E24AA','#17A2B8','#FFC107','#DC3545','#6F42C1','#28A745'] }]}, ")
+            .append(" options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 8 } } } } } });")
+            .append("}")
+            .append("}")
+            
+            // Monthly Trend Chart
+            .append("const monthlyCtx = document.getElementById('monthlyChart');")
+            .append("if(monthlyCtx && chartData.monthly) {")
+            .append("const monthlyLabels = Object.keys(chartData.monthly);")
+            .append("const monthlyValues = Object.values(chartData.monthly);")
+            .append("if(monthlyLabels.length > 0) {")
+            .append("new Chart(monthlyCtx, { type: 'line', data: { labels: monthlyLabels, datasets: [{ ")
+            .append(" label: 'Quantity', data: monthlyValues, borderColor: '#0078D7', backgroundColor: 'rgba(0,120,215,0.1)', ")
+            .append(" tension: 0.4, fill: true }]}, ")
+            .append(" options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } } });")
+            .append("}")
+            .append("}")
+            
+            .append("} catch(error) { console.error('Chart error:', error); }")
+            .append("}, 500);")
+            .append("</script>");
 
         html.append("</div></body></html>");
         
@@ -586,53 +646,55 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         font-weight: bold;
     }
 
-    /* ---------- GRAPH SECTION ---------- */
-    .graph-section {
-        margin: 15px 0 60px 0;
-        text-align: center;
+    /* ---------- CHARTS SECTION ---------- */
+    .charts-section {
+        margin: 15px 0 30px 0;
         page-break-inside: avoid;
     }
 
-    .graph-section h4 {
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 10px;
+    }
+
+    .chart-item {
+        background: #f8fbff;
+        border: 1px solid #dde8ff;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .chart-full {
+        grid-column: 1 / -1;
+    }
+
+    .chart-title {
         color: #0078D7;
+        font-size: 12px;
         margin-bottom: 8px;
-        font-size: 11px;
+        font-weight: bold;
     }
 
     .chart-container {
         position: relative;
         width: 100%;
-        max-width: 400px;
-        height: 280px;
+        height: 200px;
         margin: 0 auto;
-        padding: 15px;
-        background: #f8fbff;
-        border: 1px solid #dde8ff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .graph-placeholder {
-        width: 100%;
-        height: 100%;
-        border: 2px dashed #aad0ff;
-        margin: 0;
-        display: none;
+        display: flex;
         align-items: center;
         justify-content: center;
-        color: #0078D7;
-        font-size: 12px;
-        font-weight: 500;
-        border-radius: 6px;
-        background: #f9fcff;
     }
 
-    #productChart {
-        width: 100% !important;
-        height: 100% !important;
-        max-width: none;
-        max-height: none;
-        margin: 0;
+    .chart-full .chart-container {
+        height: 250px;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
         display: block;
     }
 
