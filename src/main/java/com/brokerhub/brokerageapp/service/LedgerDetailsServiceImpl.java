@@ -73,7 +73,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         DailyLedger dailyLedger = dailyLedgerService.getDailyLedgerByFinancialYear(date, financialYearId);
         Long sellerId = ledgerDetailsDTO.getFromSeller();
         User seller = null;
-        Long sellerBrokerage = ledgerDetailsDTO.getBrokerage();
+        Long sellerBrokerage = ledgerDetailsDTO.getSellerBrokerage() != null ? 
+            Long.parseLong(ledgerDetailsDTO.getSellerBrokerage()) : 0L;
         if(null!=sellerId){
             Optional<User> sellerOptional = userRepository.findById(sellerId);
             seller = sellerOptional.orElse(null);
