@@ -43,11 +43,11 @@ public class ContactController {
             sectionDTO.setBrokerId(brokerId);
             
             ContactSectionDTO created = contactService.createSection(sectionDTO);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Section created successfully", created));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Section created successfully", created));
         } catch (Exception e) {
             log.error("Error creating section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -56,11 +56,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             List<ContactSectionDTO> sections = contactService.getAllSections(brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Sections retrieved successfully", sections));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Sections retrieved successfully", sections));
         } catch (Exception e) {
             log.error("Error retrieving sections", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("false", "Failed to retrieve sections", null));
+                    .body(new ApiResponse<>(false, "Failed to retrieve sections", null));
         }
     }
     
@@ -69,11 +69,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             ContactSectionDTO section = contactService.getSectionById(sectionId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Section retrieved successfully", section));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Section retrieved successfully", section));
         } catch (Exception e) {
             log.error("Error retrieving section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -83,11 +83,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             ContactSectionDTO updated = contactService.updateSection(sectionId, sectionDTO, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Section updated successfully", updated));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Section updated successfully", updated));
         } catch (Exception e) {
             log.error("Error updating section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -96,11 +96,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             contactService.deleteSection(sectionId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Section deleted successfully", null));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Section deleted successfully", null));
         } catch (Exception e) {
             log.error("Error deleting section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -113,11 +113,11 @@ public class ContactController {
             contactDTO.setBrokerId(brokerId);
             
             ContactDTO created = contactService.createContact(contactDTO);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact created successfully", created));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact created successfully", created));
         } catch (Exception e) {
             log.error("Error creating contact", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -126,11 +126,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             List<ContactDTO> contacts = contactService.getAllContacts(brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contacts retrieved successfully", contacts));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contacts retrieved successfully", contacts));
         } catch (Exception e) {
             log.error("Error retrieving contacts", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("false", "Failed to retrieve contacts", null));
+                    .body(new ApiResponse<>(false, "Failed to retrieve contacts", null));
         }
     }
     
@@ -139,11 +139,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             List<ContactDTO> contacts = contactService.getContactsBySection(sectionId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contacts retrieved successfully", contacts));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contacts retrieved successfully", contacts));
         } catch (Exception e) {
             log.error("Error retrieving contacts by section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -152,11 +152,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             List<ContactSectionDTO> sections = contactService.getRootSections(brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Root sections retrieved successfully", sections));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Root sections retrieved successfully", sections));
         } catch (Exception e) {
             log.error("Error retrieving root sections", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("false", "Failed to retrieve root sections", null));
+                    .body(new ApiResponse<>(false, "Failed to retrieve root sections", null));
         }
     }
     
@@ -165,11 +165,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             List<ContactSectionDTO> sections = contactService.getChildSections(parentId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Child sections retrieved successfully", sections));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Child sections retrieved successfully", sections));
         } catch (Exception e) {
             log.error("Error retrieving child sections", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -179,11 +179,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             contactService.addContactToSection(contactId, sectionId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact added to section successfully", null));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact added to section successfully", null));
         } catch (Exception e) {
             log.error("Error adding contact to section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -193,11 +193,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             contactService.removeContactFromSection(contactId, sectionId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact removed from section successfully", null));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact removed from section successfully", null));
         } catch (Exception e) {
             log.error("Error removing contact from section", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -206,11 +206,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             ContactDTO contact = contactService.getContactById(contactId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact retrieved successfully", contact));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact retrieved successfully", contact));
         } catch (Exception e) {
             log.error("Error retrieving contact", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -220,11 +220,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             ContactDTO updated = contactService.updateContact(contactId, contactDTO, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact updated successfully", updated));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact updated successfully", updated));
         } catch (Exception e) {
             log.error("Error updating contact", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -233,11 +233,11 @@ public class ContactController {
         try {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             contactService.deleteContact(contactId, brokerId);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contact deleted successfully", null));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contact deleted successfully", null));
         } catch (Exception e) {
             log.error("Error deleting contact", e);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse<>("false", e.getMessage(), null));
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
     
@@ -252,11 +252,11 @@ public class ContactController {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             Pageable pageable = PageRequest.of(page, size);
             Page<ContactDTO> contacts = contactService.searchContacts(brokerId, query, pageable);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Search completed successfully", contacts));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Search completed successfully", contacts));
         } catch (Exception e) {
             log.error("Error searching contacts", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("false", "Search failed", null));
+                    .body(new ApiResponse<>(false, "Search failed", null));
         }
     }
     
@@ -268,11 +268,11 @@ public class ContactController {
             Long brokerId = tenantContextService.getCurrentBrokerId();
             Pageable pageable = PageRequest.of(page, size);
             Page<ContactDTO> contacts = contactService.getContactsPaginated(brokerId, pageable);
-            return ResponseEntity.ok(new ApiResponse<>("true", "Contacts retrieved successfully", contacts));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Contacts retrieved successfully", contacts));
         } catch (Exception e) {
             log.error("Error retrieving paginated contacts", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("false", "Failed to retrieve contacts", null));
+                    .body(new ApiResponse<>(false, "Failed to retrieve contacts", null));
         }
     }
 }

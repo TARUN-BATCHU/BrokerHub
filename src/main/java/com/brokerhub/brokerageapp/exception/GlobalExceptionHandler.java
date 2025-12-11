@@ -16,13 +16,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<String>> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        ApiResponse<String> response = new ApiResponse<>("error", ex.getMessage(), null);
+        ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<ApiResponse<String>> handleInvalidOperationException(InvalidOperationException ex) {
-        ApiResponse<String> response = new ApiResponse<>("error", ex.getMessage(), null);
+        ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -34,13 +34,13 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        ApiResponse<Map<String, String>> response = new ApiResponse<>("error", "Validation failed", errors);
+        ApiResponse<Map<String, String>> response = new ApiResponse<>(false, "Validation failed", errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> handleGenericException(Exception ex) {
-        ApiResponse<String> response = new ApiResponse<>("error", "An unexpected error occurred", ex.getMessage());
+        ApiResponse<String> response = new ApiResponse<>(false, "An unexpected error occurred", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

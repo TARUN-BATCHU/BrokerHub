@@ -192,4 +192,30 @@ public interface BrokeragePaymentRepository extends JpaRepository<BrokeragePayme
            "FROM BrokeragePayment bp " +
            "WHERE bp.broker.brokerId = :brokerId")
     Object[] getBrokeragePaymentStatistics(@Param("brokerId") Long brokerId);
+
+    /**
+     * Find all brokerage payments for a specific broker
+     */
+    List<BrokeragePayment> findByBrokerBrokerId(Long brokerId);
+
+    /**
+     * Find brokerage payment by broker and merchant
+     */
+    @Query("SELECT bp FROM BrokeragePayment bp " +
+           "LEFT JOIN FETCH bp.partPayments " +
+           "WHERE bp.broker.brokerId = :brokerId " +
+           "AND bp.merchant.userId = :merchantId")
+    Optional<BrokeragePayment> findByBrokerIdAndMerchantUserId(@Param("brokerId") Long brokerId, 
+                                                               @Param("merchantId") Long merchantId);
+
+    /**
+     * Find brokerage payments by broker and city
+     */
+    @Query("SELECT bp FROM BrokeragePayment bp " +
+           "JOIN FETCH bp.merchant m " +
+           "JOIN FETCH m.address a " +
+           "WHERE bp.broker.brokerId = :brokerId " +
+           "AND a.city = :city")
+    List<BrokeragePayment> findByBrokerBrokerIdAndMerchantAddressCity(@Param("brokerId") Long brokerId, 
+                                                                     @Param("city") String city);
 }

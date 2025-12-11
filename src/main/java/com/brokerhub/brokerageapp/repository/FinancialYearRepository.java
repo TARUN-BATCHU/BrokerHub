@@ -15,4 +15,10 @@ public interface FinancialYearRepository extends JpaRepository<FinancialYear, Lo
     List<FinancialYear> findOverlappingYears(LocalDate start, LocalDate end);
 
     List<FinancialYear> findByBrokerBrokerId(Long brokerId);
+    
+    @Query("SELECT fy FROM FinancialYear fy " +
+           "WHERE fy.broker.brokerId = :brokerId " +
+           "AND fy.end < CURRENT_DATE " +
+           "ORDER BY fy.end DESC")
+    java.util.Optional<FinancialYear> findPreviousFinancialYear(@org.springframework.data.repository.query.Param("brokerId") Long brokerId);
 }
