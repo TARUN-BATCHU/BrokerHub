@@ -27,6 +27,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByBrokerBrokerId(Long brokerId);
 
+    List<User> findByBroker(com.brokerhub.brokerageapp.entity.Broker broker);
+
     Page<User> findByBrokerBrokerId(Long brokerId, Pageable pageable);
 
     // Optimized queries with broker filtering

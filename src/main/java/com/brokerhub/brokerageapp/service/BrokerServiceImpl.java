@@ -346,6 +346,9 @@ public class BrokerServiceImpl implements BrokerService{
     @Autowired
     private org.springframework.security.authentication.AuthenticationManager authenticationManager;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
+
     public ResponseEntity<?> login(BrokerLoginDTO brokerLoginDTO){
         try {
             // Authenticate user
@@ -359,6 +362,22 @@ public class BrokerServiceImpl implements BrokerService{
             // Get broker details
             Broker broker = brokerRepository.findByUserName(brokerLoginDTO.getUserName())
                 .orElseThrow(() -> new RuntimeException("Broker not found"));
+
+            // Check subscription status for non-admin users
+            if (!"admin".equals(broker.getUserName())) {
+                // For multi-tenant, we need to check if broker has active subscription
+                // Since broker is the tenant owner, we check broker's subscription through any user
+                List<User> brokerUsers = userRepository.findByBroker(broker);
+                if (!brokerUsers.isEmpty()) {
+                    User firstUser = brokerUsers.get(0);
+                    if (!subscriptionService.hasActiveSubscription(firstUser)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(new com.brokerhub.brokerageapp.dto.subscription.SubscriptionErrorDTO(
+                                "SUBSCRIPTION_INACTIVE", 
+                                "Your subscription is not active"));
+                    }
+                }
+            }
 
             // Generate JWT token
             String token = jwtUtil.generateToken(broker.getUserName(), broker.getBrokerId());
