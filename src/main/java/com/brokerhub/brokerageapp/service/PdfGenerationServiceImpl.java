@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
@@ -323,11 +324,25 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("},")
             .append("monthly: {");
         
-        // Monthly data from transactions
-        java.util.Map<String, Long> monthlyData = new java.util.HashMap<>();
+        // Monthly data from transactions - sorted chronologically with missing months filled
+        java.util.Map<java.time.YearMonth, Long> tempMonthlyData = new java.util.HashMap<>();
         for (UserBrokerageDetailDTO.TransactionDetail transaction : userDetail.getTransactionDetails()) {
-            String monthKey = transaction.getTransactionDate().getMonth().toString().substring(0,3) + " " + transaction.getTransactionDate().getYear();
-            monthlyData.put(monthKey, monthlyData.getOrDefault(monthKey, 0L) + transaction.getQuantity());
+            java.time.YearMonth yearMonth = java.time.YearMonth.from(transaction.getTransactionDate());
+            tempMonthlyData.put(yearMonth, tempMonthlyData.getOrDefault(yearMonth, 0L) + transaction.getQuantity());
+        }
+        
+        // Fill missing months between first and last transaction month
+        java.util.Map<String, Long> monthlyData = new java.util.LinkedHashMap<>();
+        if (!tempMonthlyData.isEmpty()) {
+            java.time.YearMonth firstMonth = tempMonthlyData.keySet().stream().min(java.time.YearMonth::compareTo).get();
+            java.time.YearMonth lastMonth = tempMonthlyData.keySet().stream().max(java.time.YearMonth::compareTo).get();
+            
+            java.time.YearMonth current = firstMonth;
+            while (!current.isAfter(lastMonth)) {
+                String monthKey = current.getMonth().toString().substring(0,3) + " " + current.getYear();
+                monthlyData.put(monthKey, tempMonthlyData.getOrDefault(current, 0L));
+                current = current.plusMonths(1);
+            }
         }
         for (java.util.Map.Entry<String, Long> entry : monthlyData.entrySet()) {
             html.append("'").append(entry.getKey()).append("':").append(entry.getValue()).append(",");

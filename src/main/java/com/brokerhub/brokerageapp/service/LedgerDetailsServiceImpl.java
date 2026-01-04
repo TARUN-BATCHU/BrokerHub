@@ -384,10 +384,19 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         // Convert seller info (basic info only)
         if (ledgerDetails.getFromSeller() != null) {
             User seller = ledgerDetails.getFromSeller();
+            
+            // Get seller brokerage per bag from records
+            BigDecimal sellerBrokerage = BigDecimal.ZERO;
+            if (ledgerDetails.getRecords() != null && !ledgerDetails.getRecords().isEmpty()) {
+                Long brokerageRate = ledgerDetails.getRecords().get(0).getBrokerage();
+                sellerBrokerage = BigDecimal.valueOf(brokerageRate);
+            }
+            
             OptimizedUserDTO sellerDTO = OptimizedUserDTO.builder()
                     .userId(seller.getUserId())
                     .firmName(seller.getFirmName())
                     .addressId(seller.getAddress() != null ? seller.getAddress().getAddressId() : null)
+                    .sellerBrokerage(sellerBrokerage)
                     .build();
             dto.setFromSeller(sellerDTO);
         }
