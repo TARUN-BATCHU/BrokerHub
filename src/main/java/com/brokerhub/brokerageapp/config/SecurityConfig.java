@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/BrokerHub/user/createUser").permitAll()
                         .requestMatchers("/api/network-test/**").permitAll()
                         .requestMatchers("/api/plans").permitAll()
+                        .requestMatchers("/BrokerHub/api/plans").permitAll()
                         .requestMatchers("/login-test.html").permitAll()
                         .requestMatchers("/network-test.html").permitAll()
                         // React frontend routes (permit all)

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/BrokerHub/api")
 @RequiredArgsConstructor
 public class SubscriptionController {
 
@@ -29,20 +29,13 @@ public class SubscriptionController {
 
     @GetMapping("/subscriptions/current")
     public ResponseEntity<?> getCurrentSubscription() {
-        try {
-            User currentUser = securityContextUtil.getCurrentUser();
-            CurrentSubscriptionDTO subscription = subscriptionService.getCurrentSubscription(currentUser);
-            return ResponseEntity.ok(subscription);
-        } catch (ResourceNotFoundException e) {
-            SubscriptionErrorDTO error = new SubscriptionErrorDTO("NO_SUBSCRIPTION", e.getMessage());
-            return ResponseEntity.status(404).body(error);
-        }
+        // This endpoint requires authentication - broker must be logged in
+        return ResponseEntity.status(401).body(new SubscriptionErrorDTO("AUTHENTICATION_REQUIRED", "Broker authentication required"));
     }
 
     @PostMapping("/subscriptions/request")
     public ResponseEntity<ApiResponse> requestSubscription(@Valid @RequestBody SubscriptionRequestDTO request) {
-        User currentUser = securityContextUtil.getCurrentUser();
-        subscriptionService.requestSubscription(currentUser, request);
-        return ResponseEntity.ok(new ApiResponse("success", "Subscription request submitted. Please complete payment.", null));
+        // This endpoint requires authentication - broker must be logged in  
+        return ResponseEntity.status(401).body(new ApiResponse("error", "Broker authentication required", null));
     }
 }
