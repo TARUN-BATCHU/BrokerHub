@@ -9,4 +9,6 @@ public interface BulkBillGenerationService {
     
     byte[] generateBulkBillsExcelSync(List<Long> userIds, Broker broker, Long financialYearId);
     
+    byte[] generateBulkPrintBillsSync(List<Long> userIds, Broker broker, Long financialYearId);
+    
 }

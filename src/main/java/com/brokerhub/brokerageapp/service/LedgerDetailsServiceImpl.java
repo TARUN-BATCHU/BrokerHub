@@ -308,7 +308,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                 .collect(Collectors.toList());
 
         for(DateLedgerRecordDTO dateLedgerRecord : ledgerRecordsOnDate){
-            String sellerName = userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName();
+            User seller = userRepository.findById(dateLedgerRecord.getSellerId()).get();
+            String sellerName = seller.getFirmName();
             DisplayLedgerDetailDTO existingLedgerDetail = checkTransactionExists(ledgerDetailsDTOList, sellerName, dateLedgerRecord.getTransactionNumber());
             if(null==existingLedgerDetail){
                 DisplayLedgerDetailDTO ledgerDetailsDTO = new DisplayLedgerDetailDTO();
@@ -317,7 +318,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                 ledgerDetailsDTO.setTransactionNumber(dateLedgerRecord.getTransactionNumber());
                 ledgerDetailsDTO.setFinancialYearId(financialYearId);
                 ledgerDetailsDTO.setBrokerId(currentBrokerId);
-                ledgerDetailsDTO.setSellerName(userRepository.findById(dateLedgerRecord.getSellerId()).get().getFirmName());
+                ledgerDetailsDTO.setSellerName(sellerName);
+                ledgerDetailsDTO.setSellerLocation(seller.getAddress() != null ? seller.getAddress().getCity() : null);
 
                 List<DisplayLedgerRecordDTO> ledgerRecordDTOList = new ArrayList<>();
                 DisplayLedgerRecordDTO ledgerRecordDTO = new DisplayLedgerRecordDTO();

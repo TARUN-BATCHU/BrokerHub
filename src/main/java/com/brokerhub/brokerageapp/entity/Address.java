@@ -17,7 +17,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Address {
+public class
+Address {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

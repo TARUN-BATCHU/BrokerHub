@@ -379,6 +379,20 @@ public class BrokerageServiceImpl implements BrokerageService {
         return bulkBillGenerationService.generateBulkBillsExcelSync(userIds, brokerOpt.get(), financialYearId);
     }
     
+    @Override
+    public byte[] generateBulkPrintBills(List<Long> userIds, Long brokerId, Long financialYearId) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        if (financialYearId == null) {
+            financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
+        }
+        
+        Optional<com.brokerhub.brokerageapp.entity.Broker> brokerOpt = brokerRepository.findById(currentBrokerId);
+        if (!brokerOpt.isPresent()) {
+            throw new RuntimeException("Broker not found: " + currentBrokerId);
+        }
+        
+        return bulkBillGenerationService.generateBulkPrintBillsSync(userIds, brokerOpt.get(), financialYearId);
+    }
 
     @Override
     public String generateExcelFilename(Long userId, Long financialYearId) {

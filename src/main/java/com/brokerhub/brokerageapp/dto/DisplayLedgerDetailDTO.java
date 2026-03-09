@@ -20,6 +20,8 @@ public class DisplayLedgerDetailDTO {
 
     private String sellerName;
 
+    private String sellerLocation;
+
     private LocalDate date;
 
     private Long transactionNumber;

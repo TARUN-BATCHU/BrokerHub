@@ -237,6 +237,24 @@ public class BrokerageController {
         }
     }
     
+    @PostMapping("/bulk-print-bills/{financialYearId}")
+    public ResponseEntity<byte[]> downloadBulkPrintBills(
+            @RequestBody List<Long> userIds,
+            @PathVariable Long financialYearId) {
+        try {
+            byte[] zipData = brokerageService.generateBulkPrintBills(userIds, null, financialYearId);
+            String filename = "bulk-print-bills-FY" + financialYearId + ".zip";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=" + filename)
+                    .body(zipData);
+        } catch (Exception e) {
+            log.error("Error generating bulk print bills", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
     @GetMapping("/city-wise-print-bill/{userId}/{financialYearId}")
     public ResponseEntity<byte[]> generateCityWisePrintBill(
             @PathVariable Long userId,

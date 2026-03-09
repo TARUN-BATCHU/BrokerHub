@@ -138,5 +138,50 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
         return fileName.replaceAll("[^a-zA-Z0-9\\s-_]", "").replaceAll("\\s+", "-");
     }
     
+    @Override
+    public byte[] generateBulkPrintBillsSync(List<Long> userIds, Broker broker, Long financialYearId) {
+        try {
+            log.info("Starting synchronous print bill generation for {} users", userIds.size());
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ZipOutputStream zos = new ZipOutputStream(baos);
+            
+            int successCount = 0;
+            for (Long userId : userIds) {
+                try {
+                    Optional<User> userOpt = userRepository.findById(userId);
+                    if (userOpt.isPresent()) {
+                        User user = userOpt.get();
+                        
+                        UserBrokerageDetailDTO userDetail = brokerageService.getUserBrokerageDetailInFinancialYear(
+                            userId, broker.getBrokerId(), financialYearId);
+                        
+                        byte[] printBill = pdfGenerationService.generatePrintOptimizedBill(userDetail, broker, financialYearId, null, "a4", "portrait");
+                        
+                        String fileName = "print-bill_" + userId + "_" + sanitizeFileName(user.getFirmName()) + ".html";
+                        ZipEntry entry = new ZipEntry(fileName);
+                        zos.putNextEntry(entry);
+                        zos.write(printBill);
+                        zos.closeEntry();
+                        
+                        successCount++;
+                        log.debug("Generated print bill for user: {}", user.getFirmName());
+                    } else {
+                        log.warn("User not found: {}", userId);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to generate print bill for user: {}", userId, e);
+                }
+            }
+            
+            zos.close();
+            log.info("Completed print bill generation. Generated {} out of {} files", successCount, userIds.size());
+            
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Error in print bill generation", e);
+            throw new RuntimeException("Failed to generate print bills: " + e.getMessage(), e);
+        }
+    }
 
 }

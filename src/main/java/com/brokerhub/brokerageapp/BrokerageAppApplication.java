@@ -22,16 +22,20 @@ public class BrokerageAppApplication {
 	public void openBrowser() {
 		try {
 			String url = "http://localhost:8080";
+			String os = System.getProperty("os.name").toLowerCase();
 
-			if (Desktop.isDesktopSupported()) {
+			if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
 				System.out.println("✅ Using Desktop API to open browser...");
 				Desktop.getDesktop().browse(new URI(url));
-			} else {
-				System.out.println("⚡ Desktop not supported, using Windows command fallback...");
+			} else if (os.contains("mac")) {
+				Runtime.getRuntime().exec("open " + url);
+			} else if (os.contains("win")) {
 				Runtime.getRuntime().exec("rundll32 url.dll,FileProtocolHandler " + url);
+			} else if (os.contains("nix") || os.contains("nux")) {
+				Runtime.getRuntime().exec("xdg-open " + url);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("⚠️ Could not open browser automatically. Please open: http://localhost:8080");
 		}
 	}
 
