@@ -21,6 +21,67 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LedgerDetailsServiceImpl implements LedgerDetailsService{
 
+    /**
+     * Helper method to safely get total payable brokerage, returning ZERO if null
+     * This prevents NullPointerException in calculations
+     */
+    private BigDecimal getTotalPayableBrokerageSafe(User user) {
+        if (user == null) {
+            return BigDecimal.ZERO;
+        }
+        return user.getTotalPayableBrokerage() != null ? 
+            user.getTotalPayableBrokerage() : BigDecimal.ZERO;
+    }
+
+    /**
+     * Helper method to safely add brokerage to user
+     * Handles null values and logs the operation
+     */
+    private void addBrokerage(User user, BigDecimal amount, String operation) {
+        if (user == null || amount == null) {
+            log.warn("{}: Skipping brokerage addition - user or amount is null", operation);
+            return;
+        }
+        BigDecimal current = getTotalPayableBrokerageSafe(user);
+        BigDecimal newValue = current.add(amount);
+        log.debug("{}: User {} brokerage {} + {} = {}", 
+            operation, user.getUserId(), current, amount, newValue);
+        user.setTotalPayableBrokerage(newValue);
+    }
+
+    /**
+     * Helper method to safely subtract brokerage from user
+     * Prevents negative values and logs warnings
+     */
+    private void subtractBrokerage(User user, BigDecimal amount, String operation) {
+        if (user == null || amount == null) {
+            log.warn("{}: Skipping brokerage subtraction - user or amount is null", operation);
+            return;
+        }
+        BigDecimal current = getTotalPayableBrokerageSafe(user);
+        if (current.compareTo(amount) < 0) {
+            log.warn("{}: User {} has insufficient brokerage {} to subtract {}. Setting to zero.",
+                operation, user.getUserId(), current, amount);
+            user.setTotalPayableBrokerage(BigDecimal.ZERO);
+        } else {
+            BigDecimal newValue = current.subtract(amount);
+            log.debug("{}: User {} brokerage {} - {} = {}", 
+                operation, user.getUserId(), current, amount, newValue);
+            user.setTotalPayableBrokerage(newValue);
+        }
+    }
+
+    /**
+     * Helper method to safely multiply two numbers and convert to BigDecimal
+     * Prevents overflow by converting to BigDecimal before multiplication
+     */
+    private BigDecimal safeMultiply(Long value1, Long value2) {
+        if (value1 == null || value2 == null) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(value1).multiply(BigDecimal.valueOf(value2));
+    }
+
     @Autowired
     DailyLedgerService dailyLedgerService;
 
@@ -95,6 +156,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         if(seller != null){
             ledgerDetails.setFromSeller(seller);
         }
+        // Store seller brokerage rate for this transaction
+        ledgerDetails.setSellerBrokerageRate(sellerBrokerage);
         List<LedgerRecordDTO> ledgerRecordDTOList = ledgerDetailsDTO.getLedgerRecordDTOList();
         Long totalBags = 0L;
         if(ledgerRecordDTOList != null && !ledgerRecordDTOList.isEmpty()) {
@@ -122,10 +185,10 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             ledgerRecord.setTotalBrokerage(brokerage*quantity);
             ledgerRecord.setTotalProductsCost(productCost*quantity);
             totalBags+=quantity;
-            BigDecimal totalBrokerage = BigDecimal.valueOf(quantity*brokerage);
+            BigDecimal totalBrokerage = safeMultiply(quantity, brokerage);
             buyer.setTotalBagsBought(buyer.getTotalBagsBought()+quantity);
             buyer.setPayableAmount(buyer.getPayableAmount()+quantity*productCost);
-            buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().add(totalBrokerage));
+            addBrokerage(buyer, totalBrokerage, "CREATE_TRANSACTION_BUYER");
             seller.setReceivableAmount(seller.getReceivableAmount()+quantity*productCost);
             currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(totalBrokerage));
             userRepository.save(seller);
@@ -136,11 +199,13 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
         }
         if(seller != null) {
             seller.setTotalBagsSold(seller.getTotalBagsSold()+totalBags);
-            seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+            BigDecimal sellerBrokerageAmount = safeMultiply(totalBags, sellerBrokerage);
+            addBrokerage(seller, sellerBrokerageAmount, "CREATE_TRANSACTION_SELLER");
             userRepository.save(seller);
         }
         if(currentBroker != null) {
-            currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(BigDecimal.valueOf(totalBags*sellerBrokerage)));
+            BigDecimal sellerBrokerageAmount = safeMultiply(totalBags, sellerBrokerage);
+            currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(sellerBrokerageAmount));
         }
         ledgerDetailsRepository.save(ledgerDetails);
         
@@ -591,8 +656,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                         // Reverse old buyer updates
                         buyer.setTotalBagsBought(buyer.getTotalBagsBought() - quantity);
                         buyer.setPayableAmount(buyer.getPayableAmount() - (quantity * productCost));
-                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
-                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().subtract(recordBrokerage));
+                        BigDecimal recordBrokerage = safeMultiply(quantity, brokerage);
+                        subtractBrokerage(buyer, recordBrokerage, "UPDATE_TRANSACTION_REVERSE_BUYER");
                         
                         // Reverse old seller receivable amount
                         if (oldSeller != null) {
@@ -612,11 +677,14 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             // Reverse old seller totals
             if (oldSeller != null && oldTotalBags > 0) {
                 oldSeller.setTotalBagsSold(oldSeller.getTotalBagsSold() - oldTotalBags);
-                if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
-                    Long sellerBrokerageRate = existingLedger.getRecords().get(0).getBrokerage();
-                    oldTotalSellerBrokerage = BigDecimal.valueOf(oldTotalBags * sellerBrokerageRate);
-                }
-                oldSeller.setTotalPayableBrokerage(oldSeller.getTotalPayableBrokerage().subtract(oldTotalSellerBrokerage));
+                // Use the stored seller brokerage rate from ledger details
+                // Fallback to 0 if not stored (for backward compatibility with old records)
+                Long oldSellerBrokerageRate = existingLedger.getSellerBrokerageRate() != null ? 
+                    existingLedger.getSellerBrokerageRate() : 0L;
+                oldTotalSellerBrokerage = safeMultiply(oldTotalBags, oldSellerBrokerageRate);
+                log.debug("UPDATE_REVERSE: Old seller brokerage rate={}, bags={}, total={}", 
+                    oldSellerBrokerageRate, oldTotalBags, oldTotalSellerBrokerage);
+                subtractBrokerage(oldSeller, oldTotalSellerBrokerage, "UPDATE_TRANSACTION_REVERSE_SELLER");
             }
             
             // Reverse old broker total brokerage
@@ -651,6 +719,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             // STEP 3: Apply new transaction balances
             Long newTotalBags = 0L;
             Long newSellerBrokerage = ledgerDetailsDTO.getBrokerage();
+            // Update the seller brokerage rate in ledger details
+            existingLedger.setSellerBrokerageRate(newSellerBrokerage);
             
             if (ledgerDetailsDTO.getLedgerRecordDTOList() != null && !ledgerDetailsDTO.getLedgerRecordDTOList().isEmpty()) {
                 for (LedgerRecordDTO recordDTO : ledgerDetailsDTO.getLedgerRecordDTOList()) {
@@ -685,8 +755,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                         
                         buyer.setTotalBagsBought(buyer.getTotalBagsBought() + quantity);
                         buyer.setPayableAmount(buyer.getPayableAmount() + (quantity * productCost));
-                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
-                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().add(recordBrokerage));
+                        BigDecimal recordBrokerage = safeMultiply(quantity, brokerage);
+                        addBrokerage(buyer, recordBrokerage, "UPDATE_TRANSACTION_APPLY_BUYER");
                         
                         // Apply new seller receivable amount
                         if (newSeller != null) {
@@ -704,12 +774,14 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             // Apply new seller totals
             if (newSeller != null && newTotalBags > 0) {
                 newSeller.setTotalBagsSold(newSeller.getTotalBagsSold() + newTotalBags);
-                newSeller.setTotalPayableBrokerage(newSeller.getTotalPayableBrokerage().add(BigDecimal.valueOf(newTotalBags * newSellerBrokerage)));
+                BigDecimal newSellerBrokerageAmount = safeMultiply(newTotalBags, newSellerBrokerage);
+                addBrokerage(newSeller, newSellerBrokerageAmount, "UPDATE_TRANSACTION_APPLY_SELLER");
             }
             
             // Apply new broker total brokerage
             if (currentBroker != null) {
-                currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(BigDecimal.valueOf(newTotalBags * newSellerBrokerage)));
+                BigDecimal newSellerBrokerageAmount = safeMultiply(newTotalBags, newSellerBrokerage);
+                currentBroker.setTotalBrokerage(currentBroker.getTotalBrokerage().add(newSellerBrokerageAmount));
                 brokerRepository.save(currentBroker);
             }
 
@@ -907,6 +979,13 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             Broker currentBroker = existingLedger.getBroker();
             User seller = existingLedger.getFromSeller();
             
+            // Get the stored seller brokerage rate from ledger details
+            // Fallback to 0 if not stored (for backward compatibility with old records)
+            Long sellerBrokerageRate = existingLedger.getSellerBrokerageRate() != null ? 
+                existingLedger.getSellerBrokerageRate() : 0L;
+            log.info("DELETE: Using seller brokerage rate {} for seller {} from ledger details",
+                sellerBrokerageRate, seller != null ? seller.getUserId() : "null");
+            
             // Calculate totals to reverse BEFORE deletion
             Long totalBags = 0L;
             BigDecimal totalSellerBrokerage = BigDecimal.ZERO;
@@ -924,8 +1003,8 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
                         // Reverse buyer updates
                         buyer.setTotalBagsBought(buyer.getTotalBagsBought() - quantity);
                         buyer.setPayableAmount(buyer.getPayableAmount() - (quantity * productCost));
-                        BigDecimal recordBrokerage = BigDecimal.valueOf(quantity * brokerage);
-                        buyer.setTotalPayableBrokerage(buyer.getTotalPayableBrokerage().subtract(recordBrokerage));
+                        BigDecimal recordBrokerage = safeMultiply(quantity, brokerage);
+                        subtractBrokerage(buyer, recordBrokerage, "DELETE_TRANSACTION_BUYER");
                         
                         // Reverse seller receivable amount
                         if (seller != null) {
@@ -943,13 +1022,9 @@ public class LedgerDetailsServiceImpl implements LedgerDetailsService{
             // Reverse seller totals
             if (seller != null && totalBags > 0) {
                 seller.setTotalBagsSold(seller.getTotalBagsSold() - totalBags);
-                // Calculate seller brokerage from ledger details brokerage field
-                if (existingLedger.getRecords() != null && !existingLedger.getRecords().isEmpty()) {
-                    // Get seller brokerage from first record or calculate from total
-                    Long sellerBrokerageRate = existingLedger.getRecords().get(0).getBrokerage(); // Assuming same rate
-                    totalSellerBrokerage = BigDecimal.valueOf(totalBags * sellerBrokerageRate);
-                }
-                seller.setTotalPayableBrokerage(seller.getTotalPayableBrokerage().subtract(totalSellerBrokerage));
+                // Use the seller brokerage rate we stored earlier
+                totalSellerBrokerage = safeMultiply(totalBags, sellerBrokerageRate);
+                subtractBrokerage(seller, totalSellerBrokerage, "DELETE_TRANSACTION_SELLER");
                 userRepository.save(seller);
             }
             

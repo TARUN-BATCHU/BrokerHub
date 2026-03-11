@@ -18,7 +18,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.YearMonth;
@@ -34,6 +33,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    private UpiQrPayloadService upiQrPayloadService;
     
     private String getQRCodeBase64() {
         try {
@@ -48,6 +50,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             log.error("Error loading QR code image", e);
             return null;
         }
+    }
+
+    private int getQrDisplaySize() {
+        return upiQrPayloadService.getQrDisplaySize();
     }
     
     @Override
@@ -259,7 +265,10 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         html.append("</div>");
         
         // QR Code section
-        String qrBase64 = getQRCodeBase64();
+        String qrBase64 = upiQrPayloadService.getDynamicQRCodeBase64(totalBrokerage, financialYear);
+        if (qrBase64 == null) {
+            qrBase64 = getQRCodeBase64();
+        }
         html.append("<div class='qr-section'>")
             .append("<h3>📱 Scan to Pay</h3>");
         if (qrBase64 != null) {
@@ -775,7 +784,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
     .qr-section {
         text-align: center;
-        margin-top: 15px;
+        margin-top: 6px;
     }
 
     .qr-section h3 {
@@ -789,7 +798,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         border: 1px solid #0078D7;
         border-radius: 4px;
         display: block;
-        margin: 5px auto;
+        margin: 2px auto;
     }
 
     .qr-placeholder {
@@ -854,7 +863,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         color: #777;
         font-size: 8px;
     }
-    """;
+    """
+            + ".qr-code, .qr-placeholder { width: " + getQrDisplaySize() + "px; height: " + getQrDisplaySize() + "px; }";
     }
 
 
@@ -1103,18 +1113,25 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         }
         
         // UPI Details
+        String upiIdDisplay = (upiQrPayloadService.getUpiPayeeAddress() != null && !upiQrPayloadService.getUpiPayeeAddress().isBlank())
+                ? upiQrPayloadService.getUpiPayeeAddress()
+                : "9848543443@ptaxis";
         html.append("<div class='upi-details'>")
                 .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
-                .append("<div class='payment-row'><span>UPI ID : </span> <strong>9848543443@ptaxis</strong></div>")
+                .append("<div class='payment-row'><span>UPI ID : </span> <strong>").append(upiIdDisplay).append("</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
                 .append("</div>")
                 .append("</div>");
         
         // QR Code (outside border)
-        String qrBase64 = getQRCodeBase64();
+        String qrBase64 = upiQrPayloadService.getDynamicQRCodeBase64(totalPayableBrokerage, financialYear);
+        if (qrBase64 == null) {
+            qrBase64 = getQRCodeBase64();
+        }
+        int qrDisplaySize = getQrDisplaySize();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
-            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='100' height='100' style='border: 1px solid #ccc;'/>")
+            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='").append(qrDisplaySize).append("' height='").append(qrDisplaySize).append("' style='border: 1px solid #ccc;'/>")
                     .append("<div class='qr-amount'>₹").append(formatCurrency(totalPayableBrokerage)).append("</div>");
         } else {
             html.append("<div class='qr-placeholder'>")
@@ -1180,16 +1197,16 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".transactions-table th { background-color: #f0f0f0; font-weight: bold; }" +
                "@media print { body { -webkit-print-color-adjust: exact; color-adjust: exact; } }" +
                 ".total-row { background-color: #6ef59d; }" +
-                ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin: 8px 0; }" +
-                ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #ccc; padding: 6px; border-radius: 4px; background-color: #f9f9f9; }" +
+                ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin: 6px 0; }" +
+                ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #ccc; padding: 4px; border-radius: 4px; background-color: #f9f9f9; }" +
                 ".bank-details, .upi-details { margin-bottom: 4px; }" +
                 ".payment-row { font-size: 9px; margin-bottom: 2px; }" +
                 ".payment-row span { display: inline-block; width: 50px; }" +
                 ".upi-apps { font-size: 8px; color: #666; margin-top: 2px; }" +
-                ".qr-section { flex: 0 0 80px; text-align: center; }" +
-                ".qr-placeholder { width: 80px; height: 80px; border: 2px solid #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
+                ".qr-section { flex: 0 0 " + getQrDisplaySize() + "px; text-align: center; }" +
+                ".qr-placeholder { width: " + getQrDisplaySize() + "px; height: " + getQrDisplaySize() + "px; border: 2px solid #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
                 ".qr-text { font-size: 8px; font-weight: bold; }" +
-                ".qr-amount { font-size: 20px; margin-top: 2px; }" +
+                ".qr-amount { font-size: 18px; margin-top: 1px; }" +
                 ".footer { text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 4px; }" +
                 ".footer em { font-style: italic; font-weight: normal; display: block; margin-bottom: 3px; }" +
                 ".city-distribution-table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 8px; }" +
@@ -1364,10 +1381,14 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("</div>");
         
         // QR Code (outside border)
-        String qrBase64 = getQRCodeBase64();
+        String qrBase64 = upiQrPayloadService.getDynamicQRCodeBase64(totalPayableBrokerage, financialYear);
+        if (qrBase64 == null) {
+            qrBase64 = getQRCodeBase64();
+        }
+        int qrDisplaySize = getQrDisplaySize();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
-            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='100' height='100' style='border: 1px solid #ccc;'/>")
+            html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='").append(qrDisplaySize).append("' height='").append(qrDisplaySize).append("' style='border: 1px solid #ccc;'/>")
                     .append("<div class='qr-amount'>₹").append(formatCurrency(totalPayableBrokerage)).append("</div>");
         } else {
             html.append("<div class='qr-placeholder'>")

@@ -50,6 +50,14 @@ public class LedgerDetails {
     @NotNull
     private User fromSeller;
 
+    /**
+     * Seller brokerage rate per bag for this transaction.
+     * This is stored to correctly calculate seller brokerage during updates/deletes.
+     * Nullable for backward compatibility with existing records.
+     */
+    @Column(name = "seller_brokerage_rate")
+    private Long sellerBrokerageRate;
+
     @ManyToOne
     @JsonIgnore
     private DailyLedger dailyLedger;

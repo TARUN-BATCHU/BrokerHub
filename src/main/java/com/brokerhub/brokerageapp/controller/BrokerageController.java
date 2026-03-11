@@ -204,9 +204,10 @@ public class BrokerageController {
     @PostMapping("/bulk-bills/html/{financialYearId}")
     public ResponseEntity<byte[]> downloadBulkBillsHtml(
             @RequestBody List<Long> userIds,
-            @PathVariable Long financialYearId) {
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] zipData = brokerageService.generateBulkBillsHtml(userIds, null, financialYearId);
+            byte[] zipData = brokerageService.generateBulkBillsHtml(userIds, null, financialYearId, customBrokerage);
             String filename = "bulk-bills-html-FY" + financialYearId + ".zip";
             
             return ResponseEntity.ok()
@@ -222,9 +223,10 @@ public class BrokerageController {
     @PostMapping("/bulk-bills/excel/{financialYearId}")
     public ResponseEntity<byte[]> downloadBulkBillsExcel(
             @RequestBody List<Long> userIds,
-            @PathVariable Long financialYearId) {
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] zipData = brokerageService.generateBulkBillsExcel(userIds, null, financialYearId);
+            byte[] zipData = brokerageService.generateBulkBillsExcel(userIds, null, financialYearId, customBrokerage);
             String filename = "bulk-bills-excel-FY" + financialYearId + ".zip";
             
             return ResponseEntity.ok()
@@ -240,9 +242,10 @@ public class BrokerageController {
     @PostMapping("/bulk-print-bills/{financialYearId}")
     public ResponseEntity<byte[]> downloadBulkPrintBills(
             @RequestBody List<Long> userIds,
-            @PathVariable Long financialYearId) {
+            @PathVariable Long financialYearId,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
         try {
-            byte[] zipData = brokerageService.generateBulkPrintBills(userIds, null, financialYearId);
+            byte[] zipData = brokerageService.generateBulkPrintBills(userIds, null, financialYearId, customBrokerage);
             String filename = "bulk-print-bills-FY" + financialYearId + ".zip";
             
             return ResponseEntity.ok()

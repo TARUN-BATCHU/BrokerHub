@@ -350,7 +350,7 @@ public class BrokerageServiceImpl implements BrokerageService {
     }
     
     @Override
-    public byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId) {
+    public byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
@@ -361,11 +361,11 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found: " + currentBrokerId);
         }
         
-        return bulkBillGenerationService.generateBulkBillsHtmlSync(userIds, brokerOpt.get(), financialYearId);
+        return bulkBillGenerationService.generateBulkBillsHtmlSync(userIds, brokerOpt.get(), financialYearId, customBrokerage);
     }
     
     @Override
-    public byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId) {
+    public byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
@@ -376,11 +376,11 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found: " + currentBrokerId);
         }
         
-        return bulkBillGenerationService.generateBulkBillsExcelSync(userIds, brokerOpt.get(), financialYearId);
+        return bulkBillGenerationService.generateBulkBillsExcelSync(userIds, brokerOpt.get(), financialYearId, customBrokerage);
     }
     
     @Override
-    public byte[] generateBulkPrintBills(List<Long> userIds, Long brokerId, Long financialYearId) {
+    public byte[] generateBulkPrintBills(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage) {
         Long currentBrokerId = tenantContextService.getCurrentBrokerId();
         if (financialYearId == null) {
             financialYearId = currentFinancialYearService.getCurrentFinancialYearId(currentBrokerId);
@@ -391,7 +391,7 @@ public class BrokerageServiceImpl implements BrokerageService {
             throw new RuntimeException("Broker not found: " + currentBrokerId);
         }
         
-        return bulkBillGenerationService.generateBulkPrintBillsSync(userIds, brokerOpt.get(), financialYearId);
+        return bulkBillGenerationService.generateBulkPrintBillsSync(userIds, brokerOpt.get(), financialYearId, customBrokerage);
     }
 
     @Override

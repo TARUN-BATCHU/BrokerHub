@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
@@ -34,7 +35,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     private ExcelGenerationService excelGenerationService;
     
     @Override
-    public byte[] generateBulkBillsHtmlSync(List<Long> userIds, Broker broker, Long financialYearId) {
+    public byte[] generateBulkBillsHtmlSync(List<Long> userIds, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
         try {
             log.info("Starting synchronous HTML bulk bill generation for {} users", userIds.size());
             
@@ -52,8 +53,13 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
                         UserBrokerageDetailDTO userDetail = brokerageService.getUserBrokerageDetailInFinancialYear(
                             userId, broker.getBrokerId(), financialYearId);
                         
-                        // Generate HTML bill
-                        byte[] billHtml = pdfGenerationService.generateUserBrokerageBill(userDetail, broker, financialYearId);
+                        // Generate HTML bill with custom brokerage if provided
+                        byte[] billHtml;
+                        if (customBrokerage != null) {
+                            billHtml = pdfGenerationService.generateUserBrokerageBill(userDetail, broker, financialYearId, customBrokerage, userId);
+                        } else {
+                            billHtml = pdfGenerationService.generateUserBrokerageBill(userDetail, broker, financialYearId, userId);
+                        }
                         
                         // Add to zip
                         String fileName = "bill_" + userId + "_" + sanitizeFileName(user.getFirmName()) + ".html";
@@ -83,7 +89,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     }
     
     @Override
-    public byte[] generateBulkBillsExcelSync(List<Long> userIds, Broker broker, Long financialYearId) {
+    public byte[] generateBulkBillsExcelSync(List<Long> userIds, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
         try {
             log.info("Starting synchronous Excel bulk bill generation for {} users", userIds.size());
             
@@ -101,8 +107,13 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
                         UserBrokerageDetailDTO userDetail = brokerageService.getUserBrokerageDetailInFinancialYear(
                             userId, broker.getBrokerId(), financialYearId);
                         
-                        // Generate Excel bill
-                        byte[] excelData = excelGenerationService.generateUserBrokerageExcel(userDetail, broker, financialYearId);
+                        // Generate Excel bill with custom brokerage if provided
+                        byte[] excelData;
+                        if (customBrokerage != null) {
+                            excelData = excelGenerationService.generateUserBrokerageExcel(userDetail, broker, financialYearId, customBrokerage);
+                        } else {
+                            excelData = excelGenerationService.generateUserBrokerageExcel(userDetail, broker, financialYearId);
+                        }
                         
                         // Add to zip
                         String fileName = sanitizeFileName(user.getFirmName()) + "-brokerage-bill-FY" + financialYearId + ".xlsx";
@@ -139,7 +150,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
     }
     
     @Override
-    public byte[] generateBulkPrintBillsSync(List<Long> userIds, Broker broker, Long financialYearId) {
+    public byte[] generateBulkPrintBillsSync(List<Long> userIds, Broker broker, Long financialYearId, BigDecimal customBrokerage) {
         try {
             log.info("Starting synchronous print bill generation for {} users", userIds.size());
             
@@ -156,7 +167,7 @@ public class BulkBillGenerationServiceImpl implements BulkBillGenerationService 
                         UserBrokerageDetailDTO userDetail = brokerageService.getUserBrokerageDetailInFinancialYear(
                             userId, broker.getBrokerId(), financialYearId);
                         
-                        byte[] printBill = pdfGenerationService.generatePrintOptimizedBill(userDetail, broker, financialYearId, null, "a4", "portrait");
+                        byte[] printBill = pdfGenerationService.generatePrintOptimizedBill(userDetail, broker, financialYearId, customBrokerage, "a4", "portrait");
                         
                         String fileName = "print-bill_" + userId + "_" + sanitizeFileName(user.getFirmName()) + ".html";
                         ZipEntry entry = new ZipEntry(fileName);

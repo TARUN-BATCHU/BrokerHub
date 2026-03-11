@@ -36,11 +36,11 @@ public interface BrokerageService {
     
 
     
-    byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId);
+    byte[] generateBulkBillsHtml(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
-    byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId);
+    byte[] generateBulkBillsExcel(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
-    byte[] generateBulkPrintBills(List<Long> userIds, Long brokerId, Long financialYearId);
+    byte[] generateBulkPrintBills(List<Long> userIds, Long brokerId, Long financialYearId, BigDecimal customBrokerage);
     
     byte[] generateCityWisePrintBill(Long userId, Long brokerId, Long financialYearId, BigDecimal customBrokerage, String paperSize, String orientation);
     
