@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -97,8 +98,8 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Process monthly totals
         for (Object[] row : monthlyData) {
-            Integer year = row[0] != null ? Integer.valueOf(row[0].toString()) : null;
-            Integer month = row[1] != null ? Integer.valueOf(row[1].toString()) : null;
+            Integer year = safeYearConvert(row[0]);
+            Integer month = safeMonthConvert(row[1]);
             if (year == null || month == null) continue;
             YearMonth yearMonth = YearMonth.of(year, month);
 
@@ -121,7 +122,7 @@ public class DashboardServiceImpl implements DashboardService {
         Map<YearMonth, List<ProductAnalyticsDTO>> productByMonth = productData.stream()
                 .filter(row -> row[0] != null && row[1] != null)
                 .collect(Collectors.groupingBy(
-                    row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                    row -> YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1])),
                     Collectors.mapping(row -> ProductAnalyticsDTO.builder()
                             .productId(row[2] != null ? Long.valueOf(row[2].toString()) : null)
                             .productName(row[3] != null ? row[3].toString() : "")
@@ -138,7 +139,7 @@ public class DashboardServiceImpl implements DashboardService {
         Map<YearMonth, List<CityAnalyticsDTO>> cityByMonth = cityData.stream()
                 .filter(row -> row[0] != null && row[1] != null)
                 .collect(Collectors.groupingBy(
-                    row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                    row -> YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1])),
                     Collectors.mapping(row -> CityAnalyticsDTO.builder()
                             .cityName(row[2] != null ? row[2].toString() : "")
                             .totalQuantity(row[3] != null ? Long.valueOf(row[3].toString()) : 0L)
@@ -155,7 +156,7 @@ public class DashboardServiceImpl implements DashboardService {
         Map<YearMonth, Map<String, MerchantTypeAnalyticsDTO>> merchantTypeByMonth = new HashMap<>();
         for (Object[] row : merchantTypeData) {
             if (row[0] == null || row[1] == null) continue;
-            YearMonth yearMonth = YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString()));
+            YearMonth yearMonth = YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1]));
             String merchantType = row[2] != null ? row[2].toString() : "";
 
             merchantTypeByMonth.computeIfAbsent(yearMonth, k -> new HashMap<>())
@@ -238,8 +239,8 @@ public class DashboardServiceImpl implements DashboardService {
 
             // Process monthly totals
             monthlyData.parallelStream().forEach(row -> {
-                Integer year = row[0] != null ? Integer.valueOf(row[0].toString()) : null;
-                Integer month = row[1] != null ? Integer.valueOf(row[1].toString()) : null;
+                Integer year = safeYearConvert(row[0]);
+                Integer month = safeMonthConvert(row[1]);
                 if (year == null || month == null) return;
                 YearMonth yearMonth = YearMonth.of(year, month);
 
@@ -262,7 +263,7 @@ public class DashboardServiceImpl implements DashboardService {
             Map<YearMonth, List<ProductAnalyticsDTO>> productByMonth = productData.parallelStream()
                     .filter(row -> row[0] != null && row[1] != null)
                     .collect(Collectors.groupingByConcurrent(
-                        row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                        row -> YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1])),
                         Collectors.mapping(this::mapToProductAnalytics, Collectors.toList())
                     ));
 
@@ -270,7 +271,7 @@ public class DashboardServiceImpl implements DashboardService {
             Map<YearMonth, List<CityAnalyticsDTO>> cityByMonth = cityData.parallelStream()
                     .filter(row -> row[0] != null && row[1] != null)
                     .collect(Collectors.groupingByConcurrent(
-                        row -> YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString())),
+                        row -> YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1])),
                         Collectors.mapping(this::mapToCityAnalytics, Collectors.toList())
                     ));
 
@@ -278,7 +279,7 @@ public class DashboardServiceImpl implements DashboardService {
             Map<YearMonth, Map<String, MerchantTypeAnalyticsDTO>> merchantTypeByMonth = new ConcurrentHashMap<>();
             merchantTypeData.parallelStream().forEach(row -> {
                 if (row[0] == null || row[1] == null || row[2] == null) return;
-                YearMonth yearMonth = YearMonth.of(Integer.valueOf(row[0].toString()), Integer.valueOf(row[1].toString()));
+                YearMonth yearMonth = YearMonth.of(safeYearConvert(row[0]), safeMonthConvert(row[1]));
                 String merchantType = row[2].toString();
                 
                 MerchantTypeAnalyticsDTO mappedData = mapToMerchantTypeAnalytics(row);
@@ -698,6 +699,24 @@ public class DashboardServiceImpl implements DashboardService {
             return BigDecimal.ZERO;
         }
         return totalBrokerage.divide(BigDecimal.valueOf(totalTransactions), 2, RoundingMode.HALF_UP);
+    }
+
+    private Integer safeYearConvert(Object value) {
+        if (value == null) return null;
+        String s = value.toString().trim();
+        if (s.contains("-")) {
+            return LocalDate.parse(s).getYear();
+        }
+        return Integer.valueOf(s);
+    }
+
+    private Integer safeMonthConvert(Object value) {
+        if (value == null) return null;
+        String s = value.toString().trim();
+        if (s.contains("-")) {
+            return LocalDate.parse(s).getMonthValue();
+        }
+        return Integer.valueOf(s);
     }
 
     // Helper method to safely convert database values

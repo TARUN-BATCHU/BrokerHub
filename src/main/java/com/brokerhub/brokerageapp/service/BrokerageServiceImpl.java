@@ -442,4 +442,227 @@ public class BrokerageServiceImpl implements BrokerageService {
         return pdfGenerationService.generateCityWisePrintBill(userDetail, brokerOpt.get(), financialYearId, customBrokerage, paperSize, orientation, cityDistribution);
     }
 
+    // ==================== Date-Range Bill Methods ====================
+
+    @Override
+    public UserBrokerageDetailDTO getUserBrokerageDetailForDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (!userOpt.isPresent()) throw new RuntimeException("User not found");
+        User user = userOpt.get();
+
+        UserBrokerageDetailDTO.UserBasicInfo basicInfo = UserBrokerageDetailDTO.UserBasicInfo.builder()
+                .firmName(user.getFirmName())
+                .ownerName(user.getOwnerName())
+                .city(user.getAddress() != null ? user.getAddress().getCity() : null)
+                .build();
+
+        Long totalBagsSold = userBrokerageRepository.getUserTotalBagsSoldByDateRange(currentBrokerId, userId, startDate, endDate);
+        Long totalBagsBought = userBrokerageRepository.getUserTotalBagsBoughtByDateRange(currentBrokerId, userId, startDate, endDate);
+
+        List<UserBrokerageDetailDTO.ProductSummary> productsBought = userBrokerageRepository
+                .getUserProductsBoughtByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> UserBrokerageDetailDTO.ProductSummary.builder()
+                        .productName((String) row[0]).totalBags(((Number) row[1]).longValue()).build())
+                .collect(Collectors.toList());
+
+        List<UserBrokerageDetailDTO.ProductSummary> productsSold = userBrokerageRepository
+                .getUserProductsSoldByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> UserBrokerageDetailDTO.ProductSummary.builder()
+                        .productName((String) row[0]).totalBags(((Number) row[1]).longValue()).build())
+                .collect(Collectors.toList());
+
+        List<UserBrokerageDetailDTO.CitySummary> citiesSoldTo = userBrokerageRepository
+                .getUserCitiesSoldToByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> UserBrokerageDetailDTO.CitySummary.builder()
+                        .city((String) row[0]).totalBags(((Number) row[1]).longValue()).build())
+                .collect(Collectors.toList());
+
+        List<UserBrokerageDetailDTO.CitySummary> citiesBoughtFrom = userBrokerageRepository
+                .getUserCitiesBoughtFromByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> UserBrokerageDetailDTO.CitySummary.builder()
+                        .city((String) row[0]).totalBags(((Number) row[1]).longValue()).build())
+                .collect(Collectors.toList());
+
+        Number totalBrokerageAmount = brokerageRepository.getUserTotalBrokerageByDateRange(currentBrokerId, userId, startDate, endDate);
+        BigDecimal totalBrokeragePayable = BigDecimal.valueOf(totalBrokerageAmount != null ? totalBrokerageAmount.longValue() : 0L);
+        Long totalAmountEarned = userBrokerageRepository.getUserTotalAmountEarnedByDateRange(currentBrokerId, userId, startDate, endDate);
+        Long totalAmountPaid = userBrokerageRepository.getUserTotalAmountPaidByDateRange(currentBrokerId, userId, startDate, endDate);
+
+        UserBrokerageDetailDTO.BrokerageSummary brokerageSummary = UserBrokerageDetailDTO.BrokerageSummary.builder()
+                .totalBagsSold(totalBagsSold).totalBagsBought(totalBagsBought)
+                .productsBought(productsBought).productsSold(productsSold)
+                .citiesSoldTo(citiesSoldTo).citiesBoughtFrom(citiesBoughtFrom)
+                .totalBrokeragePayable(totalBrokeragePayable)
+                .totalAmountEarned(totalAmountEarned).totalAmountPaid(totalAmountPaid)
+                .build();
+
+        List<UserBrokerageDetailDTO.TransactionDetail> transactionDetails = userBrokerageRepository
+                .getUserTransactionDetailsByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> UserBrokerageDetailDTO.TransactionDetail.builder()
+                        .transactionNumber(((Number) row[0]).longValue())
+                        .transactionDate((LocalDate) row[1])
+                        .counterPartyFirmName((String) row[2])
+                        .counterPartyCity((String) row[3])
+                        .productName((String) row[4])
+                        .productCost(((Number) row[5]).longValue())
+                        .quantity(((Number) row[6]).longValue())
+                        .brokerage(BigDecimal.valueOf(((Number) row[7]).longValue()))
+                        .transactionType((String) row[8])
+                        .build())
+                .collect(Collectors.toList());
+
+        return UserBrokerageDetailDTO.builder()
+                .userBasicInfo(basicInfo)
+                .brokerageSummary(brokerageSummary)
+                .transactionDetails(transactionDetails)
+                .build();
+    }
+
+    private com.brokerhub.brokerageapp.entity.Broker getCurrentBroker() {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        return brokerRepository.findById(currentBrokerId)
+                .orElseThrow(() -> new RuntimeException("Broker not found"));
+    }
+
+    @Override
+    public byte[] generateUserBrokerageBillForDateRange(Long userId, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+        if (customBrokerage != null) {
+            return pdfGenerationService.generateUserBrokerageBill(userDetail, broker, null, customBrokerage, userId);
+        }
+        return pdfGenerationService.generateUserBrokerageBill(userDetail, broker, null, userId);
+    }
+
+    @Override
+    public byte[] generateUserBrokerageBillPdfForDateRange(Long userId, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+        return pdfGenerationService.generateUserBrokerageBillPdf(userDetail, getCurrentBroker(), null, customBrokerage);
+    }
+
+    @Override
+    public byte[] generatePrintOptimizedBillForDateRange(Long userId, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage, String paperSize, String orientation) {
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+        return pdfGenerationService.generatePrintOptimizedBill(userDetail, getCurrentBroker(), null, customBrokerage, paperSize, orientation);
+    }
+
+    @Override
+    public byte[] generateUserBrokerageExcelForDateRange(Long userId, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+        if (customBrokerage != null) {
+            return excelGenerationService.generateUserBrokerageExcel(userDetail, broker, null, customBrokerage);
+        }
+        return excelGenerationService.generateUserBrokerageExcel(userDetail, broker, null);
+    }
+
+    @Override
+    public byte[] generateCityWisePrintBillForDateRange(Long userId, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage, String paperSize, String orientation) {
+        Long currentBrokerId = tenantContextService.getCurrentBrokerId();
+        UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+
+        List<CityWiseBagDistributionDTO> cityDistribution = userBrokerageRepository
+                .getUserCityWiseBagDistributionByDateRange(currentBrokerId, userId, startDate, endDate).stream()
+                .map(row -> new CityWiseBagDistributionDTO((String) row[0], ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
+
+        return pdfGenerationService.generateCityWisePrintBill(userDetail, broker, null, customBrokerage, paperSize, orientation, cityDistribution);
+    }
+
+    @Override
+    public byte[] generateBulkBillsHtmlForDateRange(List<Long> userIds, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+        try {
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
+            for (Long userId : userIds) {
+                try {
+                    Optional<User> userOpt = userRepository.findById(userId);
+                    if (!userOpt.isPresent()) continue;
+                    UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+                    if (userDetail.getTransactionDetails().isEmpty()) continue;
+                    byte[] bill = customBrokerage != null
+                            ? pdfGenerationService.generateUserBrokerageBill(userDetail, broker, null, customBrokerage, userId)
+                            : pdfGenerationService.generateUserBrokerageBill(userDetail, broker, null, userId);
+                    String fileName = "bill_" + userId + "_" + sanitizeFileName(userOpt.get().getFirmName()) + ".html";
+                    zos.putNextEntry(new java.util.zip.ZipEntry(fileName));
+                    zos.write(bill);
+                    zos.closeEntry();
+                } catch (Exception e) {
+                    log.error("Failed to generate date-range HTML bill for user: {}", userId, e);
+                }
+            }
+            zos.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate bulk HTML bills for date range", e);
+        }
+    }
+
+    @Override
+    public byte[] generateBulkBillsExcelForDateRange(List<Long> userIds, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+        try {
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
+            for (Long userId : userIds) {
+                try {
+                    Optional<User> userOpt = userRepository.findById(userId);
+                    if (!userOpt.isPresent()) continue;
+                    UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+                    if (userDetail.getTransactionDetails().isEmpty()) continue;
+                    byte[] excel = customBrokerage != null
+                            ? excelGenerationService.generateUserBrokerageExcel(userDetail, broker, null, customBrokerage)
+                            : excelGenerationService.generateUserBrokerageExcel(userDetail, broker, null);
+                    String fileName = sanitizeFileName(userOpt.get().getFirmName()) + "-brokerage-" + startDate + "-to-" + endDate + ".xlsx";
+                    zos.putNextEntry(new java.util.zip.ZipEntry(fileName));
+                    zos.write(excel);
+                    zos.closeEntry();
+                } catch (Exception e) {
+                    log.error("Failed to generate date-range Excel bill for user: {}", userId, e);
+                }
+            }
+            zos.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate bulk Excel bills for date range", e);
+        }
+    }
+
+    @Override
+    public byte[] generateBulkPrintBillsForDateRange(List<Long> userIds, LocalDate startDate, LocalDate endDate, BigDecimal customBrokerage) {
+        com.brokerhub.brokerageapp.entity.Broker broker = getCurrentBroker();
+        try {
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
+            for (Long userId : userIds) {
+                try {
+                    Optional<User> userOpt = userRepository.findById(userId);
+                    if (!userOpt.isPresent()) continue;
+                    UserBrokerageDetailDTO userDetail = getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+                    if (userDetail.getTransactionDetails().isEmpty()) continue;
+                    byte[] bill = pdfGenerationService.generatePrintOptimizedBill(userDetail, broker, null, customBrokerage, "a4", "portrait");
+                    String fileName = "print-bill_" + userId + "_" + sanitizeFileName(userOpt.get().getFirmName()) + ".html";
+                    zos.putNextEntry(new java.util.zip.ZipEntry(fileName));
+                    zos.write(bill);
+                    zos.closeEntry();
+                } catch (Exception e) {
+                    log.error("Failed to generate date-range print bill for user: {}", userId, e);
+                }
+            }
+            zos.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate bulk print bills for date range", e);
+        }
+    }
+
+    private String sanitizeFileName(String name) {
+        if (name == null) return "Unknown";
+        return name.replaceAll("[^a-zA-Z0-9\\s-_]", "").replaceAll("\\s+", "-");
+    }
+
 }

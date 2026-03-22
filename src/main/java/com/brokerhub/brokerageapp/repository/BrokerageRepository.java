@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import com.brokerhub.brokerageapp.entity.LedgerRecord;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface BrokerageRepository extends JpaRepository<LedgerRecord, Long> {
@@ -50,4 +51,12 @@ public interface BrokerageRepository extends JpaRepository<LedgerRecord, Long> {
            "WHERE lr.broker.brokerId = :brokerId AND lr.ledgerDetails.financialYearId = :financialYearId " +
            "AND a.city = :city")
     Number getCityTotalBrokerage(@Param("brokerId") Long brokerId, @Param("financialYearId") Long financialYearId, @Param("city") String city);
+
+    // Date-range queries
+    @Query("SELECT COALESCE(SUM(CAST(lr.totalBrokerage AS long)), 0) FROM LedgerRecord lr " +
+           "JOIN lr.ledgerDetails ld JOIN ld.dailyLedger dl " +
+           "WHERE lr.broker.brokerId = :brokerId AND dl.date BETWEEN :startDate AND :endDate " +
+           "AND (lr.toBuyer.userId = :userId OR ld.fromSeller.userId = :userId)")
+    Number getUserTotalBrokerageByDateRange(@Param("brokerId") Long brokerId, @Param("userId") Long userId,
+                                            @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

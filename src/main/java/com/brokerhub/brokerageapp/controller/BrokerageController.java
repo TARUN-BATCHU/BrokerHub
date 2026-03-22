@@ -6,10 +6,12 @@ import com.brokerhub.brokerageapp.dto.UserBrokerageDetailDTO;
 import com.brokerhub.brokerageapp.service.BrokerageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -276,6 +278,171 @@ public class BrokerageController {
                     .body(cityWiseBill);
         } catch (Exception e) {
             log.error("Error generating city-wise print bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // ==================== Date-Range Bill APIs ====================
+
+    @GetMapping("/date-range/user-detail/{userId}")
+    public ResponseEntity<ApiResponse<UserBrokerageDetailDTO>> getUserBrokerageDetailForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        try {
+            UserBrokerageDetailDTO userDetail = brokerageService.getUserBrokerageDetailForDateRange(userId, startDate, endDate);
+            return ResponseEntity.ok(ApiResponse.success(userDetail, "User brokerage detail retrieved successfully"));
+        } catch (Exception e) {
+            log.error("Error getting user brokerage detail for date range", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to get user brokerage detail: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/date-range/bill/{userId}")
+    public ResponseEntity<byte[]> generateBillForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] bill = brokerageService.generateUserBrokerageBillForDateRange(userId, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + "-" + startDate + "-to-" + endDate + ".html")
+                    .body(bill);
+        } catch (Exception e) {
+            log.error("Error generating date-range bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/date-range/bill/pdf/{userId}")
+    public ResponseEntity<byte[]> generateBillPdfForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] pdf = brokerageService.generateUserBrokerageBillPdfForDateRange(userId, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=brokerage-bill-" + userId + "-" + startDate + "-to-" + endDate + ".pdf")
+                    .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Error generating date-range PDF bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/date-range/print-bill/{userId}")
+    public ResponseEntity<byte[]> generatePrintBillForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage,
+            @RequestParam(defaultValue = "a4") String paperSize,
+            @RequestParam(defaultValue = "portrait") String orientation) {
+        try {
+            byte[] bill = brokerageService.generatePrintOptimizedBillForDateRange(userId, startDate, endDate, customBrokerage, paperSize, orientation);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .header("Content-Disposition", "attachment; filename=print-bill-" + userId + "-" + startDate + "-to-" + endDate + ".html")
+                    .body(bill);
+        } catch (Exception e) {
+            log.error("Error generating date-range print bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/date-range/excel/{userId}")
+    public ResponseEntity<byte[]> generateExcelForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] excel = brokerageService.generateUserBrokerageExcelForDateRange(userId, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .header("Content-Disposition", "attachment; filename=brokerage-" + userId + "-" + startDate + "-to-" + endDate + ".xlsx")
+                    .body(excel);
+        } catch (Exception e) {
+            log.error("Error generating date-range Excel", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/date-range/city-wise-print-bill/{userId}")
+    public ResponseEntity<byte[]> generateCityWisePrintBillForDateRange(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage,
+            @RequestParam(defaultValue = "a4") String paperSize,
+            @RequestParam(defaultValue = "portrait") String orientation) {
+        try {
+            byte[] bill = brokerageService.generateCityWisePrintBillForDateRange(userId, startDate, endDate, customBrokerage, paperSize, orientation);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .header("Content-Disposition", "attachment; filename=city-wise-bill-" + userId + "-" + startDate + "-to-" + endDate + ".html")
+                    .body(bill);
+        } catch (Exception e) {
+            log.error("Error generating date-range city-wise print bill", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/date-range/bulk-bills/html")
+    public ResponseEntity<byte[]> downloadBulkBillsHtmlForDateRange(
+            @RequestBody List<Long> userIds,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] zip = brokerageService.generateBulkBillsHtmlForDateRange(userIds, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=bulk-bills-html-" + startDate + "-to-" + endDate + ".zip")
+                    .body(zip);
+        } catch (Exception e) {
+            log.error("Error generating date-range bulk HTML bills", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/date-range/bulk-bills/excel")
+    public ResponseEntity<byte[]> downloadBulkBillsExcelForDateRange(
+            @RequestBody List<Long> userIds,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] zip = brokerageService.generateBulkBillsExcelForDateRange(userIds, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=bulk-bills-excel-" + startDate + "-to-" + endDate + ".zip")
+                    .body(zip);
+        } catch (Exception e) {
+            log.error("Error generating date-range bulk Excel bills", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/date-range/bulk-print-bills")
+    public ResponseEntity<byte[]> downloadBulkPrintBillsForDateRange(
+            @RequestBody List<Long> userIds,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) BigDecimal customBrokerage) {
+        try {
+            byte[] zip = brokerageService.generateBulkPrintBillsForDateRange(userIds, startDate, endDate, customBrokerage);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Disposition", "attachment; filename=bulk-print-bills-" + startDate + "-to-" + endDate + ".zip")
+                    .body(zip);
+        } catch (Exception e) {
+            log.error("Error generating date-range bulk print bills", e);
             return ResponseEntity.badRequest().build();
         }
     }

@@ -93,8 +93,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         StringBuilder html = new StringBuilder();
         
         // Get financial year details
-        Optional<FinancialYear> financialYear = financialYearService.getFinancialYear(financialYearId);
-        String fyDisplay = "FY " + financialYearId;
+        Optional<FinancialYear> financialYear = financialYearId != null ? financialYearService.getFinancialYear(financialYearId) : Optional.empty();
+        String fyDisplay = financialYearId != null ? "FY " + financialYearId : "Custom Period";
         if (financialYear.isPresent()) {
             LocalDate start = financialYear.get().getStart();
             LocalDate end = financialYear.get().getEnd();
@@ -981,9 +981,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("<button onclick='printBill()' class='print-btn'>🖨️ Print Bill</button>")
                 .append("</div>");
 
-        Optional<FinancialYear> financialYear = financialYearService.getFinancialYear(financialYearId);
+        Optional<FinancialYear> financialYear = financialYearId != null ? financialYearService.getFinancialYear(financialYearId) : Optional.empty();
         StringBuilder duration = new StringBuilder();
-        if(null!=financialYear){
+        if(financialYear.isPresent()){
             LocalDate start = financialYear.get().getStart();
             LocalDate end = financialYear.get().getEnd();
             duration.append(start.getMonth().toString()).append(" ").append(start.getYear()).append(" TO ").append(end.getMonth().toString()).append(" ").append(end.getYear());
@@ -1266,7 +1266,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("<button onclick='printBill()' class='print-btn'>🖨️ Print Bill</button>")
                 .append("</div>");
 
-        Optional<FinancialYear> financialYear = financialYearService.getFinancialYear(financialYearId);
+        Optional<FinancialYear> financialYear = financialYearId != null ? financialYearService.getFinancialYear(financialYearId) : Optional.empty();
         StringBuilder duration = new StringBuilder();
         if(financialYear.isPresent()){
             LocalDate start = financialYear.get().getStart();
