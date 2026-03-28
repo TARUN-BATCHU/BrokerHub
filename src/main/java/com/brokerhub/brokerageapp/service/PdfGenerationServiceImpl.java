@@ -55,6 +55,14 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     private int getQrDisplaySize() {
         return upiQrPayloadService.getQrDisplaySize();
     }
+
+    private int getPrintQrDisplaySize() {
+        int baseSize = getQrDisplaySize();
+        if (baseSize <= 40) {
+            return baseSize;
+        }
+        return Math.max(40, baseSize - 22);
+    }
     
     @Override
     public byte[] generateUserBrokerageBill(UserBrokerageDetailDTO userDetail, Broker broker, Long financialYearId) {
@@ -1106,6 +1114,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // Bank Details
         if (broker.getBankDetails() != null) {
             html.append("<div class='bank-details'>")
+                    .append("<div class='payment-row'><span>Name : </span> <strong>").append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>Bank : </span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>A/C No : </span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>IFSC : </span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
@@ -1117,7 +1126,6 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ? upiQrPayloadService.getUpiPayeeAddress()
                 : "9848543443@ptaxis";
         html.append("<div class='upi-details'>")
-                .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
                 .append("<div class='payment-row'><span>UPI ID : </span> <strong>").append(upiIdDisplay).append("</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
                 .append("</div>")
@@ -1128,7 +1136,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         if (qrBase64 == null) {
             qrBase64 = getQRCodeBase64();
         }
-        int qrDisplaySize = getQrDisplaySize();
+        int qrDisplaySize = getPrintQrDisplaySize();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
             html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='").append(qrDisplaySize).append("' height='").append(qrDisplaySize).append("' style='border: 1px solid #ccc;'/>")
@@ -1200,11 +1208,11 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 ".payment-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin: 6px 0; }" +
                 ".payment-details-section { flex: 0 1 auto; width: fit-content; max-width: 60%; border: 1px solid #ccc; padding: 4px; border-radius: 4px; background-color: #f9f9f9; }" +
                 ".bank-details, .upi-details { margin-bottom: 4px; }" +
-                ".payment-row { font-size: 9px; margin-bottom: 2px; }" +
+                ".payment-row { font-size: 11px; margin-bottom: 2px; }" +
                 ".payment-row span { display: inline-block; width: 50px; }" +
-                ".upi-apps { font-size: 8px; color: #666; margin-top: 2px; }" +
-                ".qr-section { flex: 0 0 " + getQrDisplaySize() + "px; text-align: center; }" +
-                ".qr-placeholder { width: " + getQrDisplaySize() + "px; height: " + getQrDisplaySize() + "px; border: 2px solid #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
+                ".upi-apps { font-size: 9px; color: #666; margin-top: 2px; }" +
+                ".qr-section { flex: 0 0 " + getPrintQrDisplaySize() + "px; text-align: center; }" +
+                ".qr-placeholder { width: " + getPrintQrDisplaySize() + "px; height: " + getPrintQrDisplaySize() + "px; border: 2px solid #ccc; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; }" +
                 ".qr-text { font-size: 8px; font-weight: bold; }" +
                 ".qr-amount { font-size: 18px; margin-top: 1px; }" +
                 ".footer { text-align: center; margin-top: 10px; font-size: 10px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 4px; }" +
@@ -1366,6 +1374,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         // Bank Details
         if (broker.getBankDetails() != null) {
             html.append("<div class='bank-details'>")
+                    .append("<div class='payment-row'><span>Name : </span> <strong>").append(broker.getBrokerName() != null ? broker.getBrokerName() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>Bank : </span> <strong>").append(broker.getBankDetails().getBankName() != null ? broker.getBankDetails().getBankName() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>A/C No : </span> <strong>").append(broker.getBankDetails().getAccountNumber() != null ? broker.getBankDetails().getAccountNumber() : "N/A").append("</strong></div>")
                     .append("<div class='payment-row'><span>IFSC : </span> <strong>").append(broker.getBankDetails().getIfscCode() != null ? broker.getBankDetails().getIfscCode() : "N/A").append("</strong></div>")
@@ -1374,7 +1383,6 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         
         // UPI Details
         html.append("<div class='upi-details'>")
-                .append("<div class='payment-row'><span>UPI : </span> <strong>").append(broker.getPhoneNumber() != null ? broker.getPhoneNumber() : "N/A").append("</strong></div>")
                 .append("<div class='payment-row'><span>UPI ID : </span> <strong>9848543443@ptaxis</strong></div>")
                 .append("<div class='upi-apps'>Paytm | PhonePe | GooglePay</div>")
                 .append("</div>")
@@ -1385,7 +1393,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         if (qrBase64 == null) {
             qrBase64 = getQRCodeBase64();
         }
-        int qrDisplaySize = getQrDisplaySize();
+        int qrDisplaySize = getPrintQrDisplaySize();
         html.append("<div class='qr-section'>");
         if (qrBase64 != null) {
             html.append("<img src='data:image/png;base64,").append(qrBase64).append("' width='").append(qrDisplaySize).append("' height='").append(qrDisplaySize).append("' style='border: 1px solid #ccc;'/>")
