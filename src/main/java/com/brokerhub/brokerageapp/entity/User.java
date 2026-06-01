@@ -59,7 +59,8 @@ public class User {
     @JoinColumn(name = "merchantBankDetailsId")
     private MerchantBankDetails bankDetails;
 
-    private List<String> phoneNumbers;
+    @Column(length = 500)
+    private String phoneNumbers;
 
     @PositiveOrZero
     private Integer brokerageRate;

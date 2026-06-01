@@ -27,7 +27,7 @@ public class UserDTO {
     private String accountNumber;
     private String ifscCode;
     private String branch;
-    private List<String> phoneNumbers;
+    private String phoneNumbers;
     private Integer brokerageRate;
     private String shopNumber;
     private String byProduct;

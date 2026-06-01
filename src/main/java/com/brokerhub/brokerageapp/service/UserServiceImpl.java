@@ -85,24 +85,23 @@ public class UserServiceImpl implements UserService {
 
             // Handle address creation - create address if city is provided (mandatory field)
             if(userDTO.getCity() != null && !userDTO.getCity().trim().isEmpty()) {
+                Long currentBrokerId = tenantContextService.getCurrentBrokerId();
                 Address address = null;
-                
-                // Try to find existing address by pincode if provided
-                if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
-                    address = addressService.findAddressByPincode(userDTO.getPincode());
-                }
-                
-                // If no existing address found, create new one
+
+                // Find existing address by city only (area and pincode not sent in bulk upload)
+                String city = userDTO.getCity().trim();
+                address = addressRepository.findByBrokerBrokerIdAndCity(currentBrokerId, city);
+
+                // No existing address found — create new one
                 if(address == null) {
                     address = new Address();
-                    address.setCity(userDTO.getCity().trim());
+                    address.setCity(city);
                     if(userDTO.getArea() != null && !userDTO.getArea().trim().isEmpty()) {
                         address.setArea(userDTO.getArea().trim());
                     }
                     if(userDTO.getPincode() != null && !userDTO.getPincode().trim().isEmpty()) {
                         address.setPincode(userDTO.getPincode().trim());
                     }
-                    // Save the address first
                     address = addressService.saveAddress(address);
                 }
                 user.setAddress(address);

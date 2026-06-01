@@ -96,14 +96,14 @@ public class ExcelUtil {
                         case 12: // phoneNumbers (comma-separated)
                             String phoneNumbersStr = getCellValueAsString(currentCell);
                             if (phoneNumbersStr != null && !phoneNumbersStr.trim().isEmpty()) {
-                                List<String> phoneNumbers = Arrays.asList(phoneNumbersStr.split(","));
-                                List<String> cleanPhoneNumbers = phoneNumbers.stream()
+                                // Clean and store as comma-separated string
+                                String cleanedPhones = Arrays.stream(phoneNumbersStr.split(","))
                                     .map(String::trim)
                                     .filter(s -> !s.isEmpty())
-                                    .collect(Collectors.toList());
-                                userDTO.setPhoneNumbers(cleanPhoneNumbers);
+                                    .collect(Collectors.joining(","));
+                                userDTO.setPhoneNumbers(cleanedPhones);
                             } else {
-                                userDTO.setPhoneNumbers(new ArrayList<>());
+                                userDTO.setPhoneNumbers(null);
                             }
                             break;
                         case 13: // brokerageRate
@@ -176,7 +176,30 @@ public class ExcelUtil {
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             case FORMULA:
-                return cell.getCellFormula();
+                // CRITICAL FIX: Evaluate formula and get the cached/computed value
+                try {
+                    switch (cell.getCachedFormulaResultType()) {
+                        case STRING:
+                            return cell.getStringCellValue();
+                        case NUMERIC:
+                            double numValue = cell.getNumericCellValue();
+                            if (numValue == (long) numValue) {
+                                return String.valueOf((long) numValue);
+                            } else {
+                                return String.valueOf(numValue);
+                            }
+                        case BOOLEAN:
+                            return String.valueOf(cell.getBooleanCellValue());
+                        case BLANK:
+                        case ERROR:
+                            return null;
+                        default:
+                            return null;
+                    }
+                } catch (Exception e) {
+                    // If formula evaluation fails, return null
+                    return null;
+                }
             case BLANK:
                 return null;
             default:

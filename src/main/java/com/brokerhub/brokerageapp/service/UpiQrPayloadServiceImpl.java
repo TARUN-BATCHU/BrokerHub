@@ -28,6 +28,9 @@ public class UpiQrPayloadServiceImpl implements UpiQrPayloadService {
     @Value("${app.qr.code.size:200}")
     private int upiQrCodeSize;
 
+    @Value("${app.qr.upi.amount-editable:false}")
+    private boolean upiAmountEditable;
+
     @Override
     public String getDynamicQRCodeBase64(BigDecimal amount, Optional<FinancialYear> financialYear) {
         if (upiPayeeAddress == null || upiPayeeAddress.isBlank()) {
@@ -35,10 +38,11 @@ public class UpiQrPayloadServiceImpl implements UpiQrPayloadService {
         }
 
         String transactionNote = buildUpiTransactionNote(financialYear);
+        BigDecimal qrAmount = upiAmountEditable ? null : amount;
         String upiString = upiQrCodeService.buildUpiPaymentString(
                 upiPayeeAddress,
                 upiPayeeName,
-                amount,
+                qrAmount,
                 transactionNote
         );
 

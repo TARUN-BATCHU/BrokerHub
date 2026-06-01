@@ -16,6 +16,8 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
 
     Address findByBrokerBrokerIdAndCityAndArea(Long brokerId, String city, String area);
 
+    Address findByBrokerBrokerIdAndCity(Long brokerId, String city);
+
     Address findByBrokerBrokerIdAndPincode(Long brokerId, String pincode);
 
     boolean existsByBrokerBrokerIdAndCity(Long brokerId, String city);
